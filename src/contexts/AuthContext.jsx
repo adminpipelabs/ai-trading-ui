@@ -7,23 +7,39 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('pipelabs_user');
-    const token = localStorage.getItem('pipelabs_token');
-    if (stored && token) setUser(JSON.parse(stored));
+    // Check both localStorage keys (for compatibility)
+    const stored = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+    const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
+    if (stored && token) {
+      try {
+        const userData = JSON.parse(stored);
+        setUser(userData);
+      } catch (e) {
+        console.error('Failed to parse stored user:', e);
+      }
+    }
     setLoading(false);
   }, []);
 
   const login = (authData) => {
+    // Handle both response formats: {user: {...}} or direct user object
+    const userObj = authData.user || authData;
+    const token = authData.access_token || authData.token;
+    
     const userData = {
-      id: authData.user?.id,
-      email: authData.user?.email,
-      wallet_address: authData.user?.wallet_address,
-      role: authData.user?.role?.toLowerCase() || 'client',
-      name: authData.user?.email || authData.user?.wallet_address?.slice(0, 8) + '...',
+      id: userObj.id,
+      email: userObj.email,
+      wallet_address: userObj.wallet_address,
+      role: (userObj.role || 'client').toLowerCase(), // Use actual role, don't default to client
+      name: userObj.email || userObj.wallet_address?.slice(0, 8) + '...',
     };
+    
     setUser(userData);
+    // Store in both formats for compatibility
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('access_token', token);
     localStorage.setItem('pipelabs_user', JSON.stringify(userData));
-    localStorage.setItem('pipelabs_token', authData.access_token);
+    localStorage.setItem('pipelabs_token', token);
     return userData;
   };
 

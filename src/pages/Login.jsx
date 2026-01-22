@@ -95,15 +95,17 @@ export default function Login() {
 
       const data = await res.json();
 
-      // Store token and user data
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Call auth context login (handles storage)
+      const userData = login({
+        user: data.user,
+        access_token: data.access_token
+      });
 
-      // Call auth context login
-      login(data.user || data);
-
-      // Redirect based on role
-      if (data.user?.role === 'admin' || data.role === 'admin') {
+      // Redirect based on role - use the role from userData (correctly parsed)
+      console.log('Login response:', data);
+      console.log('User role:', userData.role);
+      
+      if (userData.role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/');
