@@ -686,6 +686,12 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
       const token = localStorage.getItem('access_token');
       
+      if (!token) {
+        alert('No authentication token found. Please log in again.');
+        setIsSubmitting(false);
+        return;
+      }
+      
       // Validate wallet address format
       if (!clientData.wallet_address || !clientData.wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
         alert('Please enter a valid Ethereum wallet address (0x followed by 40 hex characters)');
@@ -694,19 +700,34 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       }
       
       // Call backend API to create client
-      const response = await fetch(`${API}/api/admin/clients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
+      let response;
+      try {
+        const requestBody = {
           name: clientData.name,
           wallet_address: clientData.wallet_address,
-          email: clientData.email || null, // Optional
+          email: clientData.email || null,
           status: 'Active'
-        })
-      });
+        };
+        
+        console.log('Creating client with:', requestBody);
+        console.log('API URL:', `${API}/api/admin/clients`);
+        console.log('Token present:', !!token);
+        
+        response = await fetch(`${API}/api/admin/clients`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw new Error(`Network error: ${fetchError.message}. Check browser console for details.`);
+      }
       
       if (!response.ok) {
         let errorMessage = 'Failed to create client';
