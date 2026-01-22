@@ -62,7 +62,19 @@ export default function Login() {
       // Sign message using ethers (more reliable than personal_sign)
       setStatus('Please sign the message in your wallet...');
       const signer = await provider.getSigner();
-      const signature = await signer.signMessage(message);
+      let signature;
+      try {
+        signature = await signer.signMessage(message);
+      } catch (signError) {
+        // Handle user rejection gracefully
+        if (signError?.code === 'ACTION_REJECTED' || signError?.reason === 'rejected' || signError?.message?.includes('rejected')) {
+          setError('Signature cancelled. Please try again and approve the signature in your wallet.');
+          setStatus('');
+          setLoading(false);
+          return;
+        }
+        throw signError; // Re-throw if it's a different error
+      }
 
       // Send to backend for verification
       setStatus('Verifying signature...');
