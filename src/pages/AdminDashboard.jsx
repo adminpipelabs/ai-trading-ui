@@ -926,9 +926,116 @@ function AddClientModal({ isOpen, onClose, onSave }) {
 // ========== LOGIN PAGE ==========
 function Login({ onLogin }) {
   const { theme, isDark } = useContext(ThemeContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Import BrowserProvider dynamically to avoid SSR issues
+  const connectWallet = async () => {
+    setLoading(true);
+    setError('');
+    setStatus('');
+
+    try {
+      // Dynamic import of ethers
+      const { BrowserProvider } = await import('ethers');
+      
+      // Detect wallet
+      let wallet = null;
+      if (window.ethereum) {
+        if (window.ethereum.isMetaMask) wallet = { name: 'MetaMask', provider: window.ethereum };
+        else if (window.ethereum.isPhantom) wallet = { name: 'Phantom', provider: window.ethereum };
+        else if (window.ethereum.isCoinbaseWallet) wallet = { name: 'Coinbase Wallet', provider: window.ethereum };
+        else if (window.ethereum.isTrust) wallet = { name: 'Trust Wallet', provider: window.ethereum };
+        else wallet = { name: 'Ethereum Wallet', provider: window.ethereum };
+      }
+      
+      if (!wallet) {
+        setError('No wallet detected. Please install MetaMask, Phantom, or another EVM-compatible wallet.');
+        setLoading(false);
+        return;
+      }
+
+      setStatus(`Connecting to ${wallet.name}...`);
+      
+      // Request account access
+      const provider = new BrowserProvider(wallet.provider);
+      const accounts = await provider.send('eth_requestAccounts', []);
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error('No accounts found. Please unlock your wallet and try again.');
+      }
+
+      const walletAddress = accounts[0];
+      
+      // Get nonce/message from backend
+      const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
+      setStatus('Getting authentication message...');
+      const nonceRes = await fetch(`${API}/api/auth/nonce/${walletAddress}`);
+      
+      if (!nonceRes.ok) {
+        throw new Error('Failed to get authentication message from server');
+      }
+
+      const { message } = await nonceRes.json();
+
+      // Sign message
+      setStatus('Please sign the message in your wallet...');
+      const signer = await provider.getSigner();
+      const signature = await signer.signMessage(message);
+
+      // Send to backend for verification
+      setStatus('Verifying signature...');
+      const res = await fetch(`${API}/api/auth/wallet/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          wallet_address: walletAddress, 
+          message, 
+          signature 
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        const errorMessage = errorData.detail || 'Login failed';
+        
+        // Show user-friendly error for unregistered wallets
+        if (errorMessage.includes('not registered') || errorMessage.includes('Wallet address not registered')) {
+          throw new Error(
+            `Wallet address not registered.\n\n` +
+            `Please contact your admin to create your account with this wallet address:\n` +
+            `${walletAddress}\n\n` +
+            `Once your wallet is registered, you can log in.`
+          );
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await res.json();
+
+      // Store token and user data
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // Call onLogin callback with user data
+      const userData = {
+        email: data.user?.email,
+        wallet_address: data.user?.wallet_address || walletAddress,
+        role: data.user?.role || 'client',
+        id: data.user?.id
+      };
+      
+      onLogin(userData);
+
+    } catch (e) {
+      setError(e.message || 'Failed to connect wallet');
+      setStatus('');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden transition-colors duration-300" 
@@ -946,49 +1053,50 @@ function Login({ onLogin }) {
           <p className="text-sm" style={{ color: theme.textMuted }}>AI-Powered Trading Platform</p>
         </div>
 
-        <div className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Email</label>
-            <div className="relative">
-              <Mail size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: theme.textMuted }} />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"
-                     className="w-full py-3.5 pl-11 pr-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
-            </div>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-5 p-4 rounded-xl text-sm" 
+               style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5' }}>
+            <p style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>{error}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Password</label>
-            <div className="relative">
-              <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: theme.textMuted }} />
-              <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                     className="w-full py-3.5 pl-11 pr-11 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: theme.textMuted }}>
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+        )}
+
+        {/* Status Message */}
+        {status && !error && (
+          <div className="mb-5 p-3 rounded-xl text-sm text-center" 
+               style={{ background: theme.accentLight, color: theme.accent }}>
+            {status}
           </div>
-          <button className="w-full py-3.5 rounded-xl text-white font-semibold transition-all hover:translate-y-[-1px]"
-                  style={{ background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)', boxShadow: '0 4px 16px rgba(13, 148, 136, 0.3)' }}>
-            Sign In
-          </button>
+        )}
+
+        {/* Connect Wallet Button */}
+        <button 
+          onClick={connectWallet} 
+          disabled={loading}
+          className="w-full py-3.5 rounded-xl text-white font-semibold transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ 
+            background: loading ? '#4b5563' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+            boxShadow: loading ? 'none' : '0 4px 16px rgba(102, 126, 234, 0.4)' 
+          }}>
+          {status || (loading ? 'Connecting...' : '🔐 Connect Wallet')}
+        </button>
+
+        {/* Supported Wallets Info */}
+        <div className="mt-6 text-center">
+          <p className="text-xs font-medium mb-2" style={{ color: theme.textMuted }}>Supported Wallets:</p>
+          <p className="text-xs" style={{ color: theme.textMuted }}>
+            MetaMask • Phantom • Coinbase Wallet • Trust Wallet • WalletConnect
+          </p>
         </div>
 
-        <div className="flex items-center my-7">
-          <div className="flex-1 h-px" style={{ background: theme.border }} />
-          <span className="px-4 text-xs" style={{ color: theme.textMuted }}>or try demo</span>
-          <div className="flex-1 h-px" style={{ background: theme.border }} />
-        </div>
-
-        <div className="flex gap-3">
-          <button onClick={() => onLogin({ email: 'admin@pipelabs.io', role: 'admin' })}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium"
-                  style={{ color: '#d97706', border: '1px solid rgba(217, 119, 6, 0.3)', background: isDark ? 'rgba(217, 119, 6, 0.1)' : 'rgba(251, 191, 36, 0.08)' }}>
-            <Shield size={16} />Admin Demo
-          </button>
-          <button onClick={() => onLogin({ email: 'client@example.com', role: 'client' })}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium"
-                  style={{ color: '#0d9488', border: '1px solid rgba(13, 148, 136, 0.3)', background: isDark ? 'rgba(13, 148, 136, 0.1)' : 'rgba(13, 148, 136, 0.08)' }}>
-            <User size={16} />Client Demo
-          </button>
+        {/* Info Box */}
+        <div className="mt-6 p-4 rounded-xl text-xs" 
+             style={{ background: theme.accentLight, border: `1px solid ${theme.border}`, color: theme.textSecondary }}>
+          <p className="font-semibold mb-2" style={{ color: theme.accent }}>ℹ️ How it works:</p>
+          <p className="mb-1">1. Click "Connect Wallet" to connect your wallet</p>
+          <p className="mb-1">2. Approve the connection request</p>
+          <p className="mb-1">3. Sign the authentication message (no gas fees)</p>
+          <p className="mt-2 font-semibold" style={{ color: theme.accent }}>Note: Your wallet address must be registered by an admin.</p>
         </div>
       </div>
     </div>
