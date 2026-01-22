@@ -1,42 +1,38 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for stored auth on mount
-    const storedUser = localStorage.getItem('pipelabs_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        localStorage.removeItem('pipelabs_user');
-      }
+    const stored = localStorage.getItem('pipelabs_user');
+    const token = localStorage.getItem('pipelabs_token');
+    if (stored && token) {
+      setUser(JSON.parse(stored));
     }
     setLoading(false);
   }, []);
 
-  const login = async (credentials) => {
-    // TODO: Replace with real API call
-    const { email, role } = credentials;
-    
+  const login = (authData) => {
     const userData = {
-      email,
-      role: role || 'client',
-      name: role === 'admin' ? 'Admin User' : 'Client User',
+      id: authData.user?.id,
+      email: authData.user?.email,
+      wallet_address: authData.user?.wallet_address,
+      role: authData.user?.role?.toLowerCase() || 'client',
+      name: authData.user?.email || authData.user?.wallet_address?.slice(0, 8) + '...',
     };
-    
     setUser(userData);
     localStorage.setItem('pipelabs_user', JSON.stringify(userData));
+    localStorage.setItem('pipelabs_token', authData.access_token);
     return userData;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('pipelabs_user');
+    localStorage.removeItem('pipelabs_token');
   };
 
   const isAdmin = user?.role === 'admin';
