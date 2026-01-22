@@ -679,7 +679,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
 
   const removeConnector = (id) => setConnectors(connectors.filter(c => c.id !== id));
 
-  const handleSubmit = async () => {
+  const handleSubmit = async () => { // REAL API VERSION
     setIsSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 1500));
     
