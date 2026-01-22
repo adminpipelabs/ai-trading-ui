@@ -707,7 +707,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
     setIsSubmitting(true);
     
     try {
-      const API = process.env.REACT_APP_API_URL || 'https://tender-reflection-production.up.railway.app';
+      const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
       const token = localStorage.getItem('access_token');
       
       if (!token) {
@@ -1096,7 +1096,7 @@ function Login({ onLogin }) {
       const walletAddress = accounts[0];
       
       // Get nonce/message from backend
-      const API = process.env.REACT_APP_API_URL || 'https://tender-reflection-production.up.railway.app';
+      const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
       setStatus('Getting authentication message...');
       const nonceRes = await fetch(`${API}/api/auth/nonce/${walletAddress}`);
       

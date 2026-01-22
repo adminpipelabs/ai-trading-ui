@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BrowserProvider } from 'ethers';
 
-const API = process.env.REACT_APP_API_URL || 'https://tender-reflection-production.up.railway.app';
+const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
 
 export default function Login() {
   const [status, setStatus] = useState('');
