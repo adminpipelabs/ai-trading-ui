@@ -726,14 +726,19 @@ function AddClientModal({ isOpen, onClose, onSave }) {
         console.log('Response ok:', response.ok);
       } catch (fetchError) {
         console.error('Fetch error:', fetchError);
-        throw new Error(`Network error: ${fetchError.message}. Check browser console for details.`);
+        // Show actual error - if it's a network error, it's likely CORS or backend down
+        const errorMsg = fetchError.message || 'Network error';
+        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
+          throw new Error('Cannot reach backend server. Check if backend is running and CORS is configured.');
+        }
+        throw new Error(`Error: ${errorMsg}`);
       }
       
       if (!response.ok) {
         let errorMessage = 'Failed to create client';
         try {
           const errorData = await response.json();
-          errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+          errorMessage = errorData.detail || errorData.message || `Server returned ${response.status}`;
         } catch (e) {
           errorMessage = `Server error: ${response.status} ${response.statusText}`;
         }
