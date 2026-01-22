@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
+const API_URL = process.env.REACT_APP_API_URL || 'https://tender-reflection-production.up.railway.app';
 const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
 
 // Helper function for API calls
