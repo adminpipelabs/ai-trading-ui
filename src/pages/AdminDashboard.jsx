@@ -709,8 +709,14 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create client');
+        let errorMessage = 'Failed to create client';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData);
+        } catch (e) {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
       
       const newClient = await response.json();
@@ -743,7 +749,9 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       setIsSubmitting(false);
       setShowSuccess(true);
     } catch (error) {
-      alert(`Error: ${error.message}`);
+      console.error('Client creation error:', error);
+      const errorMessage = error?.message || error?.detail || (typeof error === 'string' ? error : JSON.stringify(error)) || 'Failed to create client';
+      alert(`Error: ${errorMessage}`);
       setIsSubmitting(false);
     }
   };
@@ -1069,10 +1077,10 @@ function Login({ onLogin }) {
         // Show user-friendly error for unregistered wallets
         if (errorMessage.includes('not registered') || errorMessage.includes('Wallet address not registered')) {
           throw new Error(
-            `Wallet address not registered.\n\n` +
-            `Please contact your admin to create your account with this wallet address:\n` +
-            `${walletAddress}\n\n` +
-            `Once your wallet is registered, you can log in.`
+            `❌ Wallet address not registered.\n\n` +
+            `Your wallet address must be registered by an admin before you can log in.\n\n` +
+            `Wallet Address: ${walletAddress}\n\n` +
+            `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
           );
         }
         
