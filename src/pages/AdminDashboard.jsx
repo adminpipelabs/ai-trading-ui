@@ -652,7 +652,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showApiSecret, setShowApiSecret] = useState(false);
   
-  const [clientData, setClientData] = useState({ name: '', email: '', company: '', phone: '' });
+  const [clientData, setClientData] = useState({ name: '', wallet_address: '', email: '', company: '', phone: '' });
   const [connectors, setConnectors] = useState([]);
   const [currentConnector, setCurrentConnector] = useState({ exchange: '', apiKey: '', apiSecret: '', memo: '', label: '' });
   const [tokens, setTokens] = useState('');
@@ -660,7 +660,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
 
   const resetForm = () => {
     setStep(1);
-    setClientData({ name: '', email: '', company: '', phone: '' });
+    setClientData({ name: '', wallet_address: '', email: '', company: '', phone: '' });
     setConnectors([]);
     setCurrentConnector({ exchange: '', apiKey: '', apiSecret: '', memo: '', label: '' });
     setTokens('');
@@ -679,27 +679,73 @@ function AddClientModal({ isOpen, onClose, onSave }) {
 
   const removeConnector = (id) => setConnectors(connectors.filter(c => c.id !== id));
 
-  const handleSubmit = async () => { // REAL API VERSION
+  const handleSubmit = async () => {
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const newClient = {
-      id: Date.now(),
-      ...clientData,
-      connectors,
-      tokens: tokens.split(',').map(t => t.trim()).filter(Boolean),
-      notes,
-      createdAt: new Date().toISOString(),
-      lastActive: null,
-      status: 'invited',
-      balance: '$0',
-      pnl: '$0',
-      pnlPercent: '0%'
-    };
-    
-    onSave?.(newClient);
-    setIsSubmitting(false);
-    setShowSuccess(true);
+    try {
+      const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
+      const token = localStorage.getItem('access_token');
+      
+      // Validate wallet address format
+      if (!clientData.wallet_address || !clientData.wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
+        alert('Please enter a valid Ethereum wallet address (0x followed by 40 hex characters)');
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Call backend API to create client
+      const response = await fetch(`${API}/api/admin/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: clientData.name,
+          wallet_address: clientData.wallet_address,
+          email: clientData.email || null, // Optional
+          status: 'Active'
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to create client');
+      }
+      
+      const newClient = await response.json();
+      
+      // If connectors were added, add them via API keys endpoint
+      if (connectors.length > 0 && newClient.id) {
+        for (const connector of connectors) {
+          try {
+            await fetch(`${API}/api/admin/api-keys`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                client_id: newClient.id,
+                exchange: connector.exchange,
+                api_key: connector.apiKey,
+                api_secret: connector.apiSecret,
+                passphrase: connector.memo || null
+              })
+            });
+          } catch (err) {
+            console.error('Failed to add API key:', err);
+          }
+        }
+      }
+      
+      onSave?.(newClient);
+      setIsSubmitting(false);
+      setShowSuccess(true);
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+      setIsSubmitting(false);
+    }
   };
 
   const selectedExchange = EXCHANGES.find(e => e.id === currentConnector.exchange);
@@ -745,9 +791,13 @@ function AddClientModal({ isOpen, onClose, onSave }) {
               <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: theme.accentLight, color: theme.accent }}>
                 <CheckCircle2 size={32} />
               </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: theme.textPrimary }}>Invitation Sent!</h3>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: theme.textPrimary }}>Client Created!</h3>
               <p className="text-sm mb-6" style={{ color: theme.textMuted }}>
-                An email has been sent to <strong>{clientData.email}</strong> with instructions to join.
+                Client <strong>{clientData.name}</strong> has been created with wallet address:
+                <br />
+                <strong className="font-mono text-xs">{clientData.wallet_address}</strong>
+                <br /><br />
+                They can now log in using their wallet.
               </p>
               <button onClick={handleClose} className="px-6 py-2.5 rounded-xl font-medium" style={{ background: theme.accent, color: 'white' }}>Done</button>
             </div>
@@ -756,29 +806,40 @@ function AddClientModal({ isOpen, onClose, onSave }) {
               {/* Step 1 */}
               {step === 1 && (
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Full Name *</label>
-                      <input type="text" value={clientData.name} onChange={e => setClientData({ ...clientData, name: e.target.value })} placeholder="John Smith"
-                             className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Full Name *</label>
+                    <input type="text" value={clientData.name} onChange={e => setClientData({ ...clientData, name: e.target.value })} placeholder="John Smith"
+                           className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>
+                      Wallet Address (EVM) *
+                      <span className="ml-2 text-xs font-normal" style={{ color: theme.textMuted }}>(Client will login with this wallet)</span>
+                    </label>
+                    <div className="relative">
+                      <Wallet size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: theme.textMuted }} />
+                      <input type="text" value={clientData.wallet_address} onChange={e => setClientData({ ...clientData, wallet_address: e.target.value })} placeholder="0x..."
+                             className="w-full py-3 pl-11 pr-4 rounded-xl text-sm outline-none font-mono" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Email Address *</label>
-                      <input type="email" value={clientData.email} onChange={e => setClientData({ ...clientData, email: e.target.value })} placeholder="john@company.com"
-                             className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
-                    </div>
+                    <p className="text-xs mt-1.5" style={{ color: theme.textMuted }}>Enter the client's Ethereum wallet address (MetaMask, Phantom, etc.)</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Email Address (Optional)</label>
+                      <input type="email" value={clientData.email} onChange={e => setClientData({ ...clientData, email: e.target.value })} placeholder="john@company.com"
+                             className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
+                      <p className="text-xs mt-1.5" style={{ color: theme.textMuted }}>For notifications only</p>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Company</label>
                       <input type="text" value={clientData.company} onChange={e => setClientData({ ...clientData, company: e.target.value })} placeholder="Company Inc."
                              className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Phone</label>
-                      <input type="tel" value={clientData.phone} onChange={e => setClientData({ ...clientData, phone: e.target.value })} placeholder="+1 (555) 000-0000"
-                             className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
-                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Phone</label>
+                    <input type="tel" value={clientData.phone} onChange={e => setClientData({ ...clientData, phone: e.target.value })} placeholder="+1 (555) 000-0000"
+                           className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Assigned Tokens</label>
@@ -869,7 +930,8 @@ function AddClientModal({ isOpen, onClose, onSave }) {
                       </div>
                       <div>
                         <div className="font-semibold" style={{ color: theme.textPrimary }}>{clientData.name}</div>
-                        <div className="text-sm" style={{ color: theme.textMuted }}>{clientData.email}</div>
+                        <div className="text-sm font-mono" style={{ color: theme.textMuted }}>{clientData.wallet_address || 'No wallet address'}</div>
+                        {clientData.email && <div className="text-xs mt-1" style={{ color: theme.textMuted }}>{clientData.email}</div>}
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -897,8 +959,12 @@ function AddClientModal({ isOpen, onClose, onSave }) {
                               className="w-full py-3 px-4 rounded-xl text-sm outline-none resize-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
                   </div>
                   <div className="p-4 rounded-xl" style={{ background: theme.accentLight }}>
-                    <div className="flex items-center gap-2 mb-2"><Mail size={16} style={{ color: theme.accent }} /><span className="text-sm font-medium" style={{ color: theme.accent }}>Email Invitation</span></div>
-                    <p className="text-xs" style={{ color: theme.textSecondary }}>An invitation will be sent to <strong>{clientData.email}</strong> to set up their password and access the dashboard.</p>
+                    <div className="flex items-center gap-2 mb-2"><Wallet size={16} style={{ color: theme.accent }} /><span className="text-sm font-medium" style={{ color: theme.accent }}>Wallet Authentication</span></div>
+                    <p className="text-xs" style={{ color: theme.textSecondary }}>
+                      The client will log in using their wallet address: <strong className="font-mono">{clientData.wallet_address}</strong>
+                      <br />
+                      They'll connect their wallet and sign a message to authenticate (no password needed).
+                    </p>
                   </div>
                 </div>
               )}
@@ -912,7 +978,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
             <button onClick={() => step > 1 ? setStep(step - 1) : handleClose()} className="px-4 py-2.5 rounded-xl text-sm font-medium" style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}>
               {step === 1 ? 'Cancel' : 'Back'}
             </button>
-            <button onClick={() => step < 3 ? setStep(step + 1) : handleSubmit()} disabled={(step === 1 && (!clientData.name || !clientData.email)) || isSubmitting}
+            <button onClick={() => step < 3 ? setStep(step + 1) : handleSubmit()} disabled={(step === 1 && (!clientData.name || !clientData.wallet_address)) || isSubmitting}
                     className="px-6 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50 flex items-center gap-2" style={{ background: theme.accent, color: 'white' }}>
               {isSubmitting ? <><RefreshCw size={16} className="animate-spin" />Sending...</> : step === 3 ? <><Send size={16} />Send Invite</> : 'Continue'}
             </button>
@@ -1019,13 +1085,16 @@ function Login({ onLogin }) {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // Call onLogin callback with user data
+      // Call onLogin callback with user data - IMPORTANT: Use exact role from backend
       const userData = {
         email: data.user?.email,
         wallet_address: data.user?.wallet_address || walletAddress,
-        role: data.user?.role || 'client',
+        role: data.user?.role || data.role || 'client', // Check both places
         id: data.user?.id
       };
+      
+      console.log('Login response:', data); // Debug log
+      console.log('User role:', userData.role); // Debug log
       
       onLogin(userData);
 
