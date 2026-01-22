@@ -735,20 +735,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       console.log('API URL:', `${API}/api/admin/clients`);
       console.log('Token present:', !!token);
       
-      // First, check if backend is reachable
-      let healthCheck;
-      try {
-        healthCheck = await fetch(`${API}/health`, { method: 'GET' });
-      } catch (healthError) {
-        console.error('Health check failed:', healthError);
-        throw new Error(`Cannot reach backend server at ${API}. Please check:\n1. Backend is running\n2. CORS is configured\n3. Network connectivity`);
-      }
-      
-      if (!healthCheck.ok) {
-        throw new Error(`Backend health check failed (${healthCheck.status}). Backend may be experiencing issues.`);
-      }
-      
-      // Now create the client
+      // Now create the client (removed health check to avoid double request)
       const response = await fetch(`${API}/api/admin/clients`, {
         method: 'POST',
         headers: {
