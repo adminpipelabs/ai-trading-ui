@@ -9,9 +9,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const stored = localStorage.getItem('pipelabs_user');
     const token = localStorage.getItem('pipelabs_token');
-    if (stored && token) {
-      setUser(JSON.parse(stored));
-    }
+    if (stored && token) setUser(JSON.parse(stored));
     setLoading(false);
   }, []);
 
@@ -47,9 +45,7 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }
 

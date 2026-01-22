@@ -1,42 +1,48 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import WalletLogin from '../components/WalletLogin';
+
+const API = 'https://pipelabs-dashboard-production.up.railway.app';
 
 export default function Login() {
+  const [status, setStatus] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { login } = useAuth();
 
-  React.useEffect(() => {
-    if (user) navigate('/');
-  }, [user, navigate]);
-
-  const handleSuccess = (authData) => {
-    login(authData);
-    navigate('/');
+  const connect = async () => {
+    if (!window.ethereum) {
+      setError('Install MetaMask');
+      return;
+    }
+    try {
+      setStatus('Connecting...');
+      const [wallet] = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      setStatus('Getting challenge...');
+      const nonceRes = await fetch(`${API}/api/auth/nonce/${wallet}`);
+      const { message } = await nonceRes.json();
+      setStatus('Sign in MetaMask...');
+      const signature = await window.ethereum.request({ method: 'personal_sign', params: [message, wallet] });
+      setStatus('Verifying...');
+      const res = await fetch(`${API}/api/auth/wallet-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet_address: wallet, message, signature })
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || 'Login failed');
+      const data = await res.json();
+      login(data);
+      navigate('/');
+    } catch (e) { setError(e.message); setStatus(''); }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#0a0a1a',
-      color: 'white',
-    }}>
-      <h1 style={{ marginBottom: '0.5rem', fontSize: '2rem' }}>Pipe Labs</h1>
-      <p style={{ marginBottom: '2rem', color: '#6b7280' }}>AI-Powered Trading Platform</p>
-      <div style={{
-        background: 'rgba(255,255,255,0.05)',
-        padding: '2rem',
-        borderRadius: '16px',
-        border: '1px solid rgba(255,255,255,0.1)',
-      }}>
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Connect Wallet</h2>
-        <WalletLogin onSuccess={handleSuccess} />
-      </div>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0f0f23', color: '#fff' }}>
+      <h1>Pipe Labs</h1>
+      <button onClick={connect} style={{ marginTop: 20, padding: '12px 32px', fontSize: 16, background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+        {status || '🦊 Connect MetaMask'}
+      </button>
+      {error && <p style={{ color: '#f66', marginTop: 10 }}>{error}</p>}
     </div>
   );
 }
