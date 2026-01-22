@@ -651,6 +651,8 @@ function AddClientModal({ isOpen, onClose, onSave }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showApiSecret, setShowApiSecret] = useState(false);
+  const [exchangeSuccess, setExchangeSuccess] = useState(false);
+  const [exchangeError, setExchangeError] = useState('');
   
   const [clientData, setClientData] = useState({ name: '', wallet_address: '', email: '', company: '', phone: '' });
   const [connectors, setConnectors] = useState([]);
@@ -671,10 +673,32 @@ function AddClientModal({ isOpen, onClose, onSave }) {
   const handleClose = () => { resetForm(); onClose(); };
 
   const addConnector = () => {
-    if (currentConnector.exchange && currentConnector.apiKey && currentConnector.apiSecret) {
-      setConnectors([...connectors, { ...currentConnector, id: Date.now() }]);
-      setCurrentConnector({ exchange: '', apiKey: '', apiSecret: '', memo: '', label: '' });
+    // Validate required fields
+    if (!currentConnector.exchange) {
+      setExchangeError('Please select an exchange');
+      setTimeout(() => setExchangeError(''), 3000);
+      return;
     }
+    if (!currentConnector.apiKey) {
+      setExchangeError('Please enter an API key');
+      setTimeout(() => setExchangeError(''), 3000);
+      return;
+    }
+    if (!currentConnector.apiSecret) {
+      setExchangeError('Please enter an API secret');
+      setTimeout(() => setExchangeError(''), 3000);
+      return;
+    }
+    
+    // Add connector
+    const exchangeName = EXCHANGES.find(e => e.id === currentConnector.exchange)?.name || currentConnector.exchange;
+    setConnectors([...connectors, { ...currentConnector, id: Date.now() }]);
+    setCurrentConnector({ exchange: '', apiKey: '', apiSecret: '', memo: '', label: '' });
+    
+    // Show success message
+    setExchangeSuccess(true);
+    setExchangeError('');
+    setTimeout(() => setExchangeSuccess(false), 3000);
   };
 
   const removeConnector = (id) => setConnectors(connectors.filter(c => c.id !== id));
@@ -700,39 +724,42 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       }
       
       // Call backend API to create client
-      let response;
+      const requestBody = {
+        name: clientData.name,
+        wallet_address: clientData.wallet_address,
+        email: clientData.email || null,
+        status: 'Active'
+      };
+      
+      console.log('Creating client with:', requestBody);
+      console.log('API URL:', `${API}/api/admin/clients`);
+      console.log('Token present:', !!token);
+      
+      // First, check if backend is reachable
+      let healthCheck;
       try {
-        const requestBody = {
-          name: clientData.name,
-          wallet_address: clientData.wallet_address,
-          email: clientData.email || null,
-          status: 'Active'
-        };
-        
-        console.log('Creating client with:', requestBody);
-        console.log('API URL:', `${API}/api/admin/clients`);
-        console.log('Token present:', !!token);
-        
-        response = await fetch(`${API}/api/admin/clients`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(requestBody)
-        });
-        
-        console.log('Response status:', response.status);
-        console.log('Response ok:', response.ok);
-      } catch (fetchError) {
-        console.error('Fetch error:', fetchError);
-        // Show actual error - if it's a network error, it's likely CORS or backend down
-        const errorMsg = fetchError.message || 'Network error';
-        if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
-          throw new Error('Cannot reach backend server. Check if backend is running and CORS is configured.');
-        }
-        throw new Error(`Error: ${errorMsg}`);
+        healthCheck = await fetch(`${API}/health`, { method: 'GET' });
+      } catch (healthError) {
+        console.error('Health check failed:', healthError);
+        throw new Error(`Cannot reach backend server at ${API}. Please check:\n1. Backend is running\n2. CORS is configured\n3. Network connectivity`);
       }
+      
+      if (!healthCheck.ok) {
+        throw new Error(`Backend health check failed (${healthCheck.status}). Backend may be experiencing issues.`);
+      }
+      
+      // Now create the client
+      const response = await fetch(`${API}/api/admin/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
       
       if (!response.ok) {
         let errorMessage = 'Failed to create client';
