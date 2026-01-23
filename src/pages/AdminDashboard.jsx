@@ -2224,10 +2224,13 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
         }));
         
         setClients(transformedClients);
+        console.log('✅ Loaded clients from API:', transformedClients.length, transformedClients);
       } catch (error) {
-        console.error('Failed to load clients:', error);
-        // Fallback to mock data if API fails
-        setClients(MOCK_CLIENTS);
+        console.error('❌ Failed to load clients:', error);
+        console.error('Error details:', error.message, error.stack);
+        // Don't use mock data - show empty state instead
+        setClients([]);
+        alert('Failed to load clients. Check console for details.');
       } finally {
         setClientsLoading(false);
       }
