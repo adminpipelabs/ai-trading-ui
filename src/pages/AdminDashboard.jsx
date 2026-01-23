@@ -186,6 +186,11 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
     alert(`Invitation resent to ${client.email}`);
   };
 
+  const handleManageApiKeys = (client) => {
+    // Open API keys management modal
+    setShowApiKeysModal(client);
+  };
+
   return (
     <div className="flex-1 flex flex-col p-6 overflow-hidden">
       {/* Header */}
@@ -1314,8 +1319,8 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
           phone: client.settings?.telegramId || '',
           status: client.status || 'active',
           createdAt: client.created_at,
-          connectors: [], // Will be populated from API keys if needed
-          tokens: client.settings?.tradingPair ? [client.settings.tradingPair] : [],
+          connectors: client.connectors || client.exchanges || [], // Use connectors/exchanges from API
+          tokens: client.tokens || (client.tradingPair ? [client.tradingPair] : []), // Use tokens from API
           balance: '$0',
           pnl: '$0',
           pnlPercent: '0%'
