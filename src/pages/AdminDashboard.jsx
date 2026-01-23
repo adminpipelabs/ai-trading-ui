@@ -991,39 +991,53 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
                       ))}
                     </select>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Label (optional)"
-                    value={formData.label}
-                    onChange={e => setFormData({ ...formData, label: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="API Key"
-                    value={formData.api_key}
-                    onChange={e => setFormData({ ...formData, api_key: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                  />
-                  <input
-                    type="password"
-                    placeholder="API Secret"
-                    value={formData.api_secret}
-                    onChange={e => setFormData({ ...formData, api_secret: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                  />
-                  {EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo && (
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Label (optional)</label>
                     <input
                       type="text"
-                      placeholder="Memo/Passphrase"
-                      value={formData.passphrase}
-                      onChange={e => setFormData({ ...formData, passphrase: e.target.value })}
+                      placeholder="e.g., Main Account"
+                      value={formData.label}
+                      onChange={e => setFormData({ ...formData, label: e.target.value })}
                       className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                       style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                     />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>API Key *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter API Key"
+                      value={formData.api_key}
+                      onChange={e => setFormData({ ...formData, api_key: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>API Secret *</label>
+                    <input
+                      type="password"
+                      placeholder="Enter API Secret"
+                      value={formData.api_secret}
+                      onChange={e => setFormData({ ...formData, api_secret: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      required
+                    />
+                  </div>
+                  {EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Memo/Passphrase</label>
+                      <input
+                        type="text"
+                        placeholder="Enter memo or passphrase"
+                        value={formData.passphrase}
+                        onChange={e => setFormData({ ...formData, passphrase: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      />
+                    </div>
                   )}
                   <label className="flex items-center gap-2 text-sm" style={{ color: theme.textSecondary }}>
                     <input
