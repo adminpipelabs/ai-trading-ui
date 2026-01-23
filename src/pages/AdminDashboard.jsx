@@ -1196,6 +1196,167 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
   );
 }
 
+// ========== SEND ORDER MODAL ==========
+function SendOrderModal({ client, onClose, theme }) {
+  const [formData, setFormData] = useState({
+    exchange: client.connectors?.[0]?.exchange || '',
+    trading_pair: '',
+    order_type: 'market', // 'market' or 'limit'
+    side: 'buy', // 'buy' or 'sell'
+    quantity: '',
+    price: '', // Only for limit orders
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.exchange || !formData.trading_pair || !formData.quantity) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    if (formData.order_type === 'limit' && !formData.price) {
+      alert('Please enter a price for limit orders');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // TODO: Call trading bridge API to execute order
+      alert(`Order would be sent:\nExchange: ${formData.exchange}\nPair: ${formData.trading_pair}\nType: ${formData.order_type}\nSide: ${formData.side}\nQuantity: ${formData.quantity}${formData.order_type === 'limit' ? `\nPrice: ${formData.price}` : ''}\n\nThis will connect to the trading bridge to execute the order.`);
+      onClose();
+    } catch (error) {
+      console.error('Failed to send order:', error);
+      alert('Failed to send order: ' + (error.message || 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="relative w-full max-w-md p-6 rounded-2xl" style={{ background: theme.bgPrimary, boxShadow: theme.shadowXl }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold" style={{ color: theme.textPrimary }}>Send Order - {client.name}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" style={{ color: theme.textMuted }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Exchange</label>
+            <select
+              value={formData.exchange}
+              onChange={e => setFormData({ ...formData, exchange: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+              required
+            >
+              <option value="">Select exchange</option>
+              {client.connectors?.map(conn => (
+                <option key={conn.id} value={conn.exchange}>
+                  {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Trading Pair</label>
+            <input
+              type="text"
+              placeholder="e.g., SHARP/USDT"
+              value={formData.trading_pair}
+              onChange={e => setFormData({ ...formData, trading_pair: e.target.value.toUpperCase() })}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Order Type</label>
+              <select
+                value={formData.order_type}
+                onChange={e => setFormData({ ...formData, order_type: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+              >
+                <option value="market">Market</option>
+                <option value="limit">Limit</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Side</label>
+              <select
+                value={formData.side}
+                onChange={e => setFormData({ ...formData, side: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+              >
+                <option value="buy">Buy</option>
+                <option value="sell">Sell</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Quantity</label>
+            <input
+              type="number"
+              step="0.00000001"
+              placeholder="0.00"
+              value={formData.quantity}
+              onChange={e => setFormData({ ...formData, quantity: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+              required
+            />
+          </div>
+
+          {formData.order_type === 'limit' && (
+            <div>
+              <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Price</label>
+              <input
+                type="number"
+                step="0.00000001"
+                placeholder="0.00"
+                value={formData.price}
+                onChange={e => setFormData({ ...formData, price: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                required
+              />
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+              style={{ background: theme.bgSecondary, color: theme.textSecondary }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white"
+              style={{ background: theme.positive, opacity: isSubmitting ? 0.6 : 1 }}
+            >
+              {isSubmitting ? 'Sending...' : 'Send Order'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ========== BOTS MODAL ==========
 function BotsModal({ client, onClose, onUpdate, theme }) {
   const [pairs, setPairs] = useState([]);
