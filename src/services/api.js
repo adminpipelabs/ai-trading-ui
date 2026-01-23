@@ -92,7 +92,7 @@ export const adminAPI = {
   },
 
   async deleteClientApiKey(clientId, keyId) {
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}/api-keys/${keyId}`, {
+    return apiCall(`${API_URL}/api/admin/api-keys/${keyId}`, {
       method: 'DELETE',
     });
   },
@@ -100,6 +100,31 @@ export const adminAPI = {
   async sendInvite(clientId) {
     return apiCall(`${API_URL}/api/admin/clients/${clientId}/invite`, {
       method: 'POST',
+    });
+  },
+
+  // Trading Pairs / Bots
+  async getClientPairs(clientId) {
+    return apiCall(`${API_URL}/api/admin/clients/${clientId}/pairs`);
+  },
+
+  async createPair(clientId, data) {
+    return apiCall(`${API_URL}/api/admin/clients/${clientId}/pairs`, {
+      method: 'POST',
+      body: JSON.stringify({ ...data, client_id: clientId }),
+    });
+  },
+
+  async updatePair(pairId, data) {
+    return apiCall(`${API_URL}/api/admin/pairs/${pairId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deletePair(pairId) {
+    return apiCall(`${API_URL}/api/admin/pairs/${pairId}`, {
+      method: 'DELETE',
     });
   },
 };
