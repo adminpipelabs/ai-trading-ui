@@ -743,6 +743,15 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
         </div>
       )}
 
+      {/* Send Order Modal */}
+      {showSendOrderModal && (
+        <SendOrderModal
+          client={showSendOrderModal}
+          onClose={() => setShowSendOrderModal(null)}
+          theme={theme}
+        />
+      )}
+
       {/* API Keys Management Modal */}
       {showApiKeysModal && <ApiKeysModal client={showApiKeysModal} onClose={() => setShowApiKeysModal(null)} onUpdate={async () => {
         const { adminAPI } = await import('../services/api');
@@ -1027,6 +1036,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
   const [pairs, setPairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [clientConnectors, setClientConnectors] = useState(client.connectors || []);
   const [formData, setFormData] = useState({
     exchange: client.connectors?.[0]?.exchange || 'bitmart',
     trading_pair: '',
@@ -1034,7 +1044,32 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
 
   useEffect(() => {
     loadPairs();
+    loadClientConnectors();
   }, [client]);
+
+  const loadClientConnectors = async () => {
+    try {
+      const { adminAPI } = await import('../services/api');
+      const apiKeys = await adminAPI.getClientApiKeys(client.id);
+      // Transform API keys to connectors format
+      const connectors = (apiKeys || [])
+        .filter(key => key.is_active)
+        .map(key => ({
+          id: key.id,
+          exchange: key.exchange,
+          label: key.label || `${key.exchange} Account`,
+          is_testnet: key.is_testnet,
+          is_active: key.is_active
+        }));
+      setClientConnectors(connectors);
+      if (connectors.length > 0 && !formData.exchange) {
+        setFormData({ ...formData, exchange: connectors[0].exchange });
+      }
+    } catch (error) {
+      console.error('Failed to load connectors:', error);
+      setClientConnectors(client.connectors || []);
+    }
+  };
 
   const loadPairs = async () => {
     try {
@@ -1198,6 +1233,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
 
 // ========== SEND ORDER MODAL ==========
 function SendOrderModal({ client, onClose, theme }) {
+  const [clientConnectors, setClientConnectors] = useState(client.connectors || []);
   const [formData, setFormData] = useState({
     exchange: client.connectors?.[0]?.exchange || '',
     trading_pair: '',
@@ -1207,6 +1243,34 @@ function SendOrderModal({ client, onClose, theme }) {
     price: '', // Only for limit orders
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadClientConnectors();
+  }, [client]);
+
+  const loadClientConnectors = async () => {
+    try {
+      const { adminAPI } = await import('../services/api');
+      const apiKeys = await adminAPI.getClientApiKeys(client.id);
+      // Transform API keys to connectors format
+      const connectors = (apiKeys || [])
+        .filter(key => key.is_active)
+        .map(key => ({
+          id: key.id,
+          exchange: key.exchange,
+          label: key.label || `${key.exchange} Account`,
+          is_testnet: key.is_testnet,
+          is_active: key.is_active
+        }));
+      setClientConnectors(connectors);
+      if (connectors.length > 0 && !formData.exchange) {
+        setFormData({ ...formData, exchange: connectors[0].exchange });
+      }
+    } catch (error) {
+      console.error('Failed to load connectors:', error);
+      setClientConnectors(client.connectors || []);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1254,12 +1318,17 @@ function SendOrderModal({ client, onClose, theme }) {
               required
             >
               <option value="">Select exchange</option>
-              {client.connectors?.map(conn => (
+              {clientConnectors.map(conn => (
                 <option key={conn.id} value={conn.exchange}>
                   {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
                 </option>
               ))}
             </select>
+            {clientConnectors.length === 0 && (
+              <div className="text-xs p-2 rounded-lg mt-2" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+                ⚠️ No active API keys found. Add an API key first.
+              </div>
+            )}
           </div>
 
           <div>
@@ -1362,6 +1431,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   const [pairs, setPairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [clientConnectors, setClientConnectors] = useState(client.connectors || []);
   const [formData, setFormData] = useState({
     exchange: client.connectors?.[0]?.exchange || 'bitmart',
     trading_pair: '',
@@ -1372,7 +1442,32 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
 
   useEffect(() => {
     loadBots();
+    loadClientConnectors();
   }, [client]);
+
+  const loadClientConnectors = async () => {
+    try {
+      const { adminAPI } = await import('../services/api');
+      const apiKeys = await adminAPI.getClientApiKeys(client.id);
+      // Transform API keys to connectors format
+      const connectors = (apiKeys || [])
+        .filter(key => key.is_active)
+        .map(key => ({
+          id: key.id,
+          exchange: key.exchange,
+          label: key.label || `${key.exchange} Account`,
+          is_testnet: key.is_testnet,
+          is_active: key.is_active
+        }));
+      setClientConnectors(connectors);
+      if (connectors.length > 0 && !formData.exchange) {
+        setFormData({ ...formData, exchange: connectors[0].exchange });
+      }
+    } catch (error) {
+      console.error('Failed to load connectors:', error);
+      setClientConnectors(client.connectors || []);
+    }
+  };
 
   const loadBots = async () => {
     try {
@@ -1444,8 +1539,6 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
     }
   };
 
-  const availableExchanges = client.connectors || [];
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
@@ -1475,7 +1568,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
               <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
                 <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Create New Bot</h3>
                 <div className="space-y-3">
-                  {availableExchanges.length === 0 ? (
+                  {clientConnectors.length === 0 ? (
                     <div className="text-sm p-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
                       ⚠️ No exchanges configured. Add an API key first.
                     </div>
@@ -1487,7 +1580,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                         className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                         style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                       >
-                        {availableExchanges.map(conn => (
+                        {clientConnectors.map(conn => (
                           <option key={conn.id} value={conn.exchange}>
                             {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
                           </option>
