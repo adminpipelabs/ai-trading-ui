@@ -55,16 +55,53 @@ const themes = {
   }
 };
 
-// Supported exchanges
+// Supported exchanges - All Hummingbot connectors
+// Source: https://hummingbot.org/exchanges/
 const EXCHANGES = [
-  { id: 'bitmart', name: 'BitMart', requiresMemo: true },
+  // CLOB CEX (Centralized Exchanges)
   { id: 'binance', name: 'Binance', requiresMemo: false },
-  { id: 'kucoin', name: 'KuCoin', requiresMemo: true },
+  { id: 'bitget', name: 'Bitget', requiresMemo: false },
+  { id: 'bitmart', name: 'BitMart', requiresMemo: true },
+  { id: 'derive', name: 'Derive', requiresMemo: false },
+  { id: 'dydx', name: 'dYdX', requiresMemo: false },
   { id: 'gateio', name: 'Gate.io', requiresMemo: false },
-  { id: 'mexc', name: 'MEXC', requiresMemo: false },
-  { id: 'bybit', name: 'Bybit', requiresMemo: false },
-  { id: 'okx', name: 'OKX', requiresMemo: true },
   { id: 'htx', name: 'HTX (Huobi)', requiresMemo: false },
+  { id: 'hyperliquid', name: 'Hyperliquid', requiresMemo: false },
+  { id: 'kucoin', name: 'KuCoin', requiresMemo: true },
+  { id: 'okx', name: 'OKX', requiresMemo: true },
+  { id: 'xrpl', name: 'XRP Ledger', requiresMemo: false },
+  { id: 'ascendex', name: 'AscendEx', requiresMemo: false },
+  { id: 'bitstamp', name: 'Bitstamp', requiresMemo: false },
+  { id: 'bitrue', name: 'Bitrue', requiresMemo: false },
+  { id: 'bingx', name: 'BingX', requiresMemo: false },
+  { id: 'bybit', name: 'Bybit', requiresMemo: false },
+  { id: 'btc_markets', name: 'BTC Markets', requiresMemo: false },
+  { id: 'coinbase', name: 'Coinbase', requiresMemo: false },
+  { id: 'kraken', name: 'Kraken', requiresMemo: false },
+  { id: 'mexc', name: 'MEXC', requiresMemo: false },
+  { id: 'ndax', name: 'NDAX', requiresMemo: false },
+  
+  // CLOB DEX (Decentralized Exchanges)
+  { id: 'vertex', name: 'Vertex', requiresMemo: false },
+  
+  // Gateway DEX (AMM/DEX via Gateway)
+  { id: 'balancer', name: 'Balancer', requiresMemo: false },
+  { id: 'cube', name: 'Cube', requiresMemo: false },
+  { id: 'curve', name: 'Curve', requiresMemo: false },
+  { id: 'dexalot', name: 'Dexalot', requiresMemo: false },
+  { id: 'etcswap', name: 'ETCSwap', requiresMemo: false },
+  { id: 'foxbit', name: 'Foxbit', requiresMemo: false },
+  { id: 'injective', name: 'Injective Helix', requiresMemo: false },
+  { id: 'jupiter', name: 'Jupiter', requiresMemo: false },
+  { id: 'meteora', name: 'Meteora', requiresMemo: false },
+  { id: 'pancakeswap', name: 'Pancakeswap', requiresMemo: false },
+  { id: 'orca', name: 'Orca', requiresMemo: false },
+  { id: 'raydium', name: 'Raydium', requiresMemo: false },
+  { id: 'quickswap', name: 'Quickswap', requiresMemo: false },
+  { id: 'sushiswap', name: 'Sushiswap', requiresMemo: false },
+  { id: 'traderjoe', name: 'TraderJoe', requiresMemo: false },
+  { id: 'uniswap', name: 'Uniswap', requiresMemo: false },
+  { id: 'gateway', name: 'Gateway DEX', requiresMemo: false },
 ];
 
 // Mock client data
