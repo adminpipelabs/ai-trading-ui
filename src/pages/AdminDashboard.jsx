@@ -201,10 +201,10 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
     setShowBotsModal(client);
   };
 
+  const [showSendOrderModal, setShowSendOrderModal] = useState(null);
+
   const handleSendOrder = (client) => {
-    // Open order sending modal/interface
-    alert(`Send Order feature for ${client.name}\n\nThis will open the order interface where you can:\n- Select exchange\n- Choose trading pair\n- Set order type (market/limit)\n- Set quantity and price\n- Execute order`);
-    // TODO: Implement order sending modal
+    setShowSendOrderModal(client);
   };
 
   const handleRemovePair = async (client, pairToken) => {
