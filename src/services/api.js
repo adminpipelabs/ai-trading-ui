@@ -62,6 +62,13 @@ export const adminAPI = {
   },
 
   async addClientApiKey(clientId, data) {
+    return apiCall(`${API_URL}/api/admin/api-keys`, {
+      method: 'POST',
+      body: JSON.stringify({ ...data, client_id: clientId }),
+    });
+  },
+
+  async addClientApiKey(clientId, data) {
     return apiCall(`${API_URL}/api/admin/clients/${clientId}/api-keys`, {
       method: 'POST',
       body: JSON.stringify(data),

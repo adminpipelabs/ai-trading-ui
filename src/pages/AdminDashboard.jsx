@@ -201,22 +201,110 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
     setShowBotsModal(client);
   };
 
-  const handleRemovePair = async (client, pair) => {
-    if (!confirm(`Remove trading pair ${pair}?`)) return;
-    // TODO: Call API to remove pair
-    console.log('Remove pair:', pair, 'from client:', client.id);
+  const handleRemovePair = async (client, pairToken) => {
+    if (!confirm(`Remove trading pair ${pairToken}?`)) return;
+    try {
+      // Find the pair ID from client.pairs
+      const pair = client.pairs?.find(p => p.trading_pair === pairToken);
+      if (pair) {
+        const { adminAPI } = await import('../services/api');
+        await adminAPI.deletePair(pair.id);
+        // Reload clients
+        const data = await adminAPI.getClients();
+        const transformedClients = (data || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          wallet_address: c.wallet_address,
+          wallet_type: c.wallet_type || 'EVM',
+          company: c.settings?.contactPerson || '',
+          phone: c.settings?.telegramId || '',
+          status: c.status || 'active',
+          createdAt: c.created_at,
+          connectors: c.connectors || c.exchanges || [],
+          tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+          pairs: c.pairs || [],
+          balance: '$0',
+          pnl: '$0',
+          pnlPercent: '0%'
+        }));
+        setClients(transformedClients);
+        if (selectedClient?.id === client.id) {
+          setSelectedClient(transformedClients.find(c => c.id === client.id));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to remove pair:', error);
+      alert('Failed to remove trading pair');
+    }
   };
 
   const handleToggleBot = async (client, pair) => {
     const newStatus = pair.status === 'active' ? 'paused' : 'active';
-    // TODO: Call API to update bot status
-    console.log('Toggle bot:', pair.id, 'to status:', newStatus);
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.updatePair(pair.id, { status: newStatus });
+      // Reload clients
+      const data = await adminAPI.getClients();
+      const transformedClients = (data || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        wallet_address: c.wallet_address,
+        wallet_type: c.wallet_type || 'EVM',
+        company: c.settings?.contactPerson || '',
+        phone: c.settings?.telegramId || '',
+        status: c.status || 'active',
+        createdAt: c.created_at,
+        connectors: c.connectors || c.exchanges || [],
+        tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+        pairs: c.pairs || [],
+        balance: '$0',
+        pnl: '$0',
+        pnlPercent: '0%'
+      }));
+      setClients(transformedClients);
+      if (selectedClient?.id === client.id) {
+        setSelectedClient(transformedClients.find(c => c.id === client.id));
+      }
+    } catch (error) {
+      console.error('Failed to toggle bot:', error);
+      alert('Failed to update bot status');
+    }
   };
 
   const handleRemoveBot = async (client, botId) => {
     if (!confirm('Delete this bot?')) return;
-    // TODO: Call API to delete bot
-    console.log('Remove bot:', botId, 'from client:', client.id);
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.deletePair(botId);
+      // Reload clients
+      const data = await adminAPI.getClients();
+      const transformedClients = (data || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        wallet_address: c.wallet_address,
+        wallet_type: c.wallet_type || 'EVM',
+        company: c.settings?.contactPerson || '',
+        phone: c.settings?.telegramId || '',
+        status: c.status || 'active',
+        createdAt: c.created_at,
+        connectors: c.connectors || c.exchanges || [],
+        tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+        pairs: c.pairs || [],
+        balance: '$0',
+        pnl: '$0',
+        pnlPercent: '0%'
+      }));
+      setClients(transformedClients);
+      if (selectedClient?.id === client.id) {
+        setSelectedClient(transformedClients.find(c => c.id === client.id));
+      }
+    } catch (error) {
+      console.error('Failed to remove bot:', error);
+      alert('Failed to delete bot');
+    }
   };
 
   return (
@@ -613,6 +701,702 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
           </div>
         </div>
       )}
+
+      {/* API Keys Management Modal */}
+      {showApiKeysModal && <ApiKeysModal client={showApiKeysModal} onClose={() => setShowApiKeysModal(null)} onUpdate={async () => {
+        const { adminAPI } = await import('../services/api');
+        const data = await adminAPI.getClients();
+        const transformedClients = (data || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          wallet_address: c.wallet_address,
+          wallet_type: c.wallet_type || 'EVM',
+          company: c.settings?.contactPerson || '',
+          phone: c.settings?.telegramId || '',
+          status: c.status || 'active',
+          createdAt: c.created_at,
+          connectors: c.connectors || c.exchanges || [],
+          tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+          pairs: c.pairs || [],
+          balance: '$0',
+          pnl: '$0',
+          pnlPercent: '0%'
+        }));
+        setClients(transformedClients);
+        if (selectedClient?.id === showApiKeysModal.id) {
+          setSelectedClient(transformedClients.find(c => c.id === showApiKeysModal.id));
+        }
+      }} theme={theme} />}
+
+      {/* Trading Pairs Management Modal */}
+      {showPairsModal && <PairsModal client={showPairsModal} onClose={() => setShowPairsModal(null)} onUpdate={async () => {
+        const { adminAPI } = await import('../services/api');
+        const data = await adminAPI.getClients();
+        const transformedClients = (data || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          wallet_address: c.wallet_address,
+          wallet_type: c.wallet_type || 'EVM',
+          company: c.settings?.contactPerson || '',
+          phone: c.settings?.telegramId || '',
+          status: c.status || 'active',
+          createdAt: c.created_at,
+          connectors: c.connectors || c.exchanges || [],
+          tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+          pairs: c.pairs || [],
+          balance: '$0',
+          pnl: '$0',
+          pnlPercent: '0%'
+        }));
+        setClients(transformedClients);
+        if (selectedClient?.id === showPairsModal.id) {
+          setSelectedClient(transformedClients.find(c => c.id === showPairsModal.id));
+        }
+      }} theme={theme} />}
+
+      {/* Bots Management Modal */}
+      {showBotsModal && <BotsModal client={showBotsModal} onClose={() => setShowBotsModal(null)} onUpdate={async () => {
+        const { adminAPI } = await import('../services/api');
+        const data = await adminAPI.getClients();
+        const transformedClients = (data || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          wallet_address: c.wallet_address,
+          wallet_type: c.wallet_type || 'EVM',
+          company: c.settings?.contactPerson || '',
+          phone: c.settings?.telegramId || '',
+          status: c.status || 'active',
+          createdAt: c.created_at,
+          connectors: c.connectors || c.exchanges || [],
+          tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+          pairs: c.pairs || [],
+          balance: '$0',
+          pnl: '$0',
+          pnlPercent: '0%'
+        }));
+        setClients(transformedClients);
+        if (selectedClient?.id === showBotsModal.id) {
+          setSelectedClient(transformedClients.find(c => c.id === showBotsModal.id));
+        }
+      }} theme={theme} />}
+    </div>
+  );
+}
+
+// ========== API KEYS MODAL ==========
+function ApiKeysModal({ client, onClose, onUpdate, theme }) {
+  const [apiKeys, setApiKeys] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [formData, setFormData] = useState({
+    exchange: 'bitmart',
+    api_key: '',
+    api_secret: '',
+    passphrase: '',
+    label: '',
+    is_testnet: false
+  });
+
+  useEffect(() => {
+    loadApiKeys();
+  }, [client]);
+
+  const loadApiKeys = async () => {
+    try {
+      setLoading(true);
+      const { adminAPI } = await import('../services/api');
+      const keys = await adminAPI.getClientApiKeys(client.id);
+      setApiKeys(keys || []);
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+      setApiKeys([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.addClientApiKey(client.id, formData);
+      setFormData({ exchange: 'bitmart', api_key: '', api_secret: '', passphrase: '', label: '', is_testnet: false });
+      setShowAdd(false);
+      await loadApiKeys();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to add API key:', error);
+      alert('Failed to add API key: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  const handleDelete = async (keyId) => {
+    if (!confirm('Delete this API key?')) return;
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.deleteClientApiKey(client.id, keyId);
+      await loadApiKeys();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to delete API key:', error);
+      alert('Failed to delete API key');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: theme.bgPrimary, boxShadow: theme.shadowXl }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold" style={{ color: theme.textPrimary }}>API Keys - {client.name}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" style={{ color: theme.textMuted }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8" style={{ color: theme.textMuted }}>Loading...</div>
+        ) : (
+          <>
+            <div className="mb-4">
+              <button
+                onClick={() => setShowAdd(!showAdd)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: theme.accent, color: 'white' }}
+              >
+                <Plus size={16} /> Add API Key
+              </button>
+            </div>
+
+            {showAdd && (
+              <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Add New API Key</h3>
+                <div className="space-y-3">
+                  <select
+                    value={formData.exchange}
+                    onChange={e => setFormData({ ...formData, exchange: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  >
+                    {EXCHANGES.map(ex => (
+                      <option key={ex.id} value={ex.id}>{ex.name}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Label (optional)"
+                    value={formData.label}
+                    onChange={e => setFormData({ ...formData, label: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="API Key"
+                    value={formData.api_key}
+                    onChange={e => setFormData({ ...formData, api_key: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="API Secret"
+                    value={formData.api_secret}
+                    onChange={e => setFormData({ ...formData, api_secret: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  />
+                  {EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo && (
+                    <input
+                      type="text"
+                      placeholder="Memo/Passphrase"
+                      value={formData.passphrase}
+                      onChange={e => setFormData({ ...formData, passphrase: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    />
+                  )}
+                  <label className="flex items-center gap-2 text-sm" style={{ color: theme.textSecondary }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.is_testnet}
+                      onChange={e => setFormData({ ...formData, is_testnet: e.target.checked })}
+                    />
+                    Testnet / Sandbox
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleAdd}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{ background: theme.accent, color: 'white' }}
+                    >
+                      Add
+                    </button>
+                    <button
+                      onClick={() => setShowAdd(false)}
+                      className="px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{ background: theme.bgSecondary, color: theme.textSecondary }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {apiKeys.length === 0 ? (
+                <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>No API keys configured</div>
+              ) : (
+                apiKeys.map(key => (
+                  <div key={key.id} className="flex items-center justify-between p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                        {EXCHANGES.find(e => e.id === key.exchange)?.name || key.exchange}
+                        {key.label && <span className="ml-2 text-xs" style={{ color: theme.textMuted }}>({key.label})</span>}
+                      </div>
+                      <div className="text-xs mt-1 font-mono" style={{ color: theme.textMuted }}>{key.api_key_preview}</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {key.is_active && <span className="px-2 py-0.5 rounded text-xs" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Active</span>}
+                        {key.is_testnet && <span className="px-2 py-0.5 rounded text-xs" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>Testnet</span>}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(key.id)}
+                      className="p-2 rounded-lg"
+                      style={{ background: 'rgba(239, 68, 68, 0.1)', color: theme.negative }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== TRADING PAIRS MODAL ==========
+function PairsModal({ client, onClose, onUpdate, theme }) {
+  const [pairs, setPairs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [formData, setFormData] = useState({
+    exchange: client.connectors?.[0]?.exchange || 'bitmart',
+    trading_pair: '',
+  });
+
+  useEffect(() => {
+    loadPairs();
+  }, [client]);
+
+  const loadPairs = async () => {
+    try {
+      setLoading(true);
+      const { adminAPI } = await import('../services/api');
+      const data = await adminAPI.getClientPairs(client.id);
+      setPairs(data || []);
+    } catch (error) {
+      console.error('Failed to load pairs:', error);
+      setPairs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!formData.trading_pair) {
+      alert('Please enter a trading pair (e.g., SHARP/USDT)');
+      return;
+    }
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.createPair(client.id, {
+        exchange: formData.exchange,
+        trading_pair: formData.trading_pair.toUpperCase(),
+        bot_type: 'both'
+      });
+      setFormData({ exchange: client.connectors?.[0]?.exchange || 'bitmart', trading_pair: '' });
+      setShowAdd(false);
+      await loadPairs();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to add pair:', error);
+      alert('Failed to add trading pair: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  const handleDelete = async (pairId) => {
+    if (!confirm('Delete this trading pair?')) return;
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.deletePair(pairId);
+      await loadPairs();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to delete pair:', error);
+      alert('Failed to delete trading pair');
+    }
+  };
+
+  const availableExchanges = client.connectors || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: theme.bgPrimary, boxShadow: theme.shadowXl }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold" style={{ color: theme.textPrimary }}>Trading Pairs - {client.name}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" style={{ color: theme.textMuted }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8" style={{ color: theme.textMuted }}>Loading...</div>
+        ) : (
+          <>
+            <div className="mb-4">
+              <button
+                onClick={() => setShowAdd(!showAdd)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: theme.accent, color: 'white' }}
+              >
+                <Plus size={16} /> Add Trading Pair
+              </button>
+            </div>
+
+            {showAdd && (
+              <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Add New Trading Pair</h3>
+                <div className="space-y-3">
+                  {availableExchanges.length === 0 ? (
+                    <div className="text-sm p-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+                      ⚠️ No exchanges configured. Add an API key first.
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={formData.exchange}
+                        onChange={e => setFormData({ ...formData, exchange: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      >
+                        {availableExchanges.map(conn => (
+                          <option key={conn.id} value={conn.exchange}>
+                            {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Trading Pair (e.g., SHARP/USDT)"
+                        value={formData.trading_pair}
+                        onChange={e => setFormData({ ...formData, trading_pair: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAdd}
+                          className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                          style={{ background: theme.accent, color: 'white' }}
+                        >
+                          Add
+                        </button>
+                        <button
+                          onClick={() => setShowAdd(false)}
+                          className="px-4 py-2 rounded-lg text-sm font-medium"
+                          style={{ background: theme.bgSecondary, color: theme.textSecondary }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {pairs.length === 0 ? (
+                <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>No trading pairs configured</div>
+              ) : (
+                pairs.map(pair => (
+                  <div key={pair.id} className="flex items-center justify-between p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                        {pair.trading_pair} on {EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange}
+                      </div>
+                      <div className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                        Bot Type: {pair.bot_type} • Status: {pair.status}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(pair.id)}
+                      className="p-2 rounded-lg"
+                      style={{ background: 'rgba(239, 68, 68, 0.1)', color: theme.negative }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ========== BOTS MODAL ==========
+function BotsModal({ client, onClose, onUpdate, theme }) {
+  const [pairs, setPairs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [formData, setFormData] = useState({
+    exchange: client.connectors?.[0]?.exchange || 'bitmart',
+    trading_pair: '',
+    bot_type: 'both',
+    spread_target: 0.3,
+    volume_target_daily: 10000,
+  });
+
+  useEffect(() => {
+    loadBots();
+  }, [client]);
+
+  const loadBots = async () => {
+    try {
+      setLoading(true);
+      const { adminAPI } = await import('../services/api');
+      const data = await adminAPI.getClientPairs(client.id);
+      setPairs(data || []);
+    } catch (error) {
+      console.error('Failed to load bots:', error);
+      setPairs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!formData.trading_pair) {
+      alert('Please enter a trading pair');
+      return;
+    }
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.createPair(client.id, {
+        exchange: formData.exchange,
+        trading_pair: formData.trading_pair.toUpperCase(),
+        bot_type: formData.bot_type,
+        spread_target: formData.spread_target,
+        volume_target_daily: formData.volume_target_daily,
+      });
+      setFormData({
+        exchange: client.connectors?.[0]?.exchange || 'bitmart',
+        trading_pair: '',
+        bot_type: 'both',
+        spread_target: 0.3,
+        volume_target_daily: 10000,
+      });
+      setShowAdd(false);
+      await loadBots();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to add bot:', error);
+      alert('Failed to add bot: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  const handleToggle = async (pair) => {
+    const newStatus = pair.status === 'active' ? 'paused' : 'active';
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.updatePair(pair.id, { status: newStatus });
+      await loadBots();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to toggle bot:', error);
+      alert('Failed to update bot status');
+    }
+  };
+
+  const handleDelete = async (pairId) => {
+    if (!confirm('Delete this bot?')) return;
+    try {
+      const { adminAPI } = await import('../services/api');
+      await adminAPI.deletePair(pairId);
+      await loadBots();
+      await onUpdate();
+    } catch (error) {
+      console.error('Failed to delete bot:', error);
+      alert('Failed to delete bot');
+    }
+  };
+
+  const availableExchanges = client.connectors || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
+      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: theme.bgPrimary, boxShadow: theme.shadowXl }}>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold" style={{ color: theme.textPrimary }}>Bots - {client.name}</h2>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" style={{ color: theme.textMuted }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8" style={{ color: theme.textMuted }}>Loading...</div>
+        ) : (
+          <>
+            <div className="mb-4">
+              <button
+                onClick={() => setShowAdd(!showAdd)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: theme.accent, color: 'white' }}
+              >
+                <Plus size={16} /> Add Bot
+              </button>
+            </div>
+
+            {showAdd && (
+              <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Create New Bot</h3>
+                <div className="space-y-3">
+                  {availableExchanges.length === 0 ? (
+                    <div className="text-sm p-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
+                      ⚠️ No exchanges configured. Add an API key first.
+                    </div>
+                  ) : (
+                    <>
+                      <select
+                        value={formData.exchange}
+                        onChange={e => setFormData({ ...formData, exchange: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      >
+                        {availableExchanges.map(conn => (
+                          <option key={conn.id} value={conn.exchange}>
+                            {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Trading Pair (e.g., SHARP/USDT)"
+                        value={formData.trading_pair}
+                        onChange={e => setFormData({ ...formData, trading_pair: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      />
+                      <select
+                        value={formData.bot_type}
+                        onChange={e => setFormData({ ...formData, bot_type: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      >
+                        <option value="market_maker">Market Maker</option>
+                        <option value="volume_generator">Volume Generator</option>
+                        <option value="both">Both</option>
+                      </select>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Spread Target (%)"
+                        value={formData.spread_target}
+                        onChange={e => setFormData({ ...formData, spread_target: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      />
+                      <input
+                        type="number"
+                        step="100"
+                        placeholder="Daily Volume Target (USD)"
+                        value={formData.volume_target_daily}
+                        onChange={e => setFormData({ ...formData, volume_target_daily: parseFloat(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAdd}
+                          className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                          style={{ background: theme.accent, color: 'white' }}
+                        >
+                          Create Bot
+                        </button>
+                        <button
+                          onClick={() => setShowAdd(false)}
+                          className="px-4 py-2 rounded-lg text-sm font-medium"
+                          style={{ background: theme.bgSecondary, color: theme.textSecondary }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {pairs.length === 0 ? (
+                <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>No bots configured</div>
+              ) : (
+                pairs.map(pair => (
+                  <div key={pair.id} className="flex items-center justify-between p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                        {pair.trading_pair} on {EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange}
+                      </div>
+                      <div className="text-xs mt-1 flex items-center gap-3" style={{ color: theme.textMuted }}>
+                        <span>{pair.bot_type}</span>
+                        <span>•</span>
+                        <span className={`px-1.5 py-0.5 rounded ${
+                          pair.status === 'active' ? 'bg-green-100 text-green-700' : 
+                          pair.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {pair.status}
+                        </span>
+                        {pair.spread_target && <span>• Spread: {pair.spread_target}%</span>}
+                        {pair.volume_target_daily && <span>• Volume: ${pair.volume_target_daily.toLocaleString()}/day</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleToggle(pair)}
+                        className="p-2 rounded-lg"
+                        style={{ background: pair.status === 'active' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: pair.status === 'active' ? theme.negative : theme.positive }}
+                        title={pair.status === 'active' ? 'Pause' : 'Start'}
+                      >
+                        {pair.status === 'active' ? <Activity size={16} /> : <CheckCircle2 size={16} />}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(pair.id)}
+                        className="p-2 rounded-lg"
+                        style={{ background: 'rgba(239, 68, 68, 0.1)', color: theme.negative }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
