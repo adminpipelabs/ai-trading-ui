@@ -130,4 +130,52 @@ export const tradingBridge = {
   },
 };
 
-export default { adminAPI, tradingBridge };
+// ========== CLIENT API ==========
+export const clientAPI = {
+  async getPortfolio() {
+    return apiCall(`${API_URL}/api/clients/portfolio`);
+  },
+
+  async getBalances() {
+    return apiCall(`${API_URL}/api/clients/balances`);
+  },
+
+  async getTrades(tradingPair = null, limit = 100, days = 7) {
+    const params = new URLSearchParams({ limit: limit.toString(), days: days.toString() });
+    if (tradingPair) params.append('trading_pair', tradingPair);
+    return apiCall(`${API_URL}/api/clients/trades?${params}`);
+  },
+
+  async getVolume(days = 7) {
+    return apiCall(`${API_URL}/api/clients/volume?days=${days}`);
+  },
+
+  async generateReport(format = 'json', days = 30) {
+    const url = `${API_URL}/api/clients/report?format=${format}&days=${days}`;
+    if (format === 'csv') {
+      // For CSV, download the file
+      const token = localStorage.getItem('access_token') || 
+                    localStorage.getItem('pipelabs_token') || 
+                    localStorage.getItem('auth_token');
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error('Failed to generate report');
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `trading_report_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(downloadUrl);
+      return { success: true };
+    }
+    return apiCall(url);
+  },
+};
+
+export default { adminAPI, tradingBridge, clientAPI };

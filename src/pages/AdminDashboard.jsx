@@ -1605,155 +1605,342 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
 
 // ========== CLIENT DASHBOARD (View for clients) ==========
 function ClientDashboard({ user, theme, isDark }) {
-  const [messages, setMessages] = useState([
-    { role: 'assistant', content: "Welcome back! I can help you check your balances, view P&L, and monitor your portfolio. What would you like to know?" }
-  ]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
+  const [balances, setBalances] = useState([]);
+  const [portfolio, setPortfolio] = useState(null);
+  const [trades, setTrades] = useState([]);
+  const [volume, setVolume] = useState(null);
+  const [loadingData, setLoadingData] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'balances', 'trades', 'reports'
+  const [reportDays, setReportDays] = useState(30);
 
-  // Client's assigned tokens
-  const clientTokens = ['SHARP/USDT', 'BTC/USDT'];
-  const clientData = {
-    balance: '$124,500',
-    pnl: '+$8,420',
-    pnlPercent: '+7.2%',
-    tokens: clientTokens
-  };
-
-  const quickPrompts = ["Show my balances", "My P&L today", "SHARP/USDT price", "Trade history"];
-
+  // Load real data from API
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    loadClientData();
+    // Refresh every 30 seconds
+    const interval = setInterval(loadClientData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages(prev => [...prev, { role: 'user', content: input }]);
-    const userInput = input;
-    setInput('');
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      let response = { role: 'assistant', content: '', data: null };
+  const loadClientData = async () => {
+    try {
+      setLoadingData(true);
+      const { clientAPI } = await import('../services/api');
       
-      if (userInput.toLowerCase().includes('balance')) {
-        response.content = "Here are your current balances:";
-        response.data = { type: 'balances', tokens: clientTokens.map(t => ({ pair: t, balance: Math.random() * 10000, value: `$${(Math.random() * 50000).toFixed(2)}` })) };
-      } else if (userInput.toLowerCase().includes('price') || userInput.toLowerCase().includes('sharp')) {
-        response.content = "Here's the current price:";
-        response.data = { type: 'price', pair: 'SHARP/USDT', price: '$0.006757', change: '+2.4%' };
-      } else if (userInput.toLowerCase().includes('p&l') || userInput.toLowerCase().includes('pnl')) {
-        response.content = `Your current P&L is ${clientData.pnl} (${clientData.pnlPercent}) this week.`;
-      } else {
-        response.content = `I'll look into that for you. Your assigned trading pairs are: ${clientTokens.join(', ')}`;
-      }
-      
-      setMessages(prev => [...prev, response]);
-      setIsLoading(false);
-    }, 800);
+      // Load all data in parallel
+      const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
+        clientAPI.getPortfolio().catch(() => null),
+        clientAPI.getBalances().catch(() => []),
+        clientAPI.getTrades(null, 100, 7).catch(() => []),
+        clientAPI.getVolume(7).catch(() => null),
+      ]);
+
+      setPortfolio(portfolioData);
+      setBalances(balancesData || []);
+      setTrades(tradesData || []);
+      setVolume(volumeData);
+    } catch (error) {
+      console.error('Failed to load client data:', error);
+    } finally {
+      setLoadingData(false);
+    }
   };
+
+  const handleGenerateReport = async (format = 'json', days = 30) => {
+    try {
+      const { clientAPI } = await import('../services/api');
+      if (format === 'csv') {
+        await clientAPI.generateReport('csv', days);
+        alert('Report downloaded successfully!');
+      } else {
+        const report = await clientAPI.generateReport(format, days);
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trading_report_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Failed to generate report:', error);
+      alert('Failed to generate report: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  const formatCurrency = (value) => {
+    if (!value && value !== 0) return '$0.00';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+  };
+
+  const formatNumber = (value, decimals = 2) => {
+    if (!value && value !== 0) return '0';
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Calculate total balance
+  const totalBalance = balances.reduce((sum, b) => sum + (b.usd_value || 0), 0);
 
   return (
-    <div className="flex-1 flex flex-col p-6">
-      <div className="flex-1 flex flex-col max-w-3xl w-full mx-auto">
+    <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+      <div className="max-w-7xl w-full mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-2.5 mb-6">
-          <Sparkles size={20} style={{ color: theme.accent }} />
-          <span className="text-lg font-semibold" style={{ color: theme.textPrimary }}>AI Trading Assistant</span>
-        </div>
-
-        {/* Your Tokens */}
-        <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
-          <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted }}>Your Trading Pairs</div>
-          <div className="flex flex-wrap gap-2">
-            {clientTokens.map((token, i) => (
-              <span key={i} className="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                    style={{ background: theme.accentLight, color: theme.accent }}>
-                <Coins size={14} />
-                {token}
-              </span>
-            ))}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold mb-1" style={{ color: theme.textPrimary }}>Dashboard</h1>
+            <p className="text-sm" style={{ color: theme.textMuted }}>Your trading portfolio and performance</p>
           </div>
+          <button
+            onClick={() => handleGenerateReport('csv', reportDays)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+            style={{ background: theme.accent, color: 'white' }}
+          >
+            <Download size={16} /> Generate Report
+          </button>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto pr-2 mb-4">
-          {messages.map((msg, i) => (
-            <div key={i} className="flex gap-3 mb-5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" 
-                   style={{ background: msg.role === 'assistant' ? theme.accentLight : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', color: msg.role === 'assistant' ? theme.accent : 'white' }}>
-                {msg.role === 'assistant' ? <Bot size={18} /> : <User size={18} />}
-              </div>
-              <div className="flex-1 p-4 rounded-2xl text-sm leading-relaxed"
-                   style={{ background: msg.role === 'assistant' ? theme.bgCard : (isDark ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.05)'), border: `1px solid ${msg.role === 'assistant' ? theme.border : 'rgba(99, 102, 241, 0.2)'}`, color: theme.textSecondary }}>
-                {msg.content}
-                {msg.data?.type === 'price' && (
-                  <div className="mt-3 p-4 rounded-xl" style={{ background: isDark ? '#0f172a' : '#f8fafc', border: `1px solid ${theme.border}` }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold" style={{ color: theme.textPrimary }}>{msg.data.pair}</span>
-                      <span className="text-xs font-medium flex items-center gap-1" style={{ color: theme.positive }}>
-                        <ArrowUpRight size={14} />{msg.data.change}
-                      </span>
-                    </div>
-                    <div className="text-2xl font-bold" style={{ color: theme.textPrimary }}>{msg.data.price}</div>
-                  </div>
-                )}
-                {msg.data?.type === 'balances' && (
-                  <div className="mt-3 space-y-2">
-                    {msg.data.tokens.map((t, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 rounded-xl" style={{ background: isDark ? '#0f172a' : '#f8fafc', border: `1px solid ${theme.border}` }}>
-                        <span className="font-medium" style={{ color: theme.textPrimary }}>{t.pair}</span>
-                        <span style={{ color: theme.textSecondary }}>{t.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex gap-3 mb-5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: theme.accentLight, color: theme.accent }}><Bot size={18} /></div>
-              <div className="p-4 rounded-2xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
-                <div className="flex gap-1.5">
-                  <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: theme.textMuted }} />
-                  <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: theme.textMuted, animationDelay: '150ms' }} />
-                  <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: theme.textMuted, animationDelay: '300ms' }} />
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Quick Prompts */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {quickPrompts.map((prompt, i) => (
-            <button key={i} onClick={() => setInput(prompt)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-all"
-                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textSecondary }}>
-              {prompt}<ChevronRight size={14} />
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b" style={{ borderColor: theme.border }}>
+          {['overview', 'balances', 'trades', 'reports'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className="px-4 py-2 text-sm font-medium border-b-2 transition-all capitalize"
+              style={{
+                borderColor: activeTab === tab ? theme.accent : 'transparent',
+                color: activeTab === tab ? theme.accent : theme.textMuted
+              }}
+            >
+              {tab}
             </button>
           ))}
         </div>
 
-        {/* Input */}
-        <div className="flex gap-3 p-4 rounded-2xl" style={{ background: theme.bgPrimary, border: `1px solid ${theme.border}`, boxShadow: theme.shadowLg }}>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyPress={e => e.key === 'Enter' && handleSend()}
-            placeholder="Ask about your balances, prices, or P&L..."
-            className="flex-1 bg-transparent text-sm outline-none"
-            style={{ color: theme.textPrimary }}
-          />
-          <button onClick={handleSend} disabled={!input.trim() || isLoading}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-all disabled:opacity-50"
-                  style={{ background: theme.accent, color: 'white' }}>
-            <Send size={18} />
-          </button>
-        </div>
+        {loadingData ? (
+          <div className="text-center py-12" style={{ color: theme.textMuted }}>
+            <Activity size={32} className="mx-auto mb-3 animate-spin" />
+            <p>Loading your data...</p>
+          </div>
+        ) : (
+          <>
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Key Metrics */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                    <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>Total Balance</div>
+                    <div className="text-2xl font-bold mb-1" style={{ color: theme.textPrimary }}>
+                      {formatCurrency(totalBalance)}
+                    </div>
+                    <div className="text-xs" style={{ color: theme.textMuted }}>{balances.length} exchanges</div>
+                  </div>
+                  <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                    <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>P&L (7d)</div>
+                    <div className={`text-2xl font-bold mb-1 ${portfolio?.total_pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {portfolio?.total_pnl >= 0 ? '+' : ''}{formatCurrency(portfolio?.total_pnl || 0)}
+                    </div>
+                    <div className="text-xs" style={{ color: theme.textMuted }}>All pairs</div>
+                  </div>
+                  <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                    <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>Volume (7d)</div>
+                    <div className="text-2xl font-bold mb-1" style={{ color: theme.textPrimary }}>
+                      {formatCurrency(volume?.total_volume || 0)}
+                    </div>
+                    <div className="text-xs" style={{ color: theme.textMuted }}>{volume?.trade_count || 0} trades</div>
+                  </div>
+                </div>
+
+                {/* Active Bots */}
+                {portfolio && (
+                  <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-sm font-semibold" style={{ color: theme.textPrimary }}>Active Bots</div>
+                      <div className="text-xs" style={{ color: theme.textMuted }}>
+                        {portfolio.active_bots} / {portfolio.total_bots}
+                      </div>
+                    </div>
+                    <div className="w-full h-2 rounded-full" style={{ background: theme.bgSecondary }}>
+                      <div
+                        className="h-2 rounded-full transition-all"
+                        style={{
+                          width: `${portfolio.total_bots > 0 ? (portfolio.active_bots / portfolio.total_bots) * 100 : 0}%`,
+                          background: theme.accent
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Recent Trades */}
+                <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                  <div className="text-sm font-semibold mb-4" style={{ color: theme.textPrimary }}>Recent Trades</div>
+                  {trades.length > 0 ? (
+                    <div className="space-y-2">
+                      {trades.slice(0, 5).map((trade, i) => (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg" style={{ background: theme.bgSecondary }}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-2 h-2 rounded-full ${trade.side === 'buy' ? 'bg-green-500' : 'bg-red-500'}`} />
+                            <div>
+                              <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>{trade.trading_pair}</div>
+                              <div className="text-xs" style={{ color: theme.textMuted }}>{formatDate(trade.timestamp)}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                              {trade.side.toUpperCase()} {formatNumber(trade.amount, 4)}
+                            </div>
+                            <div className="text-xs" style={{ color: theme.textMuted }}>
+                              @ {formatCurrency(trade.price)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>No trades yet</div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Balances Tab */}
+            {activeTab === 'balances' && (
+              <div className="space-y-4">
+                {balances.length > 0 ? (
+                  balances.map((balance, i) => (
+                    <div key={i} className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-semibold" style={{ color: theme.textPrimary }}>{balance.exchange}</div>
+                        {balance.usd_value && (
+                          <div className="text-sm font-medium" style={{ color: theme.textSecondary }}>
+                            {formatCurrency(balance.usd_value)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <div className="text-xs mb-1" style={{ color: theme.textMuted }}>Asset</div>
+                          <div className="font-medium" style={{ color: theme.textPrimary }}>{balance.asset}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs mb-1" style={{ color: theme.textMuted }}>Available</div>
+                          <div className="font-medium" style={{ color: theme.textPrimary }}>{formatNumber(balance.free, 8)}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs mb-1" style={{ color: theme.textMuted }}>Total</div>
+                          <div className="font-medium" style={{ color: theme.textPrimary }}>{formatNumber(balance.total, 8)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12 text-sm" style={{ color: theme.textMuted }}>
+                    <Wallet size={40} className="mx-auto mb-3 opacity-50" />
+                    <p>No balances found. Make sure API keys are configured.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Trades Tab */}
+            {activeTab === 'trades' && (
+              <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                <div className="text-sm font-semibold mb-4" style={{ color: theme.textPrimary }}>Trade History</div>
+                {trades.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b" style={{ borderColor: theme.border }}>
+                          <th className="text-left py-2" style={{ color: theme.textMuted }}>Time</th>
+                          <th className="text-left py-2" style={{ color: theme.textMuted }}>Exchange</th>
+                          <th className="text-left py-2" style={{ color: theme.textMuted }}>Pair</th>
+                          <th className="text-left py-2" style={{ color: theme.textMuted }}>Side</th>
+                          <th className="text-right py-2" style={{ color: theme.textMuted }}>Price</th>
+                          <th className="text-right py-2" style={{ color: theme.textMuted }}>Amount</th>
+                          <th className="text-right py-2" style={{ color: theme.textMuted }}>Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {trades.map((trade, i) => (
+                          <tr key={i} className="border-b" style={{ borderColor: theme.border }}>
+                            <td className="py-3" style={{ color: theme.textSecondary }}>{formatDate(trade.timestamp)}</td>
+                            <td className="py-3" style={{ color: theme.textSecondary }}>{trade.exchange}</td>
+                            <td className="py-3 font-medium" style={{ color: theme.textPrimary }}>{trade.trading_pair}</td>
+                            <td className="py-3">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                trade.side === 'buy' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                              }`}>
+                                {trade.side.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="py-3 text-right" style={{ color: theme.textPrimary }}>{formatCurrency(trade.price)}</td>
+                            <td className="py-3 text-right" style={{ color: theme.textPrimary }}>{formatNumber(trade.amount, 8)}</td>
+                            <td className="py-3 text-right font-medium" style={{ color: theme.textPrimary }}>
+                              {formatCurrency(trade.price * trade.amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-sm" style={{ color: theme.textMuted }}>
+                    <Activity size={40} className="mx-auto mb-3 opacity-50" />
+                    <p>No trades found</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reports Tab */}
+            {activeTab === 'reports' && (
+              <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                <div className="text-sm font-semibold mb-4" style={{ color: theme.textPrimary }}>Generate Trading Report</div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium mb-2" style={{ color: theme.textSecondary }}>Period (days)</label>
+                    <select
+                      value={reportDays}
+                      onChange={e => setReportDays(Number(e.target.value))}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    >
+                      <option value={7}>Last 7 days</option>
+                      <option value={30}>Last 30 days</option>
+                      <option value={90}>Last 90 days</option>
+                      <option value={365}>Last year</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleGenerateReport('json', reportDays)}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{ background: theme.accent, color: 'white' }}
+                    >
+                      Download JSON
+                    </button>
+                    <button
+                      onClick={() => handleGenerateReport('csv', reportDays)}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{ background: theme.accent, color: 'white' }}
+                    >
+                      Download CSV
+                    </button>
+                  </div>
+                  <div className="text-xs p-3 rounded-lg" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                    Reports include: balances, trade history, volume statistics, and P&L data for the selected period.
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
