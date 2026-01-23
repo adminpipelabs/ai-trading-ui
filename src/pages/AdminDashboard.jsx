@@ -976,16 +976,21 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
               <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
                 <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Add New API Key</h3>
                 <div className="space-y-3">
-                  <select
-                    value={formData.exchange}
-                    onChange={e => setFormData({ ...formData, exchange: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                    style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                  >
-                    {EXCHANGES.map(ex => (
-                      <option key={ex.id} value={ex.id}>{ex.name}</option>
-                    ))}
-                  </select>
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Exchange</label>
+                    <select
+                      value={formData.exchange}
+                      onChange={e => setFormData({ ...formData, exchange: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      required
+                    >
+                      <option value="">Select exchange</option>
+                      {EXCHANGES.map(ex => (
+                        <option key={ex.id} value={ex.id}>{ex.name}</option>
+                      ))}
+                    </select>
+                  </div>
                   <input
                     type="text"
                     placeholder="Label (optional)"
