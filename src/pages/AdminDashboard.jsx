@@ -446,6 +446,41 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                 {getStatusBadge(selectedClient.status)}
               </div>
               
+              {/* Quick Actions Bar */}
+              <div className="mb-4 p-3 rounded-lg" style={{ background: theme.bgSecondary }}>
+                <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>Quick Actions</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => handleManageApiKeys(selectedClient)}
+                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: theme.accent, color: 'white' }}
+                  >
+                    <Key size={14} /> API Keys
+                  </button>
+                  <button 
+                    onClick={() => handleManagePairs(selectedClient)}
+                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: theme.accent, color: 'white' }}
+                  >
+                    <Plus size={14} /> Add Pair
+                  </button>
+                  <button 
+                    onClick={() => handleManageBots(selectedClient)}
+                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: theme.accent, color: 'white' }}
+                  >
+                    <Bot size={14} /> Add Bot
+                  </button>
+                  <button 
+                    onClick={() => handleSendOrder(selectedClient)}
+                    className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-medium transition-all"
+                    style={{ background: theme.positive, color: 'white' }}
+                  >
+                    <Send size={14} /> Send Order
+                  </button>
+                </div>
+              </div>
+              
               <div className="flex gap-2">
                 <button 
                   onClick={() => setShowEditModal(selectedClient)}
@@ -600,8 +635,8 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                   </div>
                   <button 
                     onClick={() => handleManageBots(selectedClient)}
-                    className="px-2 py-1 text-xs rounded-lg transition-all"
-                    style={{ background: theme.accentLight, color: theme.accent }}
+                    className="px-2 py-1 text-xs rounded-lg transition-all font-medium"
+                    style={{ background: theme.accent, color: 'white' }}
                   >
                     <Plus size={12} className="inline mr-1" /> Add Bot
                   </button>
