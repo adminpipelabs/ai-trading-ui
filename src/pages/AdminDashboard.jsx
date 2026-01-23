@@ -1291,8 +1291,48 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showAddClient, setShowAddClient] = useState(false);
   const [showClientManagement, setShowClientManagement] = useState(false);
-  const [clients, setClients] = useState(MOCK_CLIENTS);
+  const [clients, setClients] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
   const messagesEndRef = useRef(null);
+  
+  // Load clients from API
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        setClientsLoading(true);
+        const { adminAPI } = await import('../services/api');
+        const data = await adminAPI.getClients();
+        
+        // Transform API response to match expected format
+        const transformedClients = (data || []).map(client => ({
+          id: client.id,
+          name: client.name,
+          email: client.email,
+          wallet_address: client.wallet_address,
+          wallet_type: client.wallet_type || 'EVM',
+          company: client.settings?.contactPerson || '',
+          phone: client.settings?.telegramId || '',
+          status: client.status || 'active',
+          createdAt: client.created_at,
+          connectors: [], // Will be populated from API keys if needed
+          tokens: client.settings?.tradingPair ? [client.settings.tradingPair] : [],
+          balance: '$0',
+          pnl: '$0',
+          pnlPercent: '0%'
+        }));
+        
+        setClients(transformedClients);
+      } catch (error) {
+        console.error('Failed to load clients:', error);
+        // Fallback to mock data if API fails
+        setClients(MOCK_CLIENTS);
+      } finally {
+        setClientsLoading(false);
+      }
+    };
+    
+    loadClients();
+  }, []);
 
   const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: 34 };
   const quickPrompts = ["Show all client balances", "Global P&L this week", "List active bots", "SHARP/USDT price"];
@@ -1316,7 +1356,37 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     }, 800);
   };
 
-  const handleAddClient = (newClient) => setClients([...clients, newClient]);
+  const handleAddClient = async (newClient) => {
+    // Reload clients from API after adding
+    try {
+      const { adminAPI } = await import('../services/api');
+      const data = await adminAPI.getClients();
+      
+      // Transform API response
+      const transformedClients = (data || []).map(client => ({
+        id: client.id,
+        name: client.name,
+        email: client.email,
+        wallet_address: client.wallet_address,
+        wallet_type: client.wallet_type || 'EVM',
+        company: client.settings?.contactPerson || '',
+        phone: client.settings?.telegramId || '',
+        status: client.status || 'active',
+        createdAt: client.created_at,
+        connectors: [],
+        tokens: client.settings?.tradingPair ? [client.settings.tradingPair] : [],
+        balance: '$0',
+        pnl: '$0',
+        pnlPercent: '0%'
+      }));
+      
+      setClients(transformedClients);
+    } catch (error) {
+      console.error('Failed to reload clients:', error);
+      // Add new client to existing list as fallback
+      setClients([...clients, newClient]);
+    }
+  };
 
   if (showClientManagement) {
     return (
