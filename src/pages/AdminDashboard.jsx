@@ -1215,33 +1215,42 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
                     </div>
                   ) : (
                     <>
-                      <select
-                        value={formData.exchange}
-                        onChange={e => setFormData({ ...formData, exchange: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                      >
-                        {clientConnectors.map(conn => (
-                          <option key={conn.id} value={conn.exchange}>
-                            {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="Trading Pair (e.g., SHARP/USDT)"
-                        value={formData.trading_pair}
-                        onChange={e => setFormData({ ...formData, trading_pair: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                      />
-                      <div className="flex gap-2">
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Exchange</label>
+                        <select
+                          value={formData.exchange}
+                          onChange={e => setFormData({ ...formData, exchange: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          required
+                        >
+                          <option value="">Select exchange</option>
+                          {clientConnectors.map(conn => (
+                            <option key={conn.id} value={conn.exchange}>
+                              {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Trading Pair</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., SHARP/USDT"
+                          value={formData.trading_pair}
+                          onChange={e => setFormData({ ...formData, trading_pair: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          required
+                        />
+                      </div>
+                      <div className="flex gap-2 pt-2">
                         <button
                           onClick={handleAdd}
                           className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
                           style={{ background: theme.accent, color: 'white' }}
                         >
-                          Add
+                          Add Pair
                         </button>
                         <button
                           onClick={() => setShowAdd(false)}
