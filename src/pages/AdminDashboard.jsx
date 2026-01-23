@@ -361,9 +361,17 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-3">
-                    <Mail size={14} style={{ color: theme.textMuted }} />
-                    <span style={{ color: theme.textPrimary }}>{selectedClient.email}</span>
+                    <Wallet size={14} style={{ color: theme.textMuted }} />
+                    <span className="font-mono text-xs" style={{ color: theme.textPrimary }}>
+                      {selectedClient.wallet_address || selectedClient.email || 'No wallet'}
+                    </span>
                   </div>
+                  {selectedClient.email && selectedClient.wallet_address && (
+                    <div className="flex items-center gap-3">
+                      <Mail size={14} style={{ color: theme.textMuted }} />
+                      <span style={{ color: theme.textMuted }}>{selectedClient.email}</span>
+                    </div>
+                  )}
                   {selectedClient.phone && (
                     <div className="flex items-center gap-3">
                       <Building size={14} style={{ color: theme.textMuted }} />
