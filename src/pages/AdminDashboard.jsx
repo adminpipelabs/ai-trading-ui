@@ -735,14 +735,19 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       console.log('API URL:', `${API}/api/admin/clients`);
       console.log('Token present:', !!token);
       
-      // Now create the client (removed health check to avoid double request)
-      const response = await fetch(`${API}/api/admin/clients`, {
+      // Use the production-ready quick-client endpoint
+      const response = await fetch(`${API}/api/admin/quick-client`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          name: clientData.name,
+          wallet_address: clientData.wallet_address,
+          email: clientData.email || null,
+          tier: 'Standard'
+        })
       });
       
       console.log('Response status:', response.status);
