@@ -149,7 +149,8 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         client.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (client.email && client.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                         (client.wallet_address && client.wallet_address.toLowerCase().includes(searchQuery.toLowerCase())) ||
                          client.company?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -269,7 +270,9 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                     </div>
                     <div>
                       <div className="font-medium" style={{ color: theme.textPrimary }}>{client.name}</div>
-                      <div className="text-xs" style={{ color: theme.textMuted }}>{client.email}</div>
+                      <div className="text-xs font-mono" style={{ color: theme.textMuted }}>
+                        {client.wallet_address ? `${client.wallet_address.slice(0, 6)}...${client.wallet_address.slice(-4)}` : client.email || 'No wallet'}
+                      </div>
                     </div>
                   </div>
                   {getStatusBadge(client.status)}
@@ -718,8 +721,12 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       }
       
       // Validate wallet address format
-      if (!clientData.wallet_address || !clientData.wallet_address.match(/^0x[a-fA-F0-9]{40}$/)) {
-        alert('Please enter a valid Ethereum wallet address (0x followed by 40 hex characters)');
+      // Validate wallet address (EVM or Solana)
+      const isEVM = clientData.wallet_address.match(/^0x[a-fA-F0-9]{40}$/);
+      const isSolana = clientData.wallet_address.length >= 32 && clientData.wallet_address.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(clientData.wallet_address);
+      
+      if (!clientData.wallet_address || (!isEVM && !isSolana)) {
+        alert('Please enter a valid wallet address:\n- EVM: 0x followed by 40 hex characters\n- Solana: 32-44 base58 characters');
         setIsSubmitting(false);
         return;
       }
