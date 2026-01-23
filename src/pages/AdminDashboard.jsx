@@ -146,6 +146,9 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
   const [selectedClient, setSelectedClient] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showEditModal, setShowEditModal] = useState(null);
+  const [showApiKeysModal, setShowApiKeysModal] = useState(null);
+  const [showPairsModal, setShowPairsModal] = useState(null);
+  const [showBotsModal, setShowBotsModal] = useState(null);
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -187,8 +190,33 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
   };
 
   const handleManageApiKeys = (client) => {
-    // Open API keys management modal
     setShowApiKeysModal(client);
+  };
+
+  const handleManagePairs = (client) => {
+    setShowPairsModal(client);
+  };
+
+  const handleManageBots = (client) => {
+    setShowBotsModal(client);
+  };
+
+  const handleRemovePair = async (client, pair) => {
+    if (!confirm(`Remove trading pair ${pair}?`)) return;
+    // TODO: Call API to remove pair
+    console.log('Remove pair:', pair, 'from client:', client.id);
+  };
+
+  const handleToggleBot = async (client, pair) => {
+    const newStatus = pair.status === 'active' ? 'paused' : 'active';
+    // TODO: Call API to update bot status
+    console.log('Toggle bot:', pair.id, 'to status:', newStatus);
+  };
+
+  const handleRemoveBot = async (client, botId) => {
+    if (!confirm('Delete this bot?')) return;
+    // TODO: Call API to delete bot
+    console.log('Remove bot:', botId, 'from client:', client.id);
   };
 
   return (
@@ -439,19 +467,103 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                 )}
               </div>
 
-              {/* Tokens */}
+              {/* Trading Pairs */}
               <div>
-                <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                  Trading Pairs ({selectedClient.tokens.length})
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
+                    Trading Pairs ({selectedClient.tokens.length})
+                  </div>
+                  <button 
+                    onClick={() => handleManagePairs(selectedClient)}
+                    className="px-2 py-1 text-xs rounded-lg transition-all"
+                    style={{ background: theme.accentLight, color: theme.accent }}
+                  >
+                    <Plus size={12} className="inline mr-1" /> Add
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {selectedClient.tokens.map((token, i) => (
-                    <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium"
-                          style={{ background: theme.bgSecondary, color: theme.textPrimary, border: `1px solid ${theme.border}` }}>
-                      {token}
-                    </span>
-                  ))}
+                  {selectedClient.tokens.length > 0 ? (
+                    selectedClient.tokens.map((token, i) => (
+                      <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2"
+                            style={{ background: theme.bgSecondary, color: theme.textPrimary, border: `1px solid ${theme.border}` }}>
+                        {token}
+                        <button 
+                          onClick={() => handleRemovePair(selectedClient, token)}
+                          className="hover:opacity-70"
+                          style={{ color: theme.negative }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <div className="text-xs p-2 rounded-lg text-center w-full" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                      No trading pairs
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Bots */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
+                    Bots ({selectedClient.pairs?.length || 0})
+                  </div>
+                  <button 
+                    onClick={() => handleManageBots(selectedClient)}
+                    className="px-2 py-1 text-xs rounded-lg transition-all"
+                    style={{ background: theme.accentLight, color: theme.accent }}
+                  >
+                    <Plus size={12} className="inline mr-1" /> Add Bot
+                  </button>
+                </div>
+                {selectedClient.pairs && selectedClient.pairs.length > 0 ? (
+                  <div className="space-y-2">
+                    {selectedClient.pairs.map(pair => (
+                      <div key={pair.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                            {pair.trading_pair} on {pair.exchange}
+                          </div>
+                          <div className="text-xs flex items-center gap-2 mt-1" style={{ color: theme.textMuted }}>
+                            <span>{pair.bot_type}</span>
+                            <span>•</span>
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${
+                              pair.status === 'active' ? 'bg-green-100 text-green-700' : 
+                              pair.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {pair.status}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleToggleBot(selectedClient, pair)}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: pair.status === 'active' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: pair.status === 'active' ? theme.negative : theme.positive }}
+                            title={pair.status === 'active' ? 'Pause' : 'Start'}
+                          >
+                            {pair.status === 'active' ? <Activity size={14} /> : <CheckCircle2 size={14} />}
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveBot(selectedClient, pair.id)}
+                            className="p-1.5 rounded-lg transition-all"
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', color: theme.negative }}
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                    No bots configured
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1321,6 +1433,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
           createdAt: client.created_at,
           connectors: client.connectors || client.exchanges || [], // Use connectors/exchanges from API
           tokens: client.tokens || (client.tradingPair ? [client.tradingPair] : []), // Use tokens from API
+          pairs: client.pairs || [], // Trading pairs/bots
           balance: '$0',
           pnl: '$0',
           pnlPercent: '0%'
