@@ -2269,9 +2269,21 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
       } catch (error) {
         console.error('❌ Failed to load clients:', error);
         console.error('Error details:', error.message, error.stack);
+        console.error('Full error object:', error);
+        
+        // Try to get more details from the error
+        let errorMessage = 'Failed to load clients. ';
+        if (error.message) {
+          errorMessage += error.message;
+        } else if (error.detail) {
+          errorMessage += error.detail;
+        } else {
+          errorMessage += 'Check browser console (F12) for details.';
+        }
+        
         // Don't use mock data - show empty state instead
         setClients([]);
-        alert('Failed to load clients. Check console for details.');
+        alert(errorMessage);
       } finally {
         setClientsLoading(false);
       }

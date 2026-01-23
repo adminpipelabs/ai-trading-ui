@@ -4,7 +4,10 @@ const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://
 
 // Helper function for API calls
 async function apiCall(url, options = {}) {
-  const token = localStorage.getItem('auth_token');
+  // Check multiple possible token keys for compatibility
+  const token = localStorage.getItem('access_token') || 
+                localStorage.getItem('pipelabs_token') || 
+                localStorage.getItem('auth_token');
   
   const response = await fetch(url, {
     ...options,
@@ -16,8 +19,22 @@ async function apiCall(url, options = {}) {
   });
   
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    throw new Error(error.detail || error.message || `HTTP error! status: ${response.status}`);
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch (e) {
+      errorData = { detail: `HTTP ${response.status}: ${response.statusText}` };
+    }
+    const error = new Error(errorData.detail || errorData.message || `HTTP error! status: ${response.status}`);
+    error.status = response.status;
+    error.data = errorData;
+    console.error('API Error:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      error: errorData
+    });
+    throw error;
   }
   
   return response.json();
