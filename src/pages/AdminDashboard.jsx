@@ -2242,8 +2242,12 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     const loadClients = async () => {
       try {
         setClientsLoading(true);
+        console.log('🔄 Loading clients...');
         const { adminAPI } = await import('../services/api');
+        console.log('📡 Calling adminAPI.getClients()...');
         const data = await adminAPI.getClients();
+        console.log('📦 Raw API response:', data);
+        console.log('📊 Response type:', typeof data, 'Is array?', Array.isArray(data), 'Length:', data?.length);
         
         // Transform API response to match expected format
         const transformedClients = (data || []).map(client => ({

@@ -47,6 +47,12 @@ export const adminAPI = {
   },
 
   async getClients() {
+    console.log('🔗 API_URL:', API_URL);
+    console.log('🔗 Calling:', `${API_URL}/api/admin/clients`);
+    const token = localStorage.getItem('access_token') || 
+                  localStorage.getItem('pipelabs_token') || 
+                  localStorage.getItem('auth_token');
+    console.log('🔑 Token present?', !!token, 'Length:', token?.length);
     return apiCall(`${API_URL}/api/admin/clients`);
   },
 
