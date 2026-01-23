@@ -637,34 +637,49 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                    Trading Pairs ({selectedClient.tokens.length})
+                    Trading Pairs ({selectedClient.pairs?.length || 0})
                   </div>
                   <button 
                     onClick={() => handleManagePairs(selectedClient)}
                     className="px-2 py-1 text-xs rounded-lg transition-all"
                     style={{ background: theme.accentLight, color: theme.accent }}
                   >
-                    <Plus size={12} className="inline mr-1" /> Add
+                    <Plus size={12} className="inline mr-1" /> Add Pair
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedClient.tokens.length > 0 ? (
-                    selectedClient.tokens.map((token, i) => (
-                      <span key={i} className="px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2"
-                            style={{ background: theme.bgSecondary, color: theme.textPrimary, border: `1px solid ${theme.border}` }}>
-                        {token}
+                <div className="space-y-2">
+                  {selectedClient.pairs && selectedClient.pairs.length > 0 ? (
+                    selectedClient.pairs.map((pair, i) => (
+                      <div key={pair.id || i} className="flex items-center justify-between p-3 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
+                            {pair.trading_pair} on {EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange}
+                          </div>
+                          <div className="text-xs flex items-center gap-2 mt-1" style={{ color: theme.textMuted }}>
+                            <span>{pair.bot_type || 'both'}</span>
+                            <span>•</span>
+                            <span className={`px-1.5 py-0.5 rounded text-xs ${
+                              pair.status === 'active' ? 'bg-green-100 text-green-700' : 
+                              pair.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {pair.status || 'paused'}
+                            </span>
+                          </div>
+                        </div>
                         <button 
-                          onClick={() => handleRemovePair(selectedClient, token)}
-                          className="hover:opacity-70"
-                          style={{ color: theme.negative }}
+                          onClick={() => handleManagePairs(selectedClient)}
+                          className="p-1.5 rounded-lg hover:opacity-70"
+                          style={{ color: theme.accent }}
+                          title="Manage"
                         >
-                          <X size={12} />
+                          <Edit2 size={14} />
                         </button>
-                      </span>
+                      </div>
                     ))
                   ) : (
-                    <div className="text-xs p-2 rounded-lg text-center w-full" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
-                      No trading pairs
+                    <div className="text-xs p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                      No trading pairs configured. Click "Add Pair" to create one.
                     </div>
                   )}
                 </div>
@@ -1127,20 +1142,28 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
       alert('Please enter a trading pair (e.g., SHARP/USDT)');
       return;
     }
+    if (!formData.exchange) {
+      alert('Please select an exchange');
+      return;
+    }
     try {
       const { adminAPI } = await import('../services/api');
       await adminAPI.createPair(client.id, {
         exchange: formData.exchange,
-        trading_pair: formData.trading_pair.toUpperCase(),
+        trading_pair: formData.trading_pair.toUpperCase().replace(/\s+/g, ''),
         bot_type: 'both'
       });
-      setFormData({ exchange: client.connectors?.[0]?.exchange || 'bitmart', trading_pair: '' });
+      setFormData({ 
+        exchange: clientConnectors.length > 0 ? clientConnectors[0].exchange : '', 
+        trading_pair: '' 
+      });
       setShowAdd(false);
       await loadPairs();
       await onUpdate();
     } catch (error) {
       console.error('Failed to add pair:', error);
-      alert('Failed to add trading pair: ' + (error.message || 'Unknown error'));
+      const errorMsg = error.message || error.detail || 'Unknown error';
+      alert('Failed to add trading pair: ' + errorMsg);
     }
   };
 
