@@ -208,7 +208,7 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
   };
 
   const handleRemovePair = async (client, pairToken) => {
-    if (!confirm(`Remove trading pair ${pairToken}?`)) return;
+    if (!window.window.confirm(`Remove trading pair ${pairToken}?`)) return;
     try {
       // Find the pair ID from client.pairs
       const pair = client.pairs?.find(p => p.trading_pair === pairToken);
@@ -280,7 +280,7 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
   };
 
   const handleRemoveBot = async (client, botId) => {
-    if (!confirm('Delete this bot?')) return;
+    if (!window.confirm('Delete this bot?')) return;
     try {
       const { adminAPI } = await import('../services/api');
       await adminAPI.deletePair(botId);
@@ -874,7 +874,7 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
   };
 
   const handleDelete = async (keyId) => {
-    if (!confirm('Delete this API key?')) return;
+    if (!window.confirm('Delete this API key?')) return;
     try {
       const { adminAPI } = await import('../services/api');
       await adminAPI.deleteClientApiKey(client.id, keyId);
@@ -1073,7 +1073,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
   };
 
   const handleDelete = async (pairId) => {
-    if (!confirm('Delete this trading pair?')) return;
+    if (!window.confirm('Delete this trading pair?')) return;
     try {
       const { adminAPI } = await import('../services/api');
       await adminAPI.deletePair(pairId);
@@ -1271,7 +1271,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   };
 
   const handleDelete = async (pairId) => {
-    if (!confirm('Delete this bot?')) return;
+    if (!window.confirm('Delete this bot?')) return;
     try {
       const { adminAPI } = await import('../services/api');
       await adminAPI.deletePair(pairId);
