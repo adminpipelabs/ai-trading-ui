@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BrowserProvider } from 'ethers';
-
-const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
+import { API_URL } from '../config/api';
 
 export default function Login() {
   const [status, setStatus] = useState('');
@@ -51,7 +50,7 @@ export default function Login() {
       
       // Get nonce/message from backend
       setStatus('Getting authentication message...');
-      const nonceRes = await fetch(`${API}/api/auth/nonce/${walletAddress}`);
+      const nonceRes = await fetch(`${API_URL}/api/auth/nonce/${walletAddress}`);
       
       if (!nonceRes.ok) {
         throw new Error('Failed to get authentication message from server');
@@ -78,7 +77,7 @@ export default function Login() {
 
       // Send to backend for verification
       setStatus('Verifying signature...');
-      const res = await fetch(`${API}/api/auth/wallet/login`, {
+      const res = await fetch(`${API_URL}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -7,6 +7,7 @@ import {
   MoreVertical, ExternalLink, Clock, Filter, Download, UserPlus, ArrowLeft,
   Coins, MessageSquare
 } from 'lucide-react';
+import { API_URL } from '../config/api';
 
 // ========== THEME CONTEXT ==========
 const ThemeContext = createContext();
@@ -707,7 +708,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
     setIsSubmitting(true);
     
     try {
-      const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
+      // Import API URL from config (handles runtime detection)
       const token = localStorage.getItem('access_token');
       
       if (!token) {
@@ -732,11 +733,11 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       };
       
       console.log('Creating client with:', requestBody);
-      console.log('API URL:', `${API}/api/admin/clients`);
+      console.log('API URL:', `${API_URL}/api/admin/quick-client`);
       console.log('Token present:', !!token);
       
       // Use the production-ready quick-client endpoint
-      const response = await fetch(`${API}/api/admin/quick-client`, {
+      const response = await fetch(`${API_URL}/api/admin/quick-client`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -770,7 +771,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       if (connectors.length > 0 && newClient.id) {
         for (const connector of connectors) {
           try {
-            await fetch(`${API}/api/admin/api-keys`, {
+            await fetch(`${API_URL}/api/admin/api-keys`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1088,9 +1089,8 @@ function Login({ onLogin }) {
       const walletAddress = accounts[0];
       
       // Get nonce/message from backend
-      const API = process.env.REACT_APP_API_URL || 'https://pipelabs-dashboard-production.up.railway.app';
       setStatus('Getting authentication message...');
-      const nonceRes = await fetch(`${API}/api/auth/nonce/${walletAddress}`);
+      const nonceRes = await fetch(`${API_URL}/api/auth/nonce/${walletAddress}`);
       
       if (!nonceRes.ok) {
         throw new Error('Failed to get authentication message from server');
@@ -1105,7 +1105,7 @@ function Login({ onLogin }) {
 
       // Send to backend for verification
       setStatus('Verifying signature...');
-      const res = await fetch(`${API}/api/auth/wallet/login`, {
+      const res = await fetch(`${API_URL}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
