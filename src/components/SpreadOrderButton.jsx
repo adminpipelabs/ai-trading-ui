@@ -1,14 +1,13 @@
-"use client";
 import { useState } from "react";
 import { spreadOrder } from "../lib/trading";
 
-export function SpreadOrderButton({ token = "SHARP", account = "client_sharp", exchange = "bitmart" }) {
+export function SpreadOrderButton({ token = "SHARP", account = "client_sharp", exchange = "bitmart", amount = 1600 }) {
   const [loading, setLoading] = useState(false);
 
   const handleClick = async () => {
     setLoading(true);
     try {
-      const res = await spreadOrder(token, account, exchange);
+      const res = await spreadOrder(token, account, exchange, amount);
       alert(`Spread orders placed!\nBuy: $${res.buyPrice}\nSell: $${res.sellPrice}`);
     } catch (err) {
       alert("Error placing orders");
