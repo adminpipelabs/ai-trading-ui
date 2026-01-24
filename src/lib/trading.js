@@ -1,7 +1,7 @@
 const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
 
-export async function spreadOrder(token, account = "client_sharp", amount = 1600) {
-  const priceRes = await fetch(`${TRADING_BRIDGE}/market/price?connector=bitmart&pair=${token}/USDT`);
+export async function spreadOrder(token, account = "client_sharp", exchange = "bitmart", amount = 1600) {
+  const priceRes = await fetch(`${TRADING_BRIDGE}/market/price?connector=${exchange}&pair=${token}/USDT`);
   const data = await priceRes.json();
   const price = data.price;
   
@@ -13,7 +13,7 @@ export async function spreadOrder(token, account = "client_sharp", amount = 1600
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       account_name: account,
-      connector_name: "bitmart",
+      connector_name: exchange,
       trading_pair: `${token}/USDT`,
       side: "buy",
       type: "limit",
@@ -27,7 +27,7 @@ export async function spreadOrder(token, account = "client_sharp", amount = 1600
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       account_name: account,
-      connector_name: "bitmart",
+      connector_name: exchange,
       trading_pair: `${token}/USDT`,
       side: "sell",
       type: "limit",
@@ -39,10 +39,8 @@ export async function spreadOrder(token, account = "client_sharp", amount = 1600
   return { success: true, price, buyPrice, sellPrice };
 }
 
-export async function volumeOrder(token, account1 = "client_sharp", account2 = "client_sharp_2", amount = 2000) {
-  const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
-  
-  const priceRes = await fetch(`${TRADING_BRIDGE}/market/price?connector=bitmart&pair=${token}/USDT`);
+export async function volumeOrder(token, account1 = "client_sharp", account2 = "client_sharp_2", exchange = "bitmart", amount = 2000) {
+  const priceRes = await fetch(`${TRADING_BRIDGE}/market/price?connector=${exchange}&pair=${token}/USDT`);
   const data = await priceRes.json();
   const price = Number(data.price).toFixed(6);
   
@@ -51,7 +49,7 @@ export async function volumeOrder(token, account1 = "client_sharp", account2 = "
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       account_name: account1,
-      connector_name: "bitmart",
+      connector_name: exchange,
       trading_pair: `${token}/USDT`,
       side: "sell",
       type: "limit",
@@ -65,7 +63,7 @@ export async function volumeOrder(token, account1 = "client_sharp", account2 = "
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       account_name: account2,
-      connector_name: "bitmart",
+      connector_name: exchange,
       trading_pair: `${token}/USDT`,
       side: "buy",
       type: "limit",
@@ -75,4 +73,16 @@ export async function volumeOrder(token, account1 = "client_sharp", account2 = "
   });
   
   return { success: true, price, amount };
+}
+
+export async function getBalance(account = "client_sharp") {
+  const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
+  const res = await fetch(`${TRADING_BRIDGE}/portfolio?account=${account}`);
+  return await res.json();
+}
+
+export async function getPrice(token, exchange = "bitmart") {
+  const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
+  const res = await fetch(`${TRADING_BRIDGE}/market/price?connector=${exchange}&pair=${token}/USDT`);
+  return await res.json();
 }
