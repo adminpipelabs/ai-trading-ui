@@ -79,3 +79,41 @@ export async function volumeOrder(token: string, amount: number = 2000) {
   
   return { success: true, price, amount, volume: amount * Number(price) };
 }
+
+export async function volumeOrder(token: string, account1: string = "client_sharp", account2: string = "client_sharp_2", amount: number = 2000) {
+  const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
+  
+  const priceRes = await fetch(`${TRADING_BRIDGE}/market/price?connector=bitmart&pair=${token}/USDT`);
+  const data = await priceRes.json();
+  const price = Number(data.price).toFixed(6);
+  
+  const sellRes = await fetch(`${TRADING_BRIDGE}/orders/place`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      account_name: account1,
+      connector_name: "bitmart",
+      trading_pair: `${token}/USDT`,
+      side: "sell",
+      type: "limit",
+      amount: amount,
+      price: price
+    })
+  });
+  
+  const buyRes = await fetch(`${TRADING_BRIDGE}/orders/place`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      account_name: account2,
+      connector_name: "bitmart",
+      trading_pair: `${token}/USDT`,
+      side: "buy",
+      type: "limit",
+      amount: amount,
+      price: price
+    })
+  });
+  
+  return { success: true, price, amount };
+}
