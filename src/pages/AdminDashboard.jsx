@@ -498,6 +498,8 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
               <div className="mb-4 p-3 rounded-lg" style={{ background: theme.bgSecondary }}>
                 <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>Quick Actions</div>
         <SpreadOrderButton token="SHARP" />
+        <SpreadOrderButton token="SHARP" />
+        <VolumeOrderButton token="SHARP" />
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => handleManageApiKeys(selectedClient)}
