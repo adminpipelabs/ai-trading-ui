@@ -74,3 +74,15 @@ export async function volumeOrder(token: string, account1: string = "client_shar
   
   return { success: true, price, amount };
 }
+
+export async function getBalance(account: string = "client_sharp") {
+  const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
+  const res = await fetch(`${TRADING_BRIDGE}/portfolio?account=${account}`);
+  return await res.json();
+}
+
+export async function getPrice(token: string, exchange: string = "bitmart") {
+  const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
+  const res = await fetch(`${TRADING_BRIDGE}/market/price?connector=${exchange}&pair=${token}/USDT`);
+  return await res.json();
+}
