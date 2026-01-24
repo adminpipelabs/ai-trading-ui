@@ -1,0 +1,40 @@
+const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
+
+export async function spreadOrder(token: string, account: string = "client_sharp", amount: number = 1600) {
+  const priceRes = await fetch(`${TRADING_BRIDGE}/market/price?connector=bitmart&pair=${token}/USDT`);
+  const data = await priceRes.json();
+  const price = data.price;
+  
+  const buyPrice = (price * 0.997).toFixed(6);
+  const sellPrice = (price * 1.003).toFixed(6);
+  
+  const buyRes = await fetch(`${TRADING_BRIDGE}/orders/place`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      account_name: account,
+      connector_name: "bitmart",
+      trading_pair: `${token}/USDT`,
+      side: "buy",
+      type: "limit",
+      amount: amount,
+      price: buyPrice
+    })
+  });
+  
+  const sellRes = await fetch(`${TRADING_BRIDGE}/orders/place`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      account_name: account,
+      connector_name: "bitmart",
+      trading_pair: `${token}/USDT`,
+      side: "sell",
+      type: "limit",
+      amount: amount,
+      price: sellPrice
+    })
+  });
+  
+  return { success: true, price, buyPrice, sellPrice };
+}
