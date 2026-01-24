@@ -1,4 +1,5 @@
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
+import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   Send, Bot, User, TrendingUp, Wallet, Activity, Users, Plus, BarChart3, 
@@ -491,8 +492,10 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
               </div>
               
               {/* Quick Actions Bar */}
+        <SpreadOrderButton token="SHARP" />
               <div className="mb-4 p-3 rounded-lg" style={{ background: theme.bgSecondary }}>
                 <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>Quick Actions</div>
+        <SpreadOrderButton token="SHARP" />
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => handleManageApiKeys(selectedClient)}
@@ -2940,6 +2943,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
 
         <div className="flex-1">
           <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Quick Actions</h3>
+        <SpreadOrderButton token="SHARP" />
           <button onClick={() => setShowAddClient(true)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium mb-2"
                   style={{ background: theme.accent, color: 'white' }}><Plus size={16} />Add Client</button>
           <button onClick={() => setShowClientManagement(true)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
@@ -3042,6 +3046,7 @@ function ClientSidebar({ user, theme, isDark, toggleTheme, onLogout }) {
 
       <div className="flex-1">
         <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Quick Actions</h3>
+        <SpreadOrderButton token="SHARP" />
         <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
                 style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><BarChart3 size={16} />View Reports</button>
         <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm"
