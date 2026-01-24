@@ -566,10 +566,10 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                     </span>
                   </div>
                   {selectedClient.email && selectedClient.wallet_address && (
-                    <div className="flex items-center gap-3">
-                      <Mail size={14} style={{ color: theme.textMuted }} />
+                  <div className="flex items-center gap-3">
+                    <Mail size={14} style={{ color: theme.textMuted }} />
                       <span style={{ color: theme.textMuted }}>{selectedClient.email}</span>
-                    </div>
+                  </div>
                   )}
                   {selectedClient.phone && (
                     <div className="flex items-center gap-3">
@@ -638,7 +638,7 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
                     Trading Pairs ({selectedClient.pairs?.length || 0})
-                  </div>
+                </div>
                   <button 
                     onClick={() => handleManagePairs(selectedClient)}
                     className="px-2 py-1 text-xs rounded-lg transition-all"
@@ -664,7 +664,7 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                               'bg-gray-100 text-gray-700'
                             }`}>
                               {pair.status || 'paused'}
-                            </span>
+                    </span>
                           </div>
                         </div>
                         <button 
@@ -738,8 +738,8 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                  ))}
+                </div>
                 ) : (
                   <div className="text-xs p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
                     No bots configured
@@ -1250,7 +1250,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
                             </option>
                           ))}
                         </select>
-                      </div>
+          </div>
                       <div>
                         <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Trading Pair</label>
                         <input
@@ -1262,7 +1262,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
                           style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                           required
                         />
-                      </div>
+        </div>
                       <div className="flex gap-2 pt-2">
                         <button
                           onClick={handleAdd}
@@ -1294,11 +1294,11 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
                     <div className="flex-1">
                       <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
                         {pair.trading_pair} on {EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange}
-                      </div>
+              </div>
                       <div className="text-xs mt-1" style={{ color: theme.textMuted }}>
                         Bot Type: {pair.bot_type} • Status: {pair.status}
-                      </div>
                     </div>
+                  </div>
                     <button
                       onClick={() => handleDelete(pair.id)}
                       className="p-2 rounded-lg"
@@ -1309,7 +1309,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
                   </div>
                 ))
               )}
-            </div>
+                      </div>
           </>
         )}
       </div>
@@ -1413,9 +1413,9 @@ function SendOrderModal({ client, onClose, theme }) {
             {clientConnectors.length === 0 && (
               <div className="text-xs p-2 rounded-lg mt-2" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
                 ⚠️ No active API keys found. Add an API key first.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Trading Pair</label>
@@ -1428,7 +1428,7 @@ function SendOrderModal({ client, onClose, theme }) {
               style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
               required
             />
-          </div>
+            </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -1723,12 +1723,12 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                         >
                           Cancel
                         </button>
-                      </div>
+                </div>
                     </>
                   )}
-                </div>
               </div>
-            )}
+            </div>
+          )}
 
             <div className="space-y-2">
               {pairs.length === 0 ? (
@@ -1739,7 +1739,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                     <div className="flex-1">
                       <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
                         {pair.trading_pair} on {EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange}
-                      </div>
+        </div>
                       <div className="text-xs mt-1 flex items-center gap-3" style={{ color: theme.textMuted }}>
                         <span>{pair.bot_type}</span>
                         <span>•</span>
@@ -2110,8 +2110,8 @@ function ClientDashboard({ user, theme, isDark }) {
                       style={{ background: theme.accent, color: 'white' }}
                     >
                       Download CSV
-                    </button>
-                  </div>
+          </button>
+        </div>
                   <div className="text-xs p-3 rounded-lg" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
                     Reports include: balances, trade history, volume statistics, and P&L data for the selected period.
                   </div>
@@ -2173,8 +2173,8 @@ function AddClientModal({ isOpen, onClose, onSave }) {
     
     // Add connector
     const exchangeName = EXCHANGES.find(e => e.id === currentConnector.exchange)?.name || currentConnector.exchange;
-    setConnectors([...connectors, { ...currentConnector, id: Date.now() }]);
-    setCurrentConnector({ exchange: '', apiKey: '', apiSecret: '', memo: '', label: '' });
+      setConnectors([...connectors, { ...currentConnector, id: Date.now() }]);
+      setCurrentConnector({ exchange: '', apiKey: '', apiSecret: '', memo: '', label: '' });
     
     // Show success message
     setExchangeSuccess(true);
@@ -2274,10 +2274,10 @@ function AddClientModal({ isOpen, onClose, onSave }) {
           }
         }
       }
-      
-      onSave?.(newClient);
-      setIsSubmitting(false);
-      setShowSuccess(true);
+    
+    onSave?.(newClient);
+    setIsSubmitting(false);
+    setShowSuccess(true);
     } catch (error) {
       console.error('Client creation error:', error);
       const errorMessage = error?.message || error?.detail || (typeof error === 'string' ? error : JSON.stringify(error)) || 'Failed to create client';
@@ -2344,12 +2344,12 @@ function AddClientModal({ isOpen, onClose, onSave }) {
               {/* Step 1 */}
               {step === 1 && (
                 <div className="space-y-5">
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Full Name *</label>
-                    <input type="text" value={clientData.name} onChange={e => setClientData({ ...clientData, name: e.target.value })} placeholder="John Smith"
-                           className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
-                  </div>
-                  <div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Full Name *</label>
+                      <input type="text" value={clientData.name} onChange={e => setClientData({ ...clientData, name: e.target.value })} placeholder="John Smith"
+                             className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
+                    </div>
+                    <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>
                       Wallet Address (EVM) *
                       <span className="ml-2 text-xs font-normal" style={{ color: theme.textMuted }}>(Client will login with this wallet)</span>
@@ -2373,11 +2373,11 @@ function AddClientModal({ isOpen, onClose, onSave }) {
                       <input type="text" value={clientData.company} onChange={e => setClientData({ ...clientData, company: e.target.value })} placeholder="Company Inc."
                              className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Phone</label>
-                    <input type="tel" value={clientData.phone} onChange={e => setClientData({ ...clientData, phone: e.target.value })} placeholder="+1 (555) 000-0000"
-                           className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Phone</label>
+                      <input type="tel" value={clientData.phone} onChange={e => setClientData({ ...clientData, phone: e.target.value })} placeholder="+1 (555) 000-0000"
+                             className="w-full py-3 px-4 rounded-xl text-sm outline-none" style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2" style={{ color: theme.textSecondary }}>Assigned Tokens</label>
@@ -2664,7 +2664,7 @@ function Login({ onLogin }) {
           <div className="mb-5 p-4 rounded-xl text-sm" 
                style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5' }}>
             <p style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>{error}</p>
-          </div>
+            </div>
         )}
 
         {/* Status Message */}
@@ -2685,7 +2685,7 @@ function Login({ onLogin }) {
             boxShadow: loading ? 'none' : '0 4px 16px rgba(102, 126, 234, 0.4)' 
           }}>
           {status || (loading ? 'Connecting...' : '🔐 Connect Wallet')}
-        </button>
+              </button>
 
         {/* Supported Wallets Info */}
         <div className="mt-6 text-center">
