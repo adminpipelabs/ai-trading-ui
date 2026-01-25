@@ -2842,21 +2842,73 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
     setMessages(prev => [...prev, { role: 'user', content: input }]);
     const userInput = input;
     setInput('');
     setIsLoading(true);
-    setTimeout(() => {
-      const isPrice = userInput.toLowerCase().includes('price') || userInput.toLowerCase().includes('sharp');
+    
+    const lowerInput = userInput.toLowerCase();
+    
+    // Detect query type
+    const isBalanceQuery = lowerInput.includes('balance') || 
+                          lowerInput.includes('how much') || 
+                          lowerInput.includes('what is the balance') ||
+                          (lowerInput.includes('sharp') && lowerInput.includes('balance'));
+    
+    const isPriceQuery = lowerInput.includes('price') && !isBalanceQuery;
+    
+    try {
+      if (isBalanceQuery) {
+        // Extract account name if mentioned, default to client_sharp
+        let account = 'client_sharp';
+        if (lowerInput.includes('client_sharp')) account = 'client_sharp';
+        else if (lowerInput.includes('client_sharp_2')) account = 'client_sharp_2';
+        
+        // Fetch actual balance
+        const { getBalance } = await import('../lib/trading');
+        const balanceData = await getBalance(account);
+        
+        const balances = balanceData.balances?.bitmart || {};
+        const sharpBalance = balances.SHARP || {};
+        const usdtBalance = balances.USDT || {};
+        
+        const balanceText = `**${account} Balance:**\n\n` +
+          `**SHARP:** ${sharpBalance.total || 0} (${sharpBalance.free || 0} free)\n` +
+          `**USDT:** $${(usdtBalance.total || 0).toFixed(2)} ($${(usdtBalance.free || 0).toFixed(2)} free)`;
+        
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: balanceText,
+          data: { type: 'balance', account, balances: balanceData }
+        }]);
+      } else if (isPriceQuery) {
+        // Fetch actual price
+        const { getPrice } = await import('../lib/trading');
+        const priceData = await getPrice('SHARP', 'bitmart');
+        const price = priceData.price || 0;
+        
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: "Here's the current price from BitMart:",
+          data: { type: 'price', pair: 'SHARP/USDT', price: `$${price}`, change: '+2.4%' }
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Processing: "${userInput}"\n\nI can help you with:\n- Balance queries (e.g., "what is the balance of sharp")\n- Price queries (e.g., "SHARP/USDT price")\n- P&L information\n- Bot status`
+        }]);
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: isPrice ? "Here's the current price from BitMart:" : `Processing: "${userInput}"`,
-        data: isPrice ? { type: 'price', pair: 'SHARP/USDT', price: '$0.006757', change: '+2.4%' } : null
+        content: `Sorry, I encountered an error: ${error.message}. Please try again.`
       }]);
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   const handleAddClient = async (newClient) => {
