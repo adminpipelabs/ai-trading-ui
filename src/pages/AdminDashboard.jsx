@@ -1,5 +1,5 @@
 import { BalanceButton } from "../components/BalanceButton";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import { BotList } from "../components/BotList";
@@ -2772,7 +2772,6 @@ function Message({ message, theme, isDark }) {
 
 // ========== ADMIN DASHBOARD ==========
 function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
-  const navigate = useNavigate();
   const [messages, setMessages] = useState([{ role: 'assistant', content: "Welcome back. I can help you manage clients, monitor bots, and analyze performance across your platform." }]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -3024,7 +3023,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
           <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => setShowClientManagement(true)} />
           <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
           <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
-          <div onClick={() => navigate('/bots')} style={{cursor:"pointer"}}><MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} /></div>
+          <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} />
         </div>
 
         <div className="flex-1">
