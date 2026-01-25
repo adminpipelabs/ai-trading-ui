@@ -15,6 +15,7 @@ WORKDIR /app
 RUN npm install -g serve
 
 COPY --from=builder /app/build ./build
+COPY public/serve.json ./build/serve.json 2>/dev/null || true
 
 EXPOSE 3000
 
