@@ -3069,7 +3069,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
       }
     } else {
       // Open Phantom install page
-      const install = confirm('Phantom wallet not found. Open Phantom website to install?');
+      const install = window.confirm('Phantom wallet not found. Open Phantom website to install?');
       if (install) {
         window.open('https://phantom.app/', '_blank');
       }
