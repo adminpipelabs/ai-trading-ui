@@ -2849,62 +2849,82 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     setInput('');
     setIsLoading(true);
     
-    const lowerInput = userInput.toLowerCase();
-    
-    // Detect query type
-    const isBalanceQuery = lowerInput.includes('balance') || 
-                          lowerInput.includes('how much') || 
-                          lowerInput.includes('what is the balance') ||
-                          (lowerInput.includes('sharp') && lowerInput.includes('balance'));
-    
-    const isPriceQuery = lowerInput.includes('price') && !isBalanceQuery;
-    
     try {
-      if (isBalanceQuery) {
-        // Extract account name if mentioned, default to client_sharp
-        let account = 'client_sharp';
-        if (lowerInput.includes('client_sharp')) account = 'client_sharp';
-        else if (lowerInput.includes('client_sharp_2')) account = 'client_sharp_2';
-        
-        // Fetch actual balance
-        const { getBalance } = await import('../lib/trading');
-        const balanceData = await getBalance(account);
-        
-        const balances = balanceData.balances?.bitmart || {};
-        const sharpBalance = balances.SHARP || {};
-        const usdtBalance = balances.USDT || {};
-        
-        const balanceText = `**${account} Balance:**\n\n` +
-          `**SHARP:** ${sharpBalance.total || 0} (${sharpBalance.free || 0} free)\n` +
-          `**USDT:** $${(usdtBalance.total || 0).toFixed(2)} ($${(usdtBalance.free || 0).toFixed(2)} free)`;
-        
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: balanceText,
-          data: { type: 'balance', account, balances: balanceData }
-        }]);
-      } else if (isPriceQuery) {
-        // Fetch actual price
-        const { getPrice } = await import('../lib/trading');
-        const priceData = await getPrice('SHARP', 'bitmart');
-        const price = priceData.price || 0;
-        
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Here's the current price from BitMart:",
-          data: { type: 'price', pair: 'SHARP/USDT', price: `$${price}`, change: '+2.4%' }
-        }]);
-      } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: `Processing: "${userInput}"\n\nI can help you with:\n- Balance queries (e.g., "what is the balance of sharp")\n- Price queries (e.g., "SHARP/USDT price")\n- P&L information\n- Bot status`
-        }]);
+      // Call Pipe Labs backend chat API that uses Claude MCP
+      const { API_URL } = await import('../config/api');
+      const token = localStorage.getItem('access_token') || 
+                    localStorage.getItem('pipelabs_token') || 
+                    localStorage.getItem('auth_token');
+      
+      const response = await fetch(`${API_URL}/api/agent/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          message: userInput,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+        throw new Error(errorData.detail || `Chat API error: ${response.status}`);
       }
-    } catch (error) {
-      console.error('Chat error:', error);
+      
+      const data = await response.json();
+      
+      // Handle response from Claude MCP via backend
+      // Response format: { response: string, actions_taken: array }
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `Sorry, I encountered an error: ${error.message}. Please try again.`
+        content: data.response || 'No response received',
+        data: data.actions_taken ? { type: 'agent_response', actions: data.actions_taken } : null
+      }]);
+      
+    } catch (error) {
+      console.error('Chat error:', error);
+      
+      // Fallback: If chat API doesn't exist, use direct API calls
+      const lowerInput = userInput.toLowerCase();
+      const isBalanceQuery = lowerInput.includes('balance') || 
+                            lowerInput.includes('how much') || 
+                            lowerInput.includes('what is the balance');
+      
+      if (isBalanceQuery && error.message.includes('404') || error.message.includes('Chat API')) {
+        // Fallback to direct balance fetch
+        try {
+          const { getBalance } = await import('../lib/trading');
+          const account = lowerInput.includes('client_sharp_2') ? 'client_sharp_2' : 'client_sharp';
+          const balanceData = await getBalance(account);
+          const bitmartBalances = balanceData.balances?.bitmart || {};
+          
+          if (Object.keys(bitmartBalances).length > 0) {
+            let balanceText = `**${account} Balance (BitMart):**\n\n`;
+            if (bitmartBalances.SHARP) {
+              const sharp = bitmartBalances.SHARP;
+              balanceText += `**SHARP:** ${(sharp.total || 0).toFixed(8)} (${(sharp.free || 0).toFixed(8)} free)\n`;
+            }
+            if (bitmartBalances.USDT) {
+              const usdt = bitmartBalances.USDT;
+              balanceText += `**USDT:** $${(usdt.total || 0).toFixed(2)} ($${(usdt.free || 0).toFixed(2)} free)\n`;
+            }
+            
+            setMessages(prev => [...prev, {
+              role: 'assistant',
+              content: balanceText,
+              data: { type: 'balance', account, balances: balanceData }
+            }]);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback error:', fallbackError);
+        }
+      }
+      
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${error.message}. Please make sure the chat API endpoint is configured.`
       }]);
     } finally {
       setIsLoading(false);
