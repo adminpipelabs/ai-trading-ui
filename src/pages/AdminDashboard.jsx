@@ -3021,7 +3021,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
         <div className="mb-8">
           <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
           <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => setShowClientManagement(true)} />
-          <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
+          <Link to="/bots" style={{textDecoration:"none"}}><MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} /></Link>
           <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
           <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} />
         </div>
