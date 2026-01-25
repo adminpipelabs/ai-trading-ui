@@ -2839,6 +2839,16 @@ function BotManagementView({ theme, isDark, onBack }) {
 
       {loading ? (
         <div className="text-center py-12" style={{ color: theme.textMuted }}>Loading bots...</div>
+      ) : error ? (
+        <div className="p-12 rounded-xl text-center" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+          <AlertCircle size={48} className="mx-auto mb-4" style={{ color: theme.negative }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: theme.textPrimary }}>Error loading bots</h3>
+          <p style={{ color: theme.textMuted }}>{error}</p>
+          <button onClick={fetchBots} className="mt-4 px-4 py-2 rounded-lg text-sm font-medium"
+                  style={{ background: theme.accent, color: 'white' }}>
+            Retry
+          </button>
+        </div>
       ) : bots.length === 0 ? (
         <div className="p-12 rounded-xl text-center" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
           <Bot size={48} className="mx-auto mb-4" style={{ opacity: 0.5, color: theme.textMuted }} />
@@ -2849,7 +2859,32 @@ function BotManagementView({ theme, isDark, onBack }) {
         <div className="space-y-4">
           {bots.map(bot => (
             <div key={bot.id} className="p-4 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
-              <div style={{ color: theme.textPrimary }}>{bot.name}</div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="font-semibold" style={{ color: theme.textPrimary }}>{bot.name || bot.id}</h3>
+                  <p className="text-sm" style={{ color: theme.textMuted }}>
+                    {bot.strategy} • {bot.connector} • {bot.pair}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    bot.status === 'running' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-500'
+                  }`}>
+                    {bot.status || 'stopped'}
+                  </span>
+                  {bot.status === 'running' ? (
+                    <button onClick={() => handleStopBot(bot.id)} className="px-3 py-1 rounded text-sm"
+                            style={{ background: theme.negative, color: 'white' }}>
+                      Stop
+                    </button>
+                  ) : (
+                    <button onClick={() => handleStartBot(bot.id)} className="px-3 py-1 rounded text-sm"
+                            style={{ background: theme.positive, color: 'white' }}>
+                      Start
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
