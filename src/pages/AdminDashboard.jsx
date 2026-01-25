@@ -3023,7 +3023,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
           <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => setShowClientManagement(true)} />
           <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
           <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
-          <div onClick={() => window.location.href="/bots"} style={{cursor:"pointer"}}><MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} /></div>
+          <div onClick={() => window.location.href="/bots"} style={{cursor:"pointer"}}><div onClick={() => window.location.href="/bots"} style={{cursor:"pointer"}}><MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} /></div></div>
         </div>
 
         <div className="flex-1">
