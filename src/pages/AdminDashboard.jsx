@@ -109,6 +109,23 @@ const EXCHANGES = [
   { id: 'gateway', name: 'Gateway DEX', requiresMemo: false },
 ];
 
+// ========== CHAIN BADGE COMPONENT ==========
+const ChainBadge = ({ chain }) => (
+  <span style={{
+    padding: "2px 6px",
+    borderRadius: 4,
+    fontSize: 10,
+    fontWeight: 600,
+    background: chain === "solana" ? "#9945FF20" : "#627EEA20",
+    color: chain === "solana" ? "#9945FF" : "#627EEA",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4
+  }}>
+    {chain === "solana" ? "◎" : "⟠"} {chain?.toUpperCase() || "EVM"}
+  </span>
+);
+
 // Mock client data
 const MOCK_CLIENTS = [
   {
@@ -2771,7 +2788,7 @@ function Message({ message, theme, isDark }) {
 }
 
 // ========== BOT MANAGEMENT VIEW ==========
-function BotManagementView({ theme, isDark, onBack }) {
+function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActiveChain }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -2837,6 +2854,30 @@ function BotManagementView({ theme, isDark, onBack }) {
         </button>
       </div>
 
+      {/* Chain Filter */}
+      <div className="mb-6 flex gap-2" style={{ background: theme.bgCard, padding: 4, borderRadius: 8, border: `1px solid ${theme.border}` }}>
+        {[
+          { id: "all", label: "All Chains" },
+          { id: "evm", label: "⟠ EVM" },
+          { id: "solana", label: "◎ Solana" },
+        ].map(c => (
+          <button
+            key={c.id}
+            onClick={() => setActiveChain && setActiveChain(c.id)}
+            style={{
+              padding: "8px 16px",
+              border: "none",
+              borderRadius: 6,
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              background: activeChain === c.id ? theme.accent : "transparent",
+              color: activeChain === c.id ? "white" : theme.textMuted
+            }}
+          >{c.label}</button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="text-center py-12" style={{ color: theme.textMuted }}>Loading bots...</div>
       ) : error ? (
@@ -2857,11 +2898,23 @@ function BotManagementView({ theme, isDark, onBack }) {
         </div>
       ) : (
         <div className="space-y-4">
-          {bots.map(bot => (
+          {bots
+            .filter(bot => {
+              // Determine chain from connector/exchange
+              const chain = bot.connector === 'jupiter' || bot.exchange === 'jupiter' ? 'solana' : 'evm';
+              return activeChain === "all" || chain === activeChain;
+            })
+            .map(bot => {
+              // Determine chain for badge
+              const botChain = bot.chain || (bot.connector === 'jupiter' || bot.exchange === 'jupiter' ? 'solana' : 'evm');
+              return (
             <div key={bot.id} className="p-4 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="font-semibold" style={{ color: theme.textPrimary }}>{bot.name || bot.id}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold" style={{ color: theme.textPrimary }}>{bot.name || bot.id}</h3>
+                    <ChainBadge chain={botChain} />
+                  </div>
                   <p className="text-sm" style={{ color: theme.textMuted }}>
                     {bot.strategy} • {bot.connector} • {bot.pair}
                   </p>
@@ -2886,7 +2939,8 @@ function BotManagementView({ theme, isDark, onBack }) {
                 </div>
               </div>
             </div>
-          ))}
+              );
+            })}
         </div>
       )}
     </div>
@@ -2905,6 +2959,11 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const messagesEndRef = useRef(null);
+  
+  // Wallet connection state
+  const [evmWallet, setEvmWallet] = useState(null);
+  const [solanaWallet, setSolanaWallet] = useState(null);
+  const [activeChain, setActiveChain] = useState("all"); // "all" | "evm" | "solana"
   
   // Check if we're on /bots route (HashRouter uses pathname)
   const isBotManagement = location.pathname === '/bots';
@@ -2971,6 +3030,58 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     };
     
     loadClients();
+  }, []);
+
+  // Wallet connection handlers
+  const connectEVMWallet = async () => {
+    if (!window.ethereum) {
+      alert('Please install MetaMask');
+      return;
+    }
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      setEvmWallet(accounts[0]);
+      localStorage.setItem('evm_wallet', accounts[0]);
+    } catch (error) {
+      console.error('EVM connection error:', error);
+      if (error.code !== 4001) { // Don't alert on user rejection
+        alert('Failed to connect wallet');
+      }
+    }
+  };
+
+  const connectSolanaWallet = async () => {
+    // Check for Phantom wallet
+    if (window.solana && window.solana.isPhantom) {
+      try {
+        const resp = await window.solana.connect();
+        const address = resp.publicKey.toString();
+        setSolanaWallet(address);
+        localStorage.setItem('solana_wallet', address);
+      } catch (error) {
+        // User rejected connection
+        if (error.code === 4001) {
+          console.log('User rejected Phantom connection');
+        } else {
+          console.error('Solana connection error:', error);
+          alert('Failed to connect Phantom wallet');
+        }
+      }
+    } else {
+      // Open Phantom install page
+      const install = confirm('Phantom wallet not found. Open Phantom website to install?');
+      if (install) {
+        window.open('https://phantom.app/', '_blank');
+      }
+    }
+  };
+
+  // Load wallets on mount
+  useEffect(() => {
+    const savedEvm = localStorage.getItem('evm_wallet');
+    const savedSolana = localStorage.getItem('solana_wallet');
+    if (savedEvm) setEvmWallet(savedEvm);
+    if (savedSolana) setSolanaWallet(savedSolana);
   }, []);
 
   const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: 34 };
@@ -3159,6 +3270,60 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
             <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm" style={{ left: isDark ? '18px' : '2px' }} />
           </div>
         </button>
+        
+        {/* Wallet Connections */}
+        <div className="mb-4 space-y-2">
+          {/* EVM Wallet */}
+          <div 
+            onClick={connectEVMWallet}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 8, 
+              padding: "6px 12px", 
+              background: evmWallet ? "#627EEA15" : theme.bgInput, 
+              borderRadius: 8, 
+              cursor: "pointer",
+              border: evmWallet ? "1px solid #627EEA40" : `1px solid ${theme.border}`
+            }}
+          >
+            <span>⟠</span>
+            {evmWallet ? (
+              <div className="flex-1">
+                <div style={{ fontSize: 11, color: theme.textMuted }}>EVM</div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: "#627EEA" }}>{evmWallet.slice(0,6)}...{evmWallet.slice(-4)}</div>
+              </div>
+            ) : (
+              <span style={{ fontSize: 13, color: theme.textMuted }}>Connect EVM</span>
+            )}
+          </div>
+
+          {/* Solana Wallet */}
+          <div 
+            onClick={connectSolanaWallet}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 8, 
+              padding: "6px 12px", 
+              background: solanaWallet ? "#9945FF15" : theme.bgInput, 
+              borderRadius: 8, 
+              cursor: "pointer",
+              border: solanaWallet ? "1px solid #9945FF40" : `1px solid ${theme.border}`
+            }}
+          >
+            <span>◎</span>
+            {solanaWallet ? (
+              <div className="flex-1">
+                <div style={{ fontSize: 11, color: theme.textMuted }}>Solana</div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: "#9945FF" }}>{solanaWallet.slice(0,4)}...{solanaWallet.slice(-4)}</div>
+              </div>
+            ) : (
+              <span style={{ fontSize: 13, color: theme.textMuted }}>Connect Solana</span>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold" style={{ background: '#d97706' }}>A</div>
@@ -3188,7 +3353,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
       <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
         {renderSidebar('bots')}
         <main className="flex-1 p-6">
-          <BotManagementView theme={theme} isDark={isDark} onBack={() => navigate('/')} />
+          <BotManagementView theme={theme} isDark={isDark} onBack={() => navigate('/')} activeChain={activeChain} setActiveChain={setActiveChain} />
         </main>
       </div>
     );
