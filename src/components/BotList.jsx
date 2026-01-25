@@ -7,42 +7,55 @@ export function BotList() {
   const [loading, setLoading] = useState(true);
 
   const fetchBots = async () => {
-    const res = await fetch(`${TRADING_BRIDGE}/bots`);
-    const data = await res.json();
-    setBots(data.bots || []);
+    try {
+      const res = await fetch(`${TRADING_BRIDGE}/bots`);
+      const data = await res.json();
+      setBots(data.bots || []);
+    } catch (err) {
+      console.error("Failed to fetch bots", err);
+    }
     setLoading(false);
   };
 
   const toggleBot = async (botId, currentStatus) => {
     const action = currentStatus === "running" ? "stop" : "start";
-    await fetch(`${TRADING_BRIDGE}/bots/${botId}/${action}`, { method: "POST" });
-    fetchBots();
+    try {
+      await fetch(`${TRADING_BRIDGE}/bots/${botId}/${action}`, { method: "POST" });
+      fetchBots();
+    } catch (err) {
+      console.error("Failed to toggle bot", err);
+    }
   };
 
-  useEffect(() => { fetchBots(); }, []);
+  useEffect(() => { 
+    fetchBots(); 
+    const interval = setInterval(fetchBots, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
-  if (loading) return <div className="text-gray-500">Loading bots...</div>;
-  if (bots.length === 0) return <div className="text-gray-500">No bots configured</div>;
+  if (loading) return <div style={{color: "#888", padding: "10px"}}>Loading bots...</div>;
+  if (bots.length === 0) return <div style={{color: "#888", padding: "10px"}}>No bots configured</div>;
 
   return (
-    <div className="space-y-2">
+    <div style={{fontSize: "14px"}}>
+      <div style={{display: "grid", gridTemplateColumns: "20px 1fr 80px 100px 80px 80px 70px", gap: "10px", padding: "8px 0", borderBottom: "1px solid #eee", color: "#888", fontSize: "12px"}}>
+        <span></span>
+        <span>NAME</span>
+        <span>TYPE</span>
+        <span>PAIR</span>
+        <span>EXCHANGE</span>
+        <span>P&L</span>
+        <span></span>
+      </div>
       {bots.map(bot => (
-        <div key={bot.id} className="flex items-center justify-between py-2 border-b border-gray-100">
-          <div className="flex items-center gap-3">
-            <span className={`w-2 h-2 rounded-full ${bot.status === "running" ? "bg-green-400" : "bg-gray-300"}`}></span>
-            <div>
-              <div className="font-medium text-gray-900">{bot.name}</div>
-              <div className="text-sm text-gray-500">{bot.exchange} · {bot.pair}</div>
-            </div>
-          </div>
-          <button
-            onClick={() => toggleBot(bot.id, bot.status)}
-            className={`px-3 py-1 text-sm rounded ${
-              bot.status === "running" 
-                ? "bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600" 
-                : "bg-teal-100 hover:bg-teal-200 text-teal-700"
-            }`}
-          >
+        <div key={bot.id} style={{display: "grid", gridTemplateColumns: "20px 1fr 80px 100px 80px 80px 70px", gap: "10px", padding: "10px 0", borderBottom: "1px solid #f5f5f5", alignItems: "center"}}>
+          <span style={{width: "10px", height: "10px", borderRadius: "50%", backgroundColor: bot.status === "running" ? "#10b981" : "#d1d5db"}}></span>
+          <span style={{fontWeight: 500}}>{bot.name}</span>
+          <span style={{color: "#888"}}>{bot.strategy || bot.type}</span>
+          <span>{bot.pair}</span>
+          <span style={{color: "#888"}}>{bot.connector || bot.exchange}</span>
+          <span style={{color: "#10b981"}}>-</span>
+          <button onClick={() => toggleBot(bot.id, bot.status)} style={{padding: "4px 12px", borderRadius: "4px", border: "none", cursor: "pointer", fontSize: "12px", backgroundColor: bot.status === "running" ? "#fee2e2" : "#d1fae5", color: bot.status === "running" ? "#dc2626" : "#059669"}}>
             {bot.status === "running" ? "Stop" : "Start"}
           </button>
         </div>
