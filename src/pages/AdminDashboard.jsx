@@ -1,6 +1,7 @@
 import { BalanceButton } from "../components/BalanceButton";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
+import { BotList } from "../components/BotList";
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   Send, Bot, User, TrendingUp, Wallet, Activity, Users, Plus, BarChart3, 
@@ -505,6 +506,7 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
         <VolumeOrderButton token="SHARP" />
         <BalanceButton account="client_sharp" />
         <VolumeOrderButton token="SHARP" />
+        <div style={{marginTop: "20px"}}><h3 style={{marginBottom: "10px", fontWeight: 600}}>Running Bots</h3><BotList /></div>
         <BalanceButton account="client_sharp" />
                 <div className="grid grid-cols-2 gap-2">
                   <button 
