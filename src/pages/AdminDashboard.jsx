@@ -1,4 +1,6 @@
 import { BalanceButton } from "../components/BalanceButton";
+import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import { BotList } from "../components/BotList";
