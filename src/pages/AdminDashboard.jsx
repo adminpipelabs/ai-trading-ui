@@ -2774,10 +2774,53 @@ function Message({ message, theme, isDark }) {
 function BotManagementView({ theme, isDark, onBack }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchBots = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { tradingBridge } = await import('../services/api');
+      const data = await tradingBridge.getBots();
+      // Handle both {bots: [...]} and [...] response formats
+      const botsList = Array.isArray(data) ? data : (data.bots || []);
+      setBots(botsList);
+      console.log('✅ Loaded bots:', botsList);
+    } catch (err) {
+      console.error('❌ Failed to fetch bots:', err);
+      setError(err.message || 'Failed to load bots');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStartBot = async (botId) => {
+    try {
+      const { tradingBridge } = await import('../services/api');
+      await tradingBridge.startBot(botId);
+      fetchBots(); // Refresh list
+    } catch (err) {
+      console.error('Failed to start bot:', err);
+      alert(`Failed to start bot: ${err.message}`);
+    }
+  };
+
+  const handleStopBot = async (botId) => {
+    try {
+      const { tradingBridge } = await import('../services/api');
+      await tradingBridge.stopBot(botId);
+      fetchBots(); // Refresh list
+    } catch (err) {
+      console.error('Failed to stop bot:', err);
+      alert(`Failed to stop bot: ${err.message}`);
+    }
+  };
 
   useEffect(() => {
-    // TODO: Load bots from API
-    setLoading(false);
+    fetchBots();
+    // Refresh every 10 seconds
+    const interval = setInterval(fetchBots, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

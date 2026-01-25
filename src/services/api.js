@@ -153,6 +153,35 @@ export const tradingBridge = {
   async getPrice(connector, pair) {
     return apiCall(`${TRADING_BRIDGE_URL}/market/price?connector=${connector}&pair=${encodeURIComponent(pair)}`);
   },
+
+  async getBots() {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots`);
+  },
+
+  async createBot({ name, account, strategy, connector, pair, config }) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/create`, {
+      method: 'POST',
+      body: JSON.stringify({ name, account, strategy, connector, pair, config }),
+    });
+  },
+
+  async startBot(botId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
+      method: 'POST',
+    });
+  },
+
+  async stopBot(botId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/stop`, {
+      method: 'POST',
+    });
+  },
+
+  async deleteBot(botId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 // ========== CLIENT API ==========
