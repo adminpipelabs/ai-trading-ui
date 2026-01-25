@@ -1,5 +1,5 @@
 import { BalanceButton } from "../components/BalanceButton";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import { BotList } from "../components/BotList";
@@ -2770,9 +2770,55 @@ function Message({ message, theme, isDark }) {
   );
 }
 
+// ========== BOT MANAGEMENT VIEW ==========
+function BotManagementView({ theme, isDark, onBack }) {
+  const [bots, setBots] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // TODO: Load bots from API
+    setLoading(false);
+  }, []);
+
+  return (
+    <div className="flex-1">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textPrimary }}>Bot Management</h1>
+        <p className="text-sm" style={{ color: theme.textMuted }}>Create and manage your trading bots</p>
+      </div>
+
+      <div className="mb-6">
+        <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: theme.accent, color: 'white' }}>
+          <Plus size={18} />Create Bot
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12" style={{ color: theme.textMuted }}>Loading bots...</div>
+      ) : bots.length === 0 ? (
+        <div className="p-12 rounded-xl text-center" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+          <Bot size={48} className="mx-auto mb-4" style={{ opacity: 0.5, color: theme.textMuted }} />
+          <h3 className="text-lg font-semibold mb-2" style={{ color: theme.textPrimary }}>No bots yet</h3>
+          <p style={{ color: theme.textMuted }}>Create your first trading bot to get started</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {bots.map(bot => (
+            <div key={bot.id} className="p-4 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+              <div style={{ color: theme.textPrimary }}>{bot.name}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ========== ADMIN DASHBOARD ==========
 function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState([{ role: 'assistant', content: "Welcome back. I can help you manage clients, monitor bots, and analyze performance across your platform." }]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -2781,6 +2827,9 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const messagesEndRef = useRef(null);
+  
+  // Check if we're on /bots route (HashRouter uses hash)
+  const isBotManagement = location.hash === '#/bots';
   
   // Load clients from API
   useEffect(() => {
@@ -2967,41 +3016,99 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     }
   };
 
+  // Render sidebar component (reusable)
+  const renderSidebar = (activeView) => (
+    <aside className="w-64 flex flex-col p-5" style={{ background: theme.bgPrimary, borderRight: `1px solid ${theme.border}` }}>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm" style={{ background: theme.logoBg }}>P</div>
+          <span className="font-bold text-sm" style={{ color: theme.textPrimary }}>Pipe Labs</span>
+        </div>
+        <span className="text-xs font-semibold uppercase px-2 py-1 rounded" style={{ background: 'rgba(217, 119, 6, 0.1)', color: '#d97706' }}>Admin</span>
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
+        <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => { setShowClientManagement(true); navigate('/'); }} />
+        <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
+        <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
+        <div onClick={() => navigate('/bots')} style={{cursor:"pointer"}}>
+          <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} />
+        </div>
+      </div>
+
+      <div className="flex-1">
+        <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>{activeView === 'chat' ? 'Quick Actions' : 'Navigation'}</h3>
+        {activeView === 'chat' && (
+          <>
+            <SpreadOrderButton token="SHARP" />
+            <VolumeOrderButton token="SHARP" />
+            <BalanceButton account="client_sharp" />
+            <button onClick={() => setShowAddClient(true)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium mb-2"
+                    style={{ background: theme.accent, color: 'white' }}><Plus size={16} />Add Client</button>
+            <button onClick={() => { setShowClientManagement(true); navigate('/'); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><Users size={16} />Manage Clients</button>
+            <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm"
+                    style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><BarChart3 size={16} />View Reports</button>
+          </>
+        )}
+        {activeView !== 'chat' && (
+          <>
+            <button onClick={() => { setShowClientManagement(false); navigate('/'); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={{ background: activeView === 'chat' ? theme.accentLight : 'transparent', color: activeView === 'chat' ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}` }}>
+              <MessageSquare size={16} />AI Assistant
+            </button>
+            <button onClick={() => { setShowClientManagement(true); navigate('/'); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={{ background: activeView === 'clients' ? theme.accentLight : 'transparent', color: activeView === 'clients' ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}` }}>
+              <Users size={16} />Clients
+            </button>
+            <button onClick={() => navigate('/bots')} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={{ background: activeView === 'bots' ? theme.accentLight : 'transparent', color: activeView === 'bots' ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}` }}>
+              <Activity size={16} />Bots
+            </button>
+          </>
+        )}
+      </div>
+
+      <div className="pt-4 space-y-3" style={{ borderTop: `1px solid ${theme.border}` }}>
+        <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm"
+                style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}>
+          <span className="flex items-center gap-2.5">{isDark ? <Moon size={16} /> : <Sun size={16} />}{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+          <div className="w-9 h-5 rounded-full relative" style={{ background: isDark ? theme.accent : '#cbd5e1' }}>
+            <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm" style={{ left: isDark ? '18px' : '2px' }} />
+          </div>
+        </button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold" style={{ background: '#d97706' }}>A</div>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium" style={{ color: theme.textPrimary }}>Admin User</span>
+              <span className="text-xs" style={{ color: theme.textMuted }}>{user.email}</span>
+            </div>
+          </div>
+          <button onClick={onLogout} className="p-2 rounded-lg" style={{ color: theme.textMuted }}><LogOut size={16} /></button>
+        </div>
+      </div>
+    </aside>
+  );
+
   if (showClientManagement) {
     return (
       <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
         <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} />
-        <aside className="w-64 flex flex-col p-5" style={{ background: theme.bgPrimary, borderRight: `1px solid ${theme.border}` }}>
-          <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm" style={{ background: theme.logoBg }}>P</div>
-            <span className="font-bold text-sm" style={{ color: theme.textPrimary }}>Pipe Labs</span>
-          </div>
-          <button onClick={() => setShowClientManagement(false)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
-                  style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}>
-            <MessageSquare size={16} />AI Assistant
-          </button>
-          <button className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-8"
-                  style={{ background: theme.accentLight, color: theme.accent }}>
-            <Users size={16} />Clients
-          </button>
-          <div className="flex-1" />
-          <button onClick={toggleTheme} className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm mb-3"
-                  style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}>
-            <span className="flex items-center gap-2.5">{isDark ? <Moon size={16} /> : <Sun size={16} />}{isDark ? 'Dark' : 'Light'}</span>
-            <div className="w-9 h-5 rounded-full relative" style={{ background: isDark ? theme.accent : '#cbd5e1' }}>
-              <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm" style={{ left: isDark ? '18px' : '2px' }} />
-            </div>
-          </button>
-          <div className="flex items-center gap-2.5 pt-3" style={{ borderTop: `1px solid ${theme.border}` }}>
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold" style={{ background: '#d97706' }}>A</div>
-            <div className="flex-1">
-              <div className="text-xs font-medium" style={{ color: theme.textPrimary }}>Admin</div>
-              <div className="text-xs" style={{ color: theme.textMuted }}>{user.email}</div>
-            </div>
-            <button onClick={onLogout} className="p-2 rounded-lg" style={{ color: theme.textMuted }}><LogOut size={16} /></button>
-          </div>
-        </aside>
+        {renderSidebar('clients')}
         <ClientManagement onBack={() => setShowClientManagement(false)} onAddClient={() => setShowAddClient(true)} clients={clients} setClients={setClients} />
+      </div>
+    );
+  }
+
+  if (isBotManagement) {
+    return (
+      <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
+        {renderSidebar('bots')}
+        <main className="flex-1 p-6">
+          <BotManagementView theme={theme} isDark={isDark} onBack={() => navigate('/')} />
+        </main>
       </div>
     );
   }
@@ -3009,59 +3116,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   return (
     <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
       <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} />
-      
-      <aside className="w-64 flex flex-col p-5" style={{ background: theme.bgPrimary, borderRight: `1px solid ${theme.border}` }}>
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white text-sm" style={{ background: theme.logoBg }}>P</div>
-            <span className="font-bold text-sm" style={{ color: theme.textPrimary }}>Pipe Labs</span>
-          </div>
-          <span className="text-xs font-semibold uppercase px-2 py-1 rounded" style={{ background: 'rgba(217, 119, 6, 0.1)', color: '#d97706' }}>Admin</span>
-        </div>
-
-        <div className="mb-8">
-          <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
-          <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => setShowClientManagement(true)} />
-          <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
-          <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
-          <div onClick={() => navigate('/bots')} style={{cursor:"pointer"}}>
-            <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} />
-          </div>
-        </div>
-
-        <div className="flex-1">
-          <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Quick Actions</h3>
-        <SpreadOrderButton token="SHARP" />
-        <VolumeOrderButton token="SHARP" />
-        <BalanceButton account="client_sharp" />
-          <button onClick={() => setShowAddClient(true)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium mb-2"
-                  style={{ background: theme.accent, color: 'white' }}><Plus size={16} />Add Client</button>
-          <button onClick={() => setShowClientManagement(true)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
-                  style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><Users size={16} />Manage Clients</button>
-          <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm"
-                  style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><BarChart3 size={16} />View Reports</button>
-        </div>
-
-        <div className="pt-4 space-y-3" style={{ borderTop: `1px solid ${theme.border}` }}>
-          <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm"
-                  style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}>
-            <span className="flex items-center gap-2.5">{isDark ? <Moon size={16} /> : <Sun size={16} />}{isDark ? 'Dark Mode' : 'Light Mode'}</span>
-            <div className="w-9 h-5 rounded-full relative" style={{ background: isDark ? theme.accent : '#cbd5e1' }}>
-              <div className="absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm" style={{ left: isDark ? '18px' : '2px' }} />
-            </div>
-          </button>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold" style={{ background: '#d97706' }}>A</div>
-              <div className="flex flex-col">
-                <span className="text-xs font-medium" style={{ color: theme.textPrimary }}>Admin User</span>
-                <span className="text-xs" style={{ color: theme.textMuted }}>{user.email}</span>
-              </div>
-            </div>
-            <button onClick={onLogout} className="p-2 rounded-lg" style={{ color: theme.textMuted }}><LogOut size={16} /></button>
-          </div>
-        </div>
-      </aside>
+      {renderSidebar('chat')}
 
       <main className="flex-1 flex flex-col p-6">
         <div className="flex-1 flex flex-col max-w-3xl w-full mx-auto">
