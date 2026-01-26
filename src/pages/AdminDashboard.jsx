@@ -2792,6 +2792,17 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showCreateBot, setShowCreateBot] = useState(false);
+  const [newBot, setNewBot] = useState({
+    name: '',
+    account: 'client_sharp',
+    strategy: 'spread',
+    connector: 'bitmart',
+    pair: 'SHARP/USDT',
+    bid_spread: 0.003,
+    ask_spread: 0.003,
+    order_amount: 1000
+  });
 
   const fetchBots = async () => {
     try {
@@ -2833,6 +2844,40 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
     }
   };
 
+  const handleCreateBot = async (e) => {
+    e.preventDefault();
+    try {
+      const { tradingBridge } = await import('../services/api');
+      await tradingBridge.createBot({
+        name: newBot.name,
+        account: newBot.account,
+        strategy: newBot.strategy,
+        connector: newBot.connector,
+        pair: newBot.pair,
+        config: {
+          bid_spread: parseFloat(newBot.bid_spread),
+          ask_spread: parseFloat(newBot.ask_spread),
+          order_amount: parseFloat(newBot.order_amount)
+        }
+      });
+      setShowCreateBot(false);
+      setNewBot({
+        name: '',
+        account: 'client_sharp',
+        strategy: 'spread',
+        connector: 'bitmart',
+        pair: 'SHARP/USDT',
+        bid_spread: 0.003,
+        ask_spread: 0.003,
+        order_amount: 1000
+      });
+      fetchBots(); // Refresh list
+    } catch (err) {
+      console.error('Failed to create bot:', err);
+      alert(`Failed to create bot: ${err.message}`);
+    }
+  };
+
   useEffect(() => {
     fetchBots();
     // Refresh every 10 seconds
@@ -2848,11 +2893,143 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       </div>
 
       <div className="mb-6">
-        <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ background: theme.accent, color: 'white' }}>
+        <button 
+          onClick={() => setShowCreateBot(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+          style={{ background: theme.accent, color: 'white' }}>
           <Plus size={18} />Create Bot
         </button>
       </div>
+
+      {/* Create Bot Modal */}
+      {showCreateBot && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.5)' }}>
+          <div className="w-full max-w-md p-6 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold" style={{ color: theme.textPrimary }}>Create New Bot</h2>
+              <button onClick={() => setShowCreateBot(false)} className="p-1 rounded" style={{ color: theme.textMuted }}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateBot} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Bot Name</label>
+                <input
+                  type="text"
+                  value={newBot.name}
+                  onChange={(e) => setNewBot({...newBot, name: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  placeholder="e.g., Sharp Spread Bot"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Account</label>
+                <input
+                  type="text"
+                  value={newBot.account}
+                  onChange={(e) => setNewBot({...newBot, account: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Strategy</label>
+                <select
+                  value={newBot.strategy}
+                  onChange={(e) => setNewBot({...newBot, strategy: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                >
+                  <option value="spread">Spread Trading</option>
+                  <option value="volume">Volume Trading</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Connector</label>
+                <select
+                  value={newBot.connector}
+                  onChange={(e) => setNewBot({...newBot, connector: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                >
+                  <option value="bitmart">BitMart</option>
+                  <option value="jupiter">Jupiter (Solana)</option>
+                  <option value="binance">Binance</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Trading Pair</label>
+                <input
+                  type="text"
+                  value={newBot.pair}
+                  onChange={(e) => setNewBot({...newBot, pair: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  placeholder="SHARP/USDT"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Bid Spread</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={newBot.bid_spread}
+                    onChange={(e) => setNewBot({...newBot, bid_spread: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Ask Spread</label>
+                  <input
+                    type="number"
+                    step="0.001"
+                    value={newBot.ask_spread}
+                    onChange={(e) => setNewBot({...newBot, ask_spread: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Order Amount</label>
+                <input
+                  type="number"
+                  value={newBot.order_amount}
+                  onChange={(e) => setNewBot({...newBot, order_amount: e.target.value})}
+                  className="w-full px-3 py-2 rounded-lg text-sm"
+                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                  required
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateBot(false)}
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                  style={{ background: theme.bgSecondary, color: theme.textSecondary }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{ background: theme.positive }}
+                >
+                  Create Bot
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Chain Filter */}
       <div className="mb-6 flex gap-2" style={{ background: theme.bgCard, padding: 4, borderRadius: 8, border: `1px solid ${theme.border}` }}>
