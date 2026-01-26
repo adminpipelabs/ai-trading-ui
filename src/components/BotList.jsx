@@ -2,15 +2,24 @@ import { useState, useEffect } from "react";
 
 const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
 
-export function BotList() {
+export function BotList({ account = null }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchBots = async () => {
     try {
-      const res = await fetch(`${TRADING_BRIDGE}/bots`);
+      // If account is provided, filter by account
+      const url = account ? `${TRADING_BRIDGE}/bots?account=${encodeURIComponent(account)}` : `${TRADING_BRIDGE}/bots`;
+      const res = await fetch(url);
       const data = await res.json();
-      setBots(data.bots || []);
+      let botsList = data.bots || [];
+      
+      // If account filter not supported by backend, filter on frontend
+      if (account && botsList.length > 0) {
+        botsList = botsList.filter(bot => bot.account === account);
+      }
+      
+      setBots(botsList);
     } catch (err) {
       console.error("Failed to fetch bots", err);
     }

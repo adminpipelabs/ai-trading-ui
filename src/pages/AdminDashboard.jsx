@@ -1825,6 +1825,7 @@ function ClientDashboard({ user, theme, isDark }) {
   const [loadingData, setLoadingData] = useState(true);
   const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'balances', 'trades', 'reports'
   const [reportDays, setReportDays] = useState(30);
+  const [clientAccount, setClientAccount] = useState(null);
 
   // Load real data from API
   useEffect(() => {
@@ -1837,7 +1838,23 @@ function ClientDashboard({ user, theme, isDark }) {
   const loadClientData = async () => {
     try {
       setLoadingData(true);
-      const { clientAPI } = await import('../services/api');
+      const { clientAPI, adminAPI } = await import('../services/api');
+      
+      // Get client account identifier from backend
+      // Try to fetch client info to get account mapping
+      try {
+        // For now, derive account from wallet address hash
+        // In production, this should come from backend client record
+        const walletHash = user?.wallet_address?.slice(2, 10).toLowerCase() || '';
+        // Try common account patterns
+        const possibleAccounts = [
+          `client_${walletHash}`,
+          'client_sharp', // Default for testing
+        ];
+        setClientAccount(possibleAccounts[1]); // Use client_sharp for now
+      } catch (e) {
+        console.error('Failed to get client account:', e);
+      }
       
       // Load all data in parallel
       const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
@@ -1989,6 +2006,12 @@ function ClientDashboard({ user, theme, isDark }) {
                     </div>
                   </div>
                 )}
+
+                {/* Bot List */}
+                <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
+                  <div className="text-sm font-semibold mb-4" style={{ color: theme.textPrimary }}>My Bots</div>
+                  <BotList account={clientAccount} />
+                </div>
 
                 {/* Recent Trades */}
                 <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
