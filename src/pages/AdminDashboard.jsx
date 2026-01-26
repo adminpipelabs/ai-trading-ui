@@ -1838,22 +1838,22 @@ function ClientDashboard({ user, theme, isDark }) {
   const loadClientData = async () => {
     try {
       setLoadingData(true);
-      const { clientAPI, adminAPI } = await import('../services/api');
+      const { clientAPI } = await import('../services/api');
       
-      // Get client account identifier from backend
-      // Try to fetch client info to get account mapping
-      try {
-        // For now, derive account from wallet address hash
-        // In production, this should come from backend client record
-        const walletHash = user?.wallet_address?.slice(2, 10).toLowerCase() || '';
-        // Try common account patterns
-        const possibleAccounts = [
-          `client_${walletHash}`,
-          'client_sharp', // Default for testing
-        ];
-        setClientAccount(possibleAccounts[1]); // Use client_sharp for now
-      } catch (e) {
-        console.error('Failed to get client account:', e);
+      // Get client account identifier from backend using wallet address
+      if (user?.wallet_address) {
+        try {
+          const clientInfo = await clientAPI.getClientByWallet(user.wallet_address);
+          if (clientInfo?.account_identifier) {
+            setClientAccount(clientInfo.account_identifier);
+            console.log('✅ Found client account identifier:', clientInfo.account_identifier);
+          }
+        } catch (e) {
+          console.error('Failed to get client account identifier:', e);
+          // Fallback: try to use wallet address hash if endpoint fails
+          const walletHash = user.wallet_address.slice(2, 10).toLowerCase();
+          setClientAccount(`client_${walletHash}`);
+        }
       }
       
       // Load all data in parallel

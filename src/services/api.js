@@ -204,6 +204,12 @@ export const clientAPI = {
     return apiCall(`${API_URL}/api/clients/volume?days=${days}`);
   },
 
+  async getClientByWallet(walletAddress) {
+    // Use trading-bridge endpoint for wallet-to-account mapping
+    const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletAddress)}`);
+  },
+
   async generateReport(format = 'json', days = 30) {
     const url = `${API_URL}/api/clients/report?format=${format}&days=${days}`;
     if (format === 'csv') {
