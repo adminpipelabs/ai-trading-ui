@@ -2308,6 +2308,37 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       
       const newClient = await response.json();
       
+      // Auto-sync client to trading-bridge for wallet-to-account mapping
+      try {
+        const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+        const walletChain = isEVM ? 'evm' : 'solana';
+        
+        await fetch(`${TRADING_BRIDGE_URL}/clients/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: clientData.name,
+            account_identifier: `client_${clientData.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`,
+            wallets: [{
+              chain: walletChain,
+              address: clientData.wallet_address
+            }],
+            connectors: connectors.map(c => ({
+              name: c.exchange,
+              api_key: c.apiKey,
+              api_secret: c.apiSecret,
+              memo: c.memo || null
+            }))
+          })
+        });
+        console.log('✅ Client synced to trading-bridge');
+      } catch (syncError) {
+        console.warn('⚠️ Failed to sync client to trading-bridge (non-critical):', syncError);
+        // Non-critical - client still created in Pipe Labs dashboard
+      }
+      
       // If connectors were added, add them via API keys endpoint
       if (connectors.length > 0 && newClient.id) {
         for (const connector of connectors) {

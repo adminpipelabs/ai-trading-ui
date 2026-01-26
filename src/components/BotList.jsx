@@ -8,11 +8,9 @@ export function BotList({ account = null }) {
 
   const fetchBots = async () => {
     try {
-      // If account is provided, filter by account
-      const url = account ? `${TRADING_BRIDGE}/bots?account=${encodeURIComponent(account)}` : `${TRADING_BRIDGE}/bots`;
-      const res = await fetch(url);
-      const data = await res.json();
-      let botsList = data.bots || [];
+      const { tradingBridge } = await import('../services/api');
+      const data = await tradingBridge.getBots(account);
+      let botsList = Array.isArray(data) ? data : (data.bots || []);
       
       // If account filter not supported by backend, filter on frontend
       if (account && botsList.length > 0) {

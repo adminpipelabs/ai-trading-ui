@@ -154,8 +154,9 @@ export const tradingBridge = {
     return apiCall(`${TRADING_BRIDGE_URL}/market/price?connector=${connector}&pair=${encodeURIComponent(pair)}`);
   },
 
-  async getBots() {
-    return apiCall(`${TRADING_BRIDGE_URL}/bots`);
+  async getBots(account = null) {
+    const url = account ? `${TRADING_BRIDGE_URL}/bots?account=${encodeURIComponent(account)}` : `${TRADING_BRIDGE_URL}/bots`;
+    return apiCall(url);
   },
 
   async createBot({ name, account, strategy, connector, pair, config }) {
