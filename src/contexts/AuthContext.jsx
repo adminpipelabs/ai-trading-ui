@@ -26,11 +26,17 @@ export function AuthProvider({ children }) {
     const userObj = authData.user || authData;
     const token = authData.access_token || authData.token;
     
+    // Fix: Check account_identifier for admin override
+    let role = (userObj.role || 'client').toLowerCase();
+    if (userObj.account_identifier === 'admin' || userObj.account_identifier === 'admin_account') {
+      role = 'admin';
+    }
+    
     const userData = {
       id: userObj.id,
       email: userObj.email,
       wallet_address: userObj.wallet_address,
-      role: (userObj.role || 'client').toLowerCase(), // Use actual role, don't default to client
+      role: role,
       name: userObj.email || userObj.wallet_address?.slice(0, 8) + '...',
     };
     

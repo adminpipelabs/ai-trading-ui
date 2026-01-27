@@ -137,15 +137,22 @@ export default function Login() {
       const data = await res.json();
       console.log('✅ Login successful:', data);
 
+      // Fix: Check account_identifier for admin, override role if needed
+      const userObj = data.user || data;
+      if (userObj.account_identifier === 'admin' || userObj.account_identifier === 'admin_account') {
+        userObj.role = 'admin';
+      }
+
       // Call auth context login (handles storage)
       const userData = login({
-        user: data.user,
+        user: userObj,
         access_token: data.access_token
       });
 
       // Redirect based on role - use the role from userData (correctly parsed)
       console.log('Login response:', data);
       console.log('User role:', userData.role);
+      console.log('Account identifier:', userObj.account_identifier);
       
       if (userData.role === 'admin') {
         navigate('/admin');
