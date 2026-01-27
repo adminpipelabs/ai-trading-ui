@@ -2678,7 +2678,18 @@ function Login({ onLogin }) {
       try {
         // Ensure wallet address is lowercase for lookup
         const walletLower = walletAddress.toLowerCase();
-        const clientRes = await fetch(`${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`);
+        const lookupUrl = `${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`;
+        console.log('🔍 Checking wallet in trading-bridge:', lookupUrl);
+        
+        const clientRes = await fetch(lookupUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }).catch(fetchError => {
+          console.error('Network error fetching wallet:', fetchError);
+          throw new Error(`Network error: ${fetchError.message}. Please check your internet connection.`);
+        });
         
         if (!clientRes.ok) {
           if (clientRes.status === 404) {
@@ -2689,7 +2700,12 @@ function Login({ onLogin }) {
               `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
             );
           }
-          const errorText = await clientRes.text();
+          let errorText = 'Unknown error';
+          try {
+            errorText = await clientRes.text();
+          } catch (e) {
+            // Ignore text parsing errors
+          }
           throw new Error(`Failed to check wallet registration: ${clientRes.status} ${errorText}`);
         }
         
@@ -2697,7 +2713,7 @@ function Login({ onLogin }) {
         console.log('✅ Wallet found in trading-bridge:', clientInfo);
       } catch (e) {
         // If it's already our custom error, re-throw it
-        if (e.message.includes('Wallet address not registered')) {
+        if (e.message.includes('Wallet address not registered') || e.message.includes('Network error')) {
           throw e;
         }
         // Otherwise, wrap the error
