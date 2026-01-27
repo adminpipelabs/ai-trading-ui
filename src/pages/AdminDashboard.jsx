@@ -2671,48 +2671,23 @@ function Login({ onLogin }) {
 
       const walletAddress = accounts[0];
       
-      // Auth backend URL (declared once at top of function)
-      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
-      
-      // OPTIONAL: Try to check if wallet exists in trading-bridge (non-blocking)
-      // If trading-bridge is unavailable, fall back to original auth flow
-      let clientInfo = null;
+      // Use trading-bridge for auth (consolidated backend)
       const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
       
-      try {
-        const walletLower = walletAddress.toLowerCase();
-        const lookupUrl = `${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`;
-        console.log('🔍 Checking wallet in trading-bridge (optional):', lookupUrl);
-        
-        const clientRes = await Promise.race([
-          fetch(lookupUrl, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)) // 3 second timeout
-        ]);
-        
-        if (clientRes.ok) {
-          clientInfo = await clientRes.json();
-          console.log('✅ Wallet found in trading-bridge:', clientInfo);
-        } else if (clientRes.status === 404) {
-          console.log('⚠️ Wallet not found in trading-bridge');
-        }
-      } catch (e) {
-        // Trading-bridge check failed - continue with original auth flow
-        console.log('⚠️ Trading-bridge check failed (non-blocking):', e.message);
-        console.log('Continuing with trading-bridge auth flow...');
-      }
-      
-      // Get nonce/message from pipelabs-dashboard (auth backend)
+      // Get nonce/message from trading-bridge (auth backend)
       setStatus('Getting authentication message...');
-      const nonceRes = await fetch(`${AUTH_BACKEND}/api/auth/nonce/${walletAddress}`);
+      const nonceRes = await fetch(`${TRADING_BRIDGE_URL}/auth/message/${walletAddress}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
       
       if (!nonceRes.ok) {
-        throw new Error('Failed to get authentication message from server');
+        const errorText = await nonceRes.text();
+        throw new Error(`Failed to get authentication message: ${nonceRes.status} ${errorText}`);
       }
 
-      const { message } = await nonceRes.json();
+      const nonceData = await nonceRes.json();
+      const message = nonceData.message;
 
       // Sign message
       setStatus('Please sign the message in your wallet...');
