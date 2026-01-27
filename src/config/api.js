@@ -14,8 +14,8 @@ function getBackendURL() {
     return process.env.REACT_APP_API_URL;
   }
   
-  // 3. Production fallback - Use backend-pipelabs-dashboard for auth
-  return 'https://backend-pipelabs-dashboard-production.up.railway.app';
+  // 3. Production fallback - Use pipelabs-dashboard for auth
+  return 'https://pipelabs-dashboard-production.up.railway.app';
 }
 
 export const API_URL = getBackendURL();
