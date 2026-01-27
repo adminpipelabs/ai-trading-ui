@@ -2285,11 +2285,11 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       };
       
       console.log('Creating client with:', requestBody);
-      console.log('API URL:', `${API_URL}/api/admin/quick-client`);
+      console.log('API URL:', `${TRADING_BRIDGE_URL}/api/admin/quick-client`);
       console.log('Token present:', !!token);
       
-      // Use the production-ready quick-client endpoint
-      const response = await fetch(`${API_URL}/api/admin/quick-client`, {
+      // Use trading-bridge for client creation
+      const response = await fetch(`${TRADING_BRIDGE_URL}/api/admin/quick-client`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2716,9 +2716,10 @@ function Login({ onLogin }) {
       const signer = await provider.getSigner();
       const signature = await signer.signMessage(message);
 
-      // Send to backend for verification
+      // Send to pipelabs-dashboard for verification (auth backend)
       setStatus('Verifying signature...');
-      const res = await fetch(`${API_URL}/api/auth/wallet/login`, {
+      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
+      const res = await fetch(`${AUTH_BACKEND}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -71,11 +71,11 @@ export default function Login() {
         // Continue with normal login flow
       }
       
-      // Get nonce/message from trading-bridge
+      // Get nonce/message from pipelabs-dashboard (auth backend)
       setStatus('Getting authentication message...');
-      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-      console.log('🔗 Using TRADING_BRIDGE_URL:', TRADING_BRIDGE_URL);
-      const nonceRes = await fetch(`${TRADING_BRIDGE_URL}/api/auth/nonce/${walletAddress}`, {
+      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
+      console.log('🔗 Using AUTH_BACKEND:', AUTH_BACKEND);
+      const nonceRes = await fetch(`${AUTH_BACKEND}/api/auth/nonce/${walletAddress}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -108,11 +108,11 @@ export default function Login() {
         throw signError; // Re-throw if it's a different error
       }
 
-      // Send to trading-bridge for verification
+      // Send to pipelabs-dashboard for verification (auth backend)
       setStatus('Verifying signature...');
-      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-      console.log('🔐 Sending login request to:', `${TRADING_BRIDGE_URL}/api/auth/wallet/login`);
-      const res = await fetch(`${TRADING_BRIDGE_URL}/api/auth/wallet/login`, {
+      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
+      console.log('🔐 Sending login request to:', `${AUTH_BACKEND}/api/auth/wallet/login`);
+      const res = await fetch(`${AUTH_BACKEND}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
