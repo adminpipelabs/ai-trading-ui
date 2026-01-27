@@ -137,46 +137,15 @@ export default function Login() {
       const data = await res.json();
       console.log('✅ Login successful:', data);
 
-      // Fix: Fetch client data to get account_identifier for admin check
-      const userObj = data.user || data;
-      let accountIdentifier = userObj.account_identifier;
-      
-      // If account_identifier not in response, fetch it from clients endpoint
-      if (!accountIdentifier && walletAddress) {
-        try {
-          const clientRes = await fetch(`${TRADING_BRIDGE_URL}/clients`, {
-            headers: { 'Content-Type': 'application/json' }
-          });
-          if (clientRes.ok) {
-            const clientsData = await clientRes.json();
-            const client = (clientsData.clients || []).find(c => 
-              c.wallet_address?.toLowerCase() === walletAddress.toLowerCase()
-            );
-            if (client) {
-              accountIdentifier = client.account_identifier;
-              userObj.account_identifier = accountIdentifier;
-            }
-          }
-        } catch (e) {
-          console.error('Failed to fetch client data:', e);
-        }
-      }
-
-      // Override role if account_identifier is 'admin'
-      if (accountIdentifier === 'admin' || accountIdentifier === 'admin_account') {
-        userObj.role = 'admin';
-      }
-
       // Call auth context login (handles storage)
       const userData = login({
-        user: userObj,
+        user: data.user,
         access_token: data.access_token
       });
 
       // Redirect based on role - use the role from userData (correctly parsed)
       console.log('Login response:', data);
       console.log('User role:', userData.role);
-      console.log('Account identifier:', accountIdentifier);
       
       if (userData.role === 'admin') {
         navigate('/admin');
