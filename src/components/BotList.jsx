@@ -7,6 +7,13 @@ export function BotList({ account = null }) {
   const [loading, setLoading] = useState(true);
 
   const fetchBots = async () => {
+    // Don't fetch if account is not set yet (for client view)
+    if (account === null) {
+      console.log('⏳ BotList: Waiting for account to be set...');
+      setLoading(false);
+      return;
+    }
+    
     try {
       console.log('🔍 BotList: Fetching bots for account:', account);
       const { tradingBridge } = await import('../services/api');
