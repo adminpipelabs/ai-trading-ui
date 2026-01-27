@@ -3247,6 +3247,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   const [showClientManagement, setShowClientManagement] = useState(false);
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
+  const [bots, setBots] = useState([]);
   const messagesEndRef = useRef(null);
   
   // Wallet connection state
@@ -3318,6 +3319,23 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     };
     
     loadClients();
+  }, []);
+
+  // Load bots from API for metrics
+  useEffect(() => {
+    const loadBots = async () => {
+      try {
+        const { tradingBridge } = await import('../services/api');
+        const data = await tradingBridge.getBots();
+        const botsList = Array.isArray(data) ? data : (data.bots || []);
+        setBots(botsList);
+      } catch (error) {
+        console.error('Failed to load bots for metrics:', error);
+        setBots([]);
+      }
+    };
+    
+    loadBots();
   }, []);
 
   // Wallet connection handlers
