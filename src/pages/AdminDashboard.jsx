@@ -2701,9 +2701,10 @@ function Login({ onLogin }) {
         console.log('Continuing with trading-bridge auth flow...');
       }
       
-      // Get nonce/message from backend
+      // Get nonce/message from pipelabs-dashboard (auth backend)
       setStatus('Getting authentication message...');
-      const nonceRes = await fetch(`${API_URL}/api/auth/nonce/${walletAddress}`);
+      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
+      const nonceRes = await fetch(`${AUTH_BACKEND}/api/auth/nonce/${walletAddress}`);
       
       if (!nonceRes.ok) {
         throw new Error('Failed to get authentication message from server');
