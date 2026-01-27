@@ -48,6 +48,56 @@ export default function Login() {
 
       const walletAddress = accounts[0];
       
+      // PRODUCTION FIX: Check trading-bridge first, auto-create in pipelabs-dashboard if needed
+      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+      let clientInfo = null;
+      
+      try {
+        const walletLower = walletAddress.toLowerCase();
+        const clientRes = await fetch(`${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        if (clientRes.ok) {
+          clientInfo = await clientRes.json();
+          console.log('✅ Wallet found in trading-bridge:', clientInfo);
+          
+          // Auto-create in pipelabs-dashboard if wallet exists in trading-bridge
+          setStatus('Syncing account...');
+          try {
+            const createRes = await fetch(`${API_URL}/api/admin/quick-client`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                name: clientInfo.name || 'Client',
+                wallet_address: walletAddress,
+                email: null,
+                tier: 'Standard'
+              })
+            });
+            
+            if (createRes.ok) {
+              console.log('✅ Client auto-created in pipelabs-dashboard');
+            } else {
+              // If already exists, that's fine - continue
+              const errorText = await createRes.text();
+              if (!errorText.includes('already exists') && !errorText.includes('duplicate')) {
+                console.warn('⚠️ Failed to auto-create client (non-critical):', createRes.status);
+              }
+            }
+          } catch (e) {
+            console.warn('⚠️ Auto-create failed (non-critical):', e.message);
+            // Continue with login anyway
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ Trading-bridge check failed (non-blocking):', e.message);
+        // Continue with normal login flow
+      }
+      
       // Get nonce/message from backend
       setStatus('Getting authentication message...');
       console.log('🔗 Using API_URL:', API_URL);
@@ -126,6 +176,16 @@ export default function Login() {
 
       const data = await res.json();
       console.log('✅ Login successful:', data);
+      
+      // Merge trading-bridge client info if available
+      if (clientInfo) {
+        data.user = {
+          ...data.user,
+          wallet_address: walletAddress,
+          account_identifier: clientInfo.account_identifier,
+          name: clientInfo.name || data.user?.name
+        };
+      }
 
       // Call auth context login (handles storage)
       const userData = login({
