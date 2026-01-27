@@ -8,13 +8,15 @@ export function BotList({ account = null }) {
 
   const fetchBots = async () => {
     // Don't fetch if account is not set yet (for client view)
-    if (account === null) {
+    if (account === null || account === undefined) {
       console.log('⏳ BotList: Waiting for account to be set...');
+      setBots([]);
       setLoading(false);
       return;
     }
     
     try {
+      setLoading(true); // Set loading when we start fetching
       console.log('🔍 BotList: Fetching bots for account:', account);
       const { tradingBridge } = await import('../services/api');
       const data = await tradingBridge.getBots(account);
@@ -32,8 +34,10 @@ export function BotList({ account = null }) {
       console.log('✅ BotList: Set bots:', botsList.length);
     } catch (err) {
       console.error("❌ BotList: Failed to fetch bots", err);
+      setBots([]); // Set empty array on error
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const toggleBot = async (botId, currentStatus) => {

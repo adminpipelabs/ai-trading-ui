@@ -2010,11 +2010,15 @@ function ClientDashboard({ user, theme, isDark }) {
                 {/* Bot List */}
                 <div className="p-5 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
                   <div className="text-sm font-semibold mb-4" style={{ color: theme.textPrimary }}>My Bots</div>
-                  {clientAccount ? (
+                  {loadingData && !clientAccount ? (
+                    <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>
+                      Loading account...
+                    </div>
+                  ) : clientAccount ? (
                     <BotList account={clientAccount} />
                   ) : (
                     <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>
-                      {loadingData ? 'Loading account...' : 'No account linked. Please contact support.'}
+                      No account linked. Please contact support.
                     </div>
                   )}
                 </div>
