@@ -3707,15 +3707,6 @@ function ClientSidebar({ user, theme, isDark, toggleTheme, onLogout }) {
         <span className="text-xs font-semibold uppercase px-2 py-1 rounded" style={{ background: theme.accentLight, color: theme.accent }}>Client</span>
       </div>
 
-      <div className="flex-1">
-        <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Quick Actions</h3>
-        {/* Order buttons removed - clients should not create orders */}
-        <BalanceButton account="client_sharp" />
-        <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
-                style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><BarChart3 size={16} />View Reports</button>
-        <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm"
-                style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><Settings size={16} />Settings</button>
-      </div>
 
       <div className="pt-4 space-y-3" style={{ borderTop: `1px solid ${theme.border}` }}>
         <button onClick={toggleTheme} className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm"
