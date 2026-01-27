@@ -3337,13 +3337,13 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     setIsLoading(true);
     
     try {
-      // Call Pipe Labs backend chat API that uses Claude MCP
-      const { API_URL } = await import('../config/api');
+      // Call trading-bridge chat API
+      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
       const token = localStorage.getItem('access_token') || 
                     localStorage.getItem('pipelabs_token') || 
                     localStorage.getItem('auth_token');
       
-      const response = await fetch(`${API_URL}/api/agent/chat`, {
+      const response = await fetch(`${TRADING_BRIDGE_URL}/api/agent/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
