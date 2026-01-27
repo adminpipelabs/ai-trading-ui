@@ -1,5 +1,5 @@
 import { BalanceButton } from "../components/BalanceButton";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import { BotList } from "../components/BotList";
@@ -3254,13 +3254,22 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   const [solanaWallet, setSolanaWallet] = useState(null);
   const [activeChain, setActiveChain] = useState("all"); // "all" | "evm" | "solana"
   
-  // Check if we're on /bots route (HashRouter uses pathname)
-  const isBotManagement = location.pathname === '/bots';
+  // Check if we're on /bots or /admin/bots route (HashRouter uses pathname)
+  const isBotManagement = location.pathname === '/bots' || location.pathname === '/admin/bots';
+  
+  // Sync client management view with route
+  useEffect(() => {
+    if (location.pathname === '/admin/clients') {
+      setShowClientManagement(true);
+    } else if (location.pathname === '/' || location.pathname === '/admin') {
+      setShowClientManagement(false);
+    }
+  }, [location.pathname]);
   
   // Debug: log location changes
   useEffect(() => {
     console.log('Location changed:', { pathname: location.pathname, hash: location.hash, isBotManagement });
-  }, [location.pathname, location.hash]);
+  }, [location.pathname, location.hash, isBotManagement]);
   
   // Load clients from API
   useEffect(() => {
@@ -3363,7 +3372,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     if (savedSolana) setSolanaWallet(savedSolana);
   }, []);
 
-  const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: 34 };
+  const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: bots?.filter(b => b.status === 'running').length || 0 };
   const quickPrompts = ["Show all client balances", "Global P&L this week", "List active bots", "SHARP/USDT price"];
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
@@ -3502,10 +3511,10 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
 
       <div className="mb-8">
         <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
-        <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => { setShowClientManagement(true); navigate('/'); }} />
+        <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
         <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
         <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
-        <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => { console.log('Active Bots clicked'); navigate('/bots'); }} />
+        <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
       </div>
 
       <div className="flex-1">
@@ -3517,7 +3526,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
             <BalanceButton account="client_sharp" />
             <button onClick={() => setShowAddClient(true)} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium mb-2"
                     style={{ background: theme.accent, color: 'white' }}><Plus size={16} />Add Client</button>
-            <button onClick={() => { setShowClientManagement(true); navigate('/'); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+            <button onClick={() => navigate('/admin/clients')} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
                     style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><Users size={16} />Manage Clients</button>
             <button className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm"
                     style={{ color: theme.textSecondary, border: `1px solid ${theme.border}` }}><BarChart3 size={16} />View Reports</button>
@@ -3525,18 +3534,18 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
         )}
         {activeView !== 'chat' && (
           <>
-            <button onClick={() => { setShowClientManagement(false); navigate('/'); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
-                    style={{ background: activeView === 'chat' ? theme.accentLight : 'transparent', color: activeView === 'chat' ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}` }}>
+            <NavLink to="/" className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={({ isActive }) => ({ background: isActive ? theme.accentLight : 'transparent', color: isActive ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}`, textDecoration: 'none' })}>
               <MessageSquare size={16} />AI Assistant
-            </button>
-            <button onClick={() => { setShowClientManagement(true); navigate('/'); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
-                    style={{ background: activeView === 'clients' ? theme.accentLight : 'transparent', color: activeView === 'clients' ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}` }}>
+            </NavLink>
+            <NavLink to="/admin/clients" className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={({ isActive }) => ({ background: isActive ? theme.accentLight : 'transparent', color: isActive ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}`, textDecoration: 'none' })}>
               <Users size={16} />Clients
-            </button>
-            <button onClick={() => navigate('/bots')} className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
-                    style={{ background: activeView === 'bots' ? theme.accentLight : 'transparent', color: activeView === 'bots' ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}` }}>
+            </NavLink>
+            <NavLink to="/admin/bots" className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mb-2"
+                    style={({ isActive }) => ({ background: isActive ? theme.accentLight : 'transparent', color: isActive ? theme.accent : theme.textSecondary, border: `1px solid ${theme.border}`, textDecoration: 'none' })}>
               <Activity size={16} />Bots
-            </button>
+            </NavLink>
           </>
         )}
       </div>
@@ -3622,7 +3631,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
       <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
         <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} />
         {renderSidebar('clients')}
-        <ClientManagement onBack={() => setShowClientManagement(false)} onAddClient={() => setShowAddClient(true)} clients={clients} setClients={setClients} />
+        <ClientManagement onBack={() => navigate('/')} onAddClient={() => setShowAddClient(true)} clients={clients} setClients={setClients} />
       </div>
     );
   }
