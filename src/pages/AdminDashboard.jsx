@@ -2354,7 +2354,7 @@ function AddClientModal({ isOpen, onClose, onSave }) {
       if (connectors.length > 0 && newClient.id) {
         for (const connector of connectors) {
           try {
-            await fetch(`${API_URL}/api/admin/api-keys`, {
+            await fetch(`${TRADING_BRIDGE_URL}/api/admin/api-keys`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -2724,16 +2724,6 @@ function Login({ onLogin }) {
       }
 
       const data = await res.json();
-      
-      // Merge trading-bridge client info if available
-      if (clientInfo) {
-        data.user = {
-          ...data.user,
-          wallet_address: walletAddress,
-          account_identifier: clientInfo.account_identifier,
-          name: clientInfo.name || data.user?.name
-        };
-      }
 
       // Store token and user data
       localStorage.setItem('access_token', data.access_token);
