@@ -251,6 +251,11 @@ export const tradingBridge = {
 
 // ========== CLIENT API ==========
 export const clientAPI = {
+  async getDashboard(accountIdentifier) {
+    // New optimized endpoint - gets all data in one call
+    return apiCall(`${TRADING_BRIDGE_URL}/api/exchange/dashboard/${encodeURIComponent(accountIdentifier)}`);
+  },
+
   async getPortfolio(walletAddress = null) {
     // Get wallet_address from localStorage if not provided
     if (!walletAddress) {

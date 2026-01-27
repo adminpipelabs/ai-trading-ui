@@ -1857,18 +1857,50 @@ function ClientDashboard({ user, theme, isDark }) {
         }
       }
       
-      // Load all data in parallel
-      const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
-        clientAPI.getPortfolio().catch(() => null),
-        clientAPI.getBalances().catch(() => []),
-        clientAPI.getTrades(null, 100, 7).catch(() => []),
-        clientAPI.getVolume(7).catch(() => null),
-      ]);
-
-      setPortfolio(portfolioData);
-      setBalances(balancesData || []);
-      setTrades(tradesData || []);
-      setVolume(volumeData);
+      // Use new optimized dashboard endpoint (one call gets everything)
+      if (clientAccount) {
+        try {
+          const dashboardData = await clientAPI.getDashboard(clientAccount);
+          
+          // Transform dashboard response to match existing state structure
+          setPortfolio({
+            total_pnl: dashboardData.pnl?.total || 0,
+            active_bots: dashboardData.bots?.active || 0,
+            total_bots: dashboardData.bots?.total || 0
+          });
+          setBalances(dashboardData.balance?.balances || []);
+          setTrades(dashboardData.recent_trades || []);
+          setVolume({
+            total_volume: dashboardData.volume?.traded || 0,
+            trade_count: dashboardData.volume?.trade_count || 0
+          });
+        } catch (error) {
+          console.error('Failed to load dashboard data:', error);
+          // Fallback to individual calls if dashboard endpoint fails
+          const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
+            clientAPI.getPortfolio().catch(() => null),
+            clientAPI.getBalances().catch(() => []),
+            clientAPI.getTrades(null, 100, 7).catch(() => []),
+            clientAPI.getVolume(7).catch(() => null),
+          ]);
+          setPortfolio(portfolioData);
+          setBalances(balancesData || []);
+          setTrades(tradesData || []);
+          setVolume(volumeData);
+        }
+      } else {
+        // No account identifier yet, use individual calls
+        const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
+          clientAPI.getPortfolio().catch(() => null),
+          clientAPI.getBalances().catch(() => []),
+          clientAPI.getTrades(null, 100, 7).catch(() => []),
+          clientAPI.getVolume(7).catch(() => null),
+        ]);
+        setPortfolio(portfolioData);
+        setBalances(balancesData || []);
+        setTrades(tradesData || []);
+        setVolume(volumeData);
+      }
     } catch (error) {
       console.error('Failed to load client data:', error);
     } finally {
