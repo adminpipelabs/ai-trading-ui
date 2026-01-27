@@ -2676,19 +2676,35 @@ function Login({ onLogin }) {
       
       let clientInfo;
       try {
-        const clientRes = await fetch(`${TRADING_BRIDGE_URL}/clients/by-wallet/${walletAddress}`);
-        if (clientRes.ok) {
-          clientInfo = await clientRes.json();
-          console.log('✅ Wallet found in trading-bridge:', clientInfo);
-        } else {
-          throw new Error('Wallet not found in trading-bridge');
+        // Ensure wallet address is lowercase for lookup
+        const walletLower = walletAddress.toLowerCase();
+        const clientRes = await fetch(`${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`);
+        
+        if (!clientRes.ok) {
+          if (clientRes.status === 404) {
+            throw new Error(
+              `❌ Wallet address not registered.\n\n` +
+              `Your wallet address must be registered by an admin before you can log in.\n\n` +
+              `Wallet Address: ${walletAddress}\n\n` +
+              `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
+            );
+          }
+          const errorText = await clientRes.text();
+          throw new Error(`Failed to check wallet registration: ${clientRes.status} ${errorText}`);
         }
+        
+        clientInfo = await clientRes.json();
+        console.log('✅ Wallet found in trading-bridge:', clientInfo);
       } catch (e) {
+        // If it's already our custom error, re-throw it
+        if (e.message.includes('Wallet address not registered')) {
+          throw e;
+        }
+        // Otherwise, wrap the error
+        console.error('Wallet lookup error:', e);
         throw new Error(
-          `❌ Wallet address not registered.\n\n` +
-          `Your wallet address must be registered by an admin before you can log in.\n\n` +
-          `Wallet Address: ${walletAddress}\n\n` +
-          `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
+          `Failed to check wallet registration: ${e.message}\n\n` +
+          `Please try again or contact support if the problem persists.`
         );
       }
       
