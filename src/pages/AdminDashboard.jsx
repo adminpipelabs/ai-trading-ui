@@ -3242,19 +3242,9 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
         console.error('Error details:', error.message, error.stack);
         console.error('Full error object:', error);
         
-        // Try to get more details from the error
-        let errorMessage = 'Failed to load clients. ';
-        if (error.message) {
-          errorMessage += error.message;
-        } else if (error.detail) {
-          errorMessage += error.detail;
-        } else {
-          errorMessage += 'Check browser console (F12) for details.';
-        }
-        
-        // Don't use mock data - show empty state instead
+        // Silently fail - show empty state without alert popup
+        // Error is logged to console for debugging
         setClients([]);
-        alert(errorMessage);
       } finally {
         setClientsLoading(false);
       }
