@@ -2671,6 +2671,9 @@ function Login({ onLogin }) {
 
       const walletAddress = accounts[0];
       
+      // Auth backend URL (declared once at top of function)
+      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
+      
       // OPTIONAL: Try to check if wallet exists in trading-bridge (non-blocking)
       // If trading-bridge is unavailable, fall back to original auth flow
       let clientInfo = null;
@@ -2703,7 +2706,6 @@ function Login({ onLogin }) {
       
       // Get nonce/message from pipelabs-dashboard (auth backend)
       setStatus('Getting authentication message...');
-      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
       const nonceRes = await fetch(`${AUTH_BACKEND}/api/auth/nonce/${walletAddress}`);
       
       if (!nonceRes.ok) {
