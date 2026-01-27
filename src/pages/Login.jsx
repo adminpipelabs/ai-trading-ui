@@ -75,12 +75,19 @@ export default function Login() {
       setStatus('Getting authentication message...');
       const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
       console.log('🔗 Using AUTH_BACKEND:', AUTH_BACKEND);
-      const nonceRes = await fetch(`${AUTH_BACKEND}/api/auth/nonce/${walletAddress}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      
+      let nonceRes;
+      try {
+        nonceRes = await fetch(`${AUTH_BACKEND}/api/auth/nonce/${walletAddress}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch (fetchError) {
+        console.error('❌ Network error fetching nonce:', fetchError);
+        throw new Error(`Network error: ${fetchError.message}. Please check your internet connection.`);
+      }
       
       if (!nonceRes.ok) {
         const errorText = await nonceRes.text();
