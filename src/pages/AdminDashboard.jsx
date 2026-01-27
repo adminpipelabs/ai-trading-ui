@@ -1842,25 +1842,30 @@ function ClientDashboard({ user, theme, isDark }) {
       const { clientAPI } = await import('../services/api');
       
       // Get client account identifier from backend using wallet address
+      let accountIdentifier = null;
       if (user?.wallet_address) {
         try {
           const clientInfo = await clientAPI.getClientByWallet(user.wallet_address);
           if (clientInfo?.account_identifier) {
-            setClientAccount(clientInfo.account_identifier);
-            console.log('✅ Found client account identifier:', clientInfo.account_identifier);
+            accountIdentifier = clientInfo.account_identifier;
+            setClientAccount(accountIdentifier);
+            console.log('✅ Found client account identifier:', accountIdentifier);
           }
         } catch (e) {
           console.error('Failed to get client account identifier:', e);
           // Fallback: try to use wallet address hash if endpoint fails
           const walletHash = user.wallet_address.slice(2, 10).toLowerCase();
-          setClientAccount(`client_${walletHash}`);
+          accountIdentifier = `client_${walletHash}`;
+          setClientAccount(accountIdentifier);
         }
       }
       
       // Use new optimized dashboard endpoint (one call gets everything)
-      if (clientAccount) {
+      if (accountIdentifier) {
         try {
-          const dashboardData = await clientAPI.getDashboard(clientAccount);
+          console.log('📡 Calling dashboard endpoint with account:', accountIdentifier);
+          const dashboardData = await clientAPI.getDashboard(accountIdentifier);
+          console.log('✅ Dashboard data received:', dashboardData);
           
           // Transform dashboard response to match existing state structure
           setPortfolio({
@@ -1874,14 +1879,15 @@ function ClientDashboard({ user, theme, isDark }) {
             total_volume: dashboardData.volume?.traded || 0,
             trade_count: dashboardData.volume?.trade_count || 0
           });
+          console.log('✅ State updated - balances:', dashboardData.balance?.balances?.length, 'trades:', dashboardData.recent_trades?.length);
         } catch (error) {
-          console.error('Failed to load dashboard data:', error);
+          console.error('❌ Failed to load dashboard data:', error);
           // Fallback to individual calls if dashboard endpoint fails
           const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
-            clientAPI.getPortfolio().catch(() => null),
-            clientAPI.getBalances().catch(() => []),
-            clientAPI.getTrades(null, 100, 7).catch(() => []),
-            clientAPI.getVolume(7).catch(() => null),
+            clientAPI.getPortfolio(user?.wallet_address).catch(() => null),
+            clientAPI.getBalances(user?.wallet_address).catch(() => []),
+            clientAPI.getTrades(null, 100, 7, user?.wallet_address).catch(() => []),
+            clientAPI.getVolume(7, user?.wallet_address).catch(() => null),
           ]);
           setPortfolio(portfolioData);
           setBalances(balancesData || []);
@@ -1889,12 +1895,13 @@ function ClientDashboard({ user, theme, isDark }) {
           setVolume(volumeData);
         }
       } else {
+        console.warn('⚠️ No account identifier - using individual endpoints');
         // No account identifier yet, use individual calls
         const [portfolioData, balancesData, tradesData, volumeData] = await Promise.all([
-          clientAPI.getPortfolio().catch(() => null),
-          clientAPI.getBalances().catch(() => []),
-          clientAPI.getTrades(null, 100, 7).catch(() => []),
-          clientAPI.getVolume(7).catch(() => null),
+          clientAPI.getPortfolio(user?.wallet_address).catch(() => null),
+          clientAPI.getBalances(user?.wallet_address).catch(() => []),
+          clientAPI.getTrades(null, 100, 7, user?.wallet_address).catch(() => []),
+          clientAPI.getVolume(7, user?.wallet_address).catch(() => null),
         ]);
         setPortfolio(portfolioData);
         setBalances(balancesData || []);
