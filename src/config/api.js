@@ -14,8 +14,8 @@ function getBackendURL() {
     return process.env.REACT_APP_API_URL;
   }
   
-  // 3. Production fallback - Railway backend URL
-  return 'https://pipelabs-dashboard-production.up.railway.app';
+  // 3. Production fallback - Use trading-bridge (consolidated backend)
+  return 'https://trading-bridge-production.up.railway.app';
 }
 
 export const API_URL = getBackendURL();
