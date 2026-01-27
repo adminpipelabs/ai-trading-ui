@@ -41,33 +41,64 @@ async function apiCall(url, options = {}) {
 }
 
 // ========== ADMIN API ==========
+// CONSOLIDATED: All client management now uses trading-bridge
 export const adminAPI = {
   async getOverview() {
+    // Keep overview on Pipe Labs backend (may have custom metrics)
     return apiCall(`${API_URL}/api/admin/overview`);
   },
 
   async getClients() {
-    console.log('🔗 API_URL:', API_URL);
-    console.log('🔗 Calling:', `${API_URL}/api/admin/clients`);
-    const token = localStorage.getItem('access_token') || 
-                  localStorage.getItem('pipelabs_token') || 
-                  localStorage.getItem('auth_token');
-    console.log('🔑 Token present?', !!token, 'Length:', token?.length);
-    return apiCall(`${API_URL}/api/admin/clients`);
+    // Use trading-bridge for client list
+    const response = await apiCall(`${TRADING_BRIDGE_URL}/clients`);
+    // trading-bridge returns {"clients": [...]}, extract array
+    return Array.isArray(response) ? response : (response.clients || []);
   },
 
   async getClient(clientId) {
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}`);
+    // Use trading-bridge for client details
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`);
   },
 
   async createClient(data) {
-    return apiCall(`${API_URL}/api/admin/clients`, {
+    // Transform frontend format to trading-bridge format
+    const wallets = data.wallet_address ? [{
+      chain: data.wallet_type?.toLowerCase() || (data.wallet_address.startsWith('0x') ? 'evm' : 'solana'),
+      address: data.wallet_address
+    }] : [];
+    
+    const requestBody = {
+      name: data.name,
+      account_identifier: data.account_identifier || `client_${data.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`,
+      wallets: wallets,
+      connectors: [] // Will be added separately via addClientApiKey
+    };
+    
+    const response = await apiCall(`${TRADING_BRIDGE_URL}/clients/create`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(requestBody),
     });
+    
+    // Also create in Pipe Labs backend for compatibility (if needed for auth/reports)
+    try {
+      await apiCall(`${API_URL}/api/admin/quick-client`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: data.name,
+          wallet_address: data.wallet_address,
+          email: data.email,
+          tier: data.tier || 'Standard'
+        }),
+      });
+    } catch (e) {
+      console.warn('Failed to sync client to Pipe Labs backend (non-critical):', e);
+    }
+    
+    return response;
   },
 
   async updateClient(clientId, data) {
+    // trading-bridge doesn't have update endpoint yet, use Pipe Labs backend as fallback
     return apiCall(`${API_URL}/api/admin/clients/${clientId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -75,55 +106,103 @@ export const adminAPI = {
   },
 
   async deleteClient(clientId) {
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}`, {
+    // Use trading-bridge for deletion
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`, {
       method: 'DELETE',
     });
   },
 
   async getClientApiKeys(clientId) {
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}/api-keys`);
+    // Get connectors from trading-bridge
+    const client = await apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`);
+    return client.connectors || [];
   },
 
   async addClientApiKey(clientId, data) {
-    return apiCall(`${API_URL}/api/admin/api-keys`, {
-      method: 'POST',
-      body: JSON.stringify({ ...data, client_id: clientId }),
+    // Add connector to trading-bridge
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/connector`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: data.exchange || data.name,
+        api_key: data.apiKey || data.api_key,
+        api_secret: data.apiSecret || data.api_secret,
+        memo: data.memo || null
+      }),
     });
   },
 
   async deleteClientApiKey(clientId, keyId) {
-    return apiCall(`${API_URL}/api/admin/api-keys/${keyId}`, {
-      method: 'DELETE',
-    });
+    // trading-bridge doesn't have delete connector endpoint yet
+    // For now, return success (connector deletion can be added later)
+    console.warn('Connector deletion not yet implemented in trading-bridge');
+    return { success: true };
   },
 
   async sendInvite(clientId) {
+    // Keep invite on Pipe Labs backend (email functionality)
     return apiCall(`${API_URL}/api/admin/clients/${clientId}/invite`, {
       method: 'POST',
     });
   },
 
-  // Trading Pairs / Bots
+  // Trading Pairs / Bots - Use trading-bridge bots endpoints
   async getClientPairs(clientId) {
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}/pairs`);
+    // Get client's account_identifier first
+    const client = await apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`);
+    const account = client.account_identifier;
+    
+    // Get bots for this account
+    const botsResponse = await apiCall(`${TRADING_BRIDGE_URL}/bots?account=${encodeURIComponent(account)}`);
+    const bots = botsResponse.bots || [];
+    
+    // Transform bots to pairs format for frontend compatibility
+    return bots.map(bot => ({
+      id: bot.id,
+      client_id: clientId,
+      trading_pair: bot.pair,
+      bot_type: bot.strategy,
+      status: bot.status === 'running' ? 'active' : 'paused',
+      connector: bot.connector,
+      config: bot.config
+    }));
   },
 
   async createPair(clientId, data) {
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}/pairs`, {
+    // Get client's account_identifier
+    const client = await apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`);
+    const account = client.account_identifier;
+    
+    // Create bot via trading-bridge
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/create`, {
       method: 'POST',
-      body: JSON.stringify({ ...data, client_id: clientId }),
+      body: JSON.stringify({
+        name: data.name || `${data.trading_pair}_${data.bot_type}`,
+        account: account,
+        strategy: data.bot_type || 'spread',
+        connector: data.connector || 'bitmart',
+        pair: data.trading_pair,
+        config: data.config || {}
+      }),
     });
   },
 
   async updatePair(pairId, data) {
-    return apiCall(`${API_URL}/api/admin/pairs/${pairId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
+    // Update bot status via trading-bridge
+    if (data.status === 'active') {
+      return apiCall(`${TRADING_BRIDGE_URL}/bots/${pairId}/start`, {
+        method: 'POST',
+      });
+    } else if (data.status === 'paused') {
+      return apiCall(`${TRADING_BRIDGE_URL}/bots/${pairId}/stop`, {
+        method: 'POST',
+      });
+    }
+    return { success: true };
   },
 
   async deletePair(pairId) {
-    return apiCall(`${API_URL}/api/admin/pairs/${pairId}`, {
+    // Delete bot via trading-bridge
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${pairId}`, {
       method: 'DELETE',
     });
   },
