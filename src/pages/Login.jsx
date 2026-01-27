@@ -48,32 +48,11 @@ export default function Login() {
 
       const walletAddress = accounts[0];
       
-      // PRODUCTION FIX: Check trading-bridge for wallet registration
+      // Use trading-bridge for auth (consolidated backend)
       const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-      let clientInfo = null;
-      
-      try {
-        const walletLower = walletAddress.toLowerCase();
-        const clientRes = await fetch(`${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        
-        if (clientRes.ok) {
-          clientInfo = await clientRes.json();
-          console.log('✅ Wallet found in trading-bridge:', clientInfo);
-          
-          // Wallet found in trading-bridge - proceed with login
-          console.log('✅ Wallet registered in trading-bridge');
-        }
-      } catch (e) {
-        console.log('⚠️ Trading-bridge check failed (non-blocking):', e.message);
-        // Continue with normal login flow
-      }
       
       // Get nonce/message from trading-bridge (auth backend)
       setStatus('Getting authentication message...');
-      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
       console.log('🔗 Using TRADING_BRIDGE_URL for auth:', TRADING_BRIDGE_URL);
       
       let nonceRes;
@@ -117,7 +96,6 @@ export default function Login() {
 
       // Send to trading-bridge for verification (auth backend)
       setStatus('Verifying signature...');
-      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
       console.log('🔐 Sending login request to:', `${TRADING_BRIDGE_URL}/auth/verify`);
       const res = await fetch(`${TRADING_BRIDGE_URL}/auth/verify`, {
         method: 'POST',
@@ -158,16 +136,6 @@ export default function Login() {
 
       const data = await res.json();
       console.log('✅ Login successful:', data);
-      
-      // Merge trading-bridge client info if available
-      if (clientInfo) {
-        data.user = {
-          ...data.user,
-          wallet_address: walletAddress,
-          account_identifier: clientInfo.account_identifier,
-          name: clientInfo.name || data.user?.name
-        };
-      }
 
       // Call auth context login (handles storage)
       const userData = login({
