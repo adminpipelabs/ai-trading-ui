@@ -48,7 +48,7 @@ export default function Login() {
 
       const walletAddress = accounts[0];
       
-      // PRODUCTION FIX: Check trading-bridge first, auto-create in pipelabs-dashboard if needed
+      // PRODUCTION FIX: Check trading-bridge for wallet registration
       const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
       let clientInfo = null;
       
@@ -63,51 +63,19 @@ export default function Login() {
           clientInfo = await clientRes.json();
           console.log('✅ Wallet found in trading-bridge:', clientInfo);
           
-          // Auto-create in pipelabs-dashboard if wallet exists in trading-bridge
-          // NOTE: This endpoint might require admin auth, so we try but don't fail if it doesn't work
-          setStatus('Syncing account...');
-          try {
-            // Try without auth first (some endpoints allow public creation)
-            const createRes = await fetch(`${API_URL}/api/admin/quick-client`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                name: clientInfo.name || 'Client',
-                wallet_address: walletAddress,
-                email: null,
-                tier: 'Standard'
-              })
-            });
-            
-            if (createRes.ok) {
-              console.log('✅ Client auto-created in pipelabs-dashboard');
-            } else {
-              // Check if it's an auth error or already exists
-              const errorText = await createRes.text();
-              if (createRes.status === 401 || createRes.status === 403) {
-                console.log('ℹ️ Auto-create requires admin auth - will need manual creation');
-              } else if (errorText.includes('already exists') || errorText.includes('duplicate')) {
-                console.log('ℹ️ Client already exists in pipelabs-dashboard');
-              } else {
-                console.warn('⚠️ Failed to auto-create client:', createRes.status, errorText);
-              }
-            }
-          } catch (e) {
-            console.warn('⚠️ Auto-create failed (non-critical):', e.message);
-            // Continue with login anyway - admin can create manually if needed
-          }
+          // Wallet found in trading-bridge - proceed with login
+          console.log('✅ Wallet registered in trading-bridge');
         }
       } catch (e) {
         console.log('⚠️ Trading-bridge check failed (non-blocking):', e.message);
         // Continue with normal login flow
       }
       
-      // Get nonce/message from backend
+      // Get nonce/message from trading-bridge
       setStatus('Getting authentication message...');
-      console.log('🔗 Using API_URL:', API_URL);
-      const nonceRes = await fetch(`${API_URL}/api/auth/nonce/${walletAddress}`, {
+      const AUTH_URL = 'https://trading-bridge-production.up.railway.app';
+      console.log('🔗 Using AUTH_URL:', AUTH_URL);
+      const nonceRes = await fetch(`${AUTH_URL}/api/auth/nonce/${walletAddress}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -140,10 +108,11 @@ export default function Login() {
         throw signError; // Re-throw if it's a different error
       }
 
-      // Send to backend for verification
+      // Send to trading-bridge for verification
       setStatus('Verifying signature...');
-      console.log('🔐 Sending login request to:', `${API_URL}/api/auth/wallet/login`);
-      const res = await fetch(`${API_URL}/api/auth/wallet/login`, {
+      const AUTH_URL = 'https://trading-bridge-production.up.railway.app';
+      console.log('🔐 Sending login request to:', `${AUTH_URL}/api/auth/wallet/login`);
+      const res = await fetch(`${AUTH_URL}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

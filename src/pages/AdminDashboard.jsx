@@ -2692,12 +2692,12 @@ function Login({ onLogin }) {
           clientInfo = await clientRes.json();
           console.log('✅ Wallet found in trading-bridge:', clientInfo);
         } else if (clientRes.status === 404) {
-          console.log('⚠️ Wallet not found in trading-bridge, will check pipelabs-dashboard');
+          console.log('⚠️ Wallet not found in trading-bridge');
         }
       } catch (e) {
         // Trading-bridge check failed - continue with original auth flow
         console.log('⚠️ Trading-bridge check failed (non-blocking):', e.message);
-        console.log('Continuing with original pipelabs-dashboard auth flow...');
+        console.log('Continuing with trading-bridge auth flow...');
       }
       
       // Get nonce/message from backend

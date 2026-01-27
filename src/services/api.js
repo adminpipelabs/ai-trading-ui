@@ -1,6 +1,6 @@
-// API Configuration - uses runtime detection
-import { API_URL } from '../config/api';
+// API Configuration - ALL calls go to trading-bridge (consolidated backend)
 const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+const API_URL = TRADING_BRIDGE_URL; // Use trading-bridge for everything
 
 // Helper function for API calls
 async function apiCall(url, options = {}) {
@@ -44,8 +44,8 @@ async function apiCall(url, options = {}) {
 // CONSOLIDATED: All client management now uses trading-bridge
 export const adminAPI = {
   async getOverview() {
-    // Keep overview on Pipe Labs backend (may have custom metrics)
-    return apiCall(`${API_URL}/api/admin/overview`);
+    // Use trading-bridge for overview
+    return apiCall(`${TRADING_BRIDGE_URL}/api/admin/overview`);
   },
 
   async getClients() {
@@ -79,27 +79,12 @@ export const adminAPI = {
       body: JSON.stringify(requestBody),
     });
     
-    // Also create in Pipe Labs backend for compatibility (if needed for auth/reports)
-    try {
-      await apiCall(`${API_URL}/api/admin/quick-client`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: data.name,
-          wallet_address: data.wallet_address,
-          email: data.email,
-          tier: data.tier || 'Standard'
-        }),
-      });
-    } catch (e) {
-      console.warn('Failed to sync client to Pipe Labs backend (non-critical):', e);
-    }
-    
     return response;
   },
 
   async updateClient(clientId, data) {
-    // trading-bridge doesn't have update endpoint yet, use Pipe Labs backend as fallback
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}`, {
+    // Use trading-bridge for updates
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
@@ -139,8 +124,8 @@ export const adminAPI = {
   },
 
   async sendInvite(clientId) {
-    // Keep invite on Pipe Labs backend (email functionality)
-    return apiCall(`${API_URL}/api/admin/clients/${clientId}/invite`, {
+    // Use trading-bridge for invites
+    return apiCall(`${TRADING_BRIDGE_URL}/api/admin/clients/${clientId}/invite`, {
       method: 'POST',
     });
   },
@@ -267,21 +252,21 @@ export const tradingBridge = {
 // ========== CLIENT API ==========
 export const clientAPI = {
   async getPortfolio() {
-    return apiCall(`${API_URL}/api/clients/portfolio`);
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/portfolio`);
   },
 
   async getBalances() {
-    return apiCall(`${API_URL}/api/clients/balances`);
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/balances`);
   },
 
   async getTrades(tradingPair = null, limit = 100, days = 7) {
     const params = new URLSearchParams({ limit: limit.toString(), days: days.toString() });
     if (tradingPair) params.append('trading_pair', tradingPair);
-    return apiCall(`${API_URL}/api/clients/trades?${params}`);
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/trades?${params}`);
   },
 
   async getVolume(days = 7) {
-    return apiCall(`${API_URL}/api/clients/volume?days=${days}`);
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/volume?days=${days}`);
   },
 
   async getClientByWallet(walletAddress) {
@@ -291,7 +276,7 @@ export const clientAPI = {
   },
 
   async generateReport(format = 'json', days = 30) {
-    const url = `${API_URL}/api/clients/report?format=${format}&days=${days}`;
+    const url = `${TRADING_BRIDGE_URL}/api/clients/report?format=${format}&days=${days}`;
     if (format === 'csv') {
       // For CSV, download the file
       const token = localStorage.getItem('access_token') || 
