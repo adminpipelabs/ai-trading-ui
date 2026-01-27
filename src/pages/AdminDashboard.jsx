@@ -2670,80 +2670,54 @@ function Login({ onLogin }) {
 
       const walletAddress = accounts[0];
       
-      // FIRST: Check if wallet exists in trading-bridge
-      setStatus('Checking wallet registration...');
+      // OPTIONAL: Try to check if wallet exists in trading-bridge (non-blocking)
+      // If trading-bridge is unavailable, fall back to original auth flow
+      let clientInfo = null;
       const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
       
-      let clientInfo;
       try {
-        // Ensure wallet address is lowercase for lookup
         const walletLower = walletAddress.toLowerCase();
         const lookupUrl = `${TRADING_BRIDGE_URL}/clients/by-wallet/${encodeURIComponent(walletLower)}`;
-        console.log('🔍 Checking wallet in trading-bridge:', lookupUrl);
+        console.log('🔍 Checking wallet in trading-bridge (optional):', lookupUrl);
         
-        const clientRes = await fetch(lookupUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }).catch(fetchError => {
-          console.error('Network error fetching wallet:', fetchError);
-          throw new Error(`Network error: ${fetchError.message}. Please check your internet connection.`);
-        });
+        const clientRes = await Promise.race([
+          fetch(lookupUrl, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000)) // 3 second timeout
+        ]);
         
-        if (!clientRes.ok) {
-          if (clientRes.status === 404) {
-            throw new Error(
-              `❌ Wallet address not registered.\n\n` +
-              `Your wallet address must be registered by an admin before you can log in.\n\n` +
-              `Wallet Address: ${walletAddress}\n\n` +
-              `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
-            );
-          }
-          let errorText = 'Unknown error';
-          try {
-            errorText = await clientRes.text();
-          } catch (e) {
-            // Ignore text parsing errors
-          }
-          throw new Error(`Failed to check wallet registration: ${clientRes.status} ${errorText}`);
+        if (clientRes.ok) {
+          clientInfo = await clientRes.json();
+          console.log('✅ Wallet found in trading-bridge:', clientInfo);
+        } else if (clientRes.status === 404) {
+          console.log('⚠️ Wallet not found in trading-bridge, will check pipelabs-dashboard');
         }
-        
-        clientInfo = await clientRes.json();
-        console.log('✅ Wallet found in trading-bridge:', clientInfo);
       } catch (e) {
-        // If it's already our custom error, re-throw it
-        if (e.message.includes('Wallet address not registered') || e.message.includes('Network error')) {
-          throw e;
-        }
-        // Otherwise, wrap the error
-        console.error('Wallet lookup error:', e);
-        throw new Error(
-          `Failed to check wallet registration: ${e.message}\n\n` +
-          `Please try again or contact support if the problem persists.`
-        );
+        // Trading-bridge check failed - continue with original auth flow
+        console.log('⚠️ Trading-bridge check failed (non-blocking):', e.message);
+        console.log('Continuing with original pipelabs-dashboard auth flow...');
       }
       
-      // Get nonce/message from backend (still use pipelabs-dashboard for auth)
+      // Get nonce/message from backend
       setStatus('Getting authentication message...');
-      const PIPELABS_BACKEND = 'https://backend-pipelabs-dashboard-production.up.railway.app';
-      const nonceRes = await fetch(`${PIPELABS_BACKEND}/api/auth/nonce/${walletAddress}`);
+      const nonceRes = await fetch(`${API_URL}/api/auth/nonce/${walletAddress}`);
       
-      let message = `Sign in to Pipe Labs\n\nWallet: ${walletAddress}\n\nThis request will not trigger any blockchain transaction or cost any fees.`;
-      
-      if (nonceRes.ok) {
-        const nonceData = await nonceRes.json();
-        message = nonceData.message || message;
+      if (!nonceRes.ok) {
+        throw new Error('Failed to get authentication message from server');
       }
+
+      const { message } = await nonceRes.json();
 
       // Sign message
       setStatus('Please sign the message in your wallet...');
       const signer = await provider.getSigner();
       const signature = await signer.signMessage(message);
 
-      // Send to backend for verification (still use pipelabs-dashboard for auth token)
+      // Send to backend for verification
       setStatus('Verifying signature...');
-      const res = await fetch(`${PIPELABS_BACKEND}/api/auth/wallet/login`, {
+      const res = await fetch(`${API_URL}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -2753,31 +2727,33 @@ function Login({ onLogin }) {
         })
       });
 
-      let data;
       if (!res.ok) {
-        // If auth fails but wallet exists in trading-bridge, create a session anyway
-        console.warn('Auth endpoint failed, but wallet exists in trading-bridge. Creating session...');
-        data = {
-          access_token: 'trading-bridge-session', // Placeholder token
-          user: {
-            id: clientInfo.client_id,
-            wallet_address: walletAddress,
-            email: null,
-            role: 'client',
-            name: clientInfo.name
-          }
-        };
-      } else {
-        data = await res.json();
-        // Merge trading-bridge client info with auth response
-        if (clientInfo) {
-          data.user = {
-            ...data.user,
-            wallet_address: walletAddress,
-            account_identifier: clientInfo.account_identifier,
-            name: clientInfo.name
-          };
+        const errorData = await res.json();
+        const errorMessage = errorData.detail || 'Login failed';
+        
+        // Show user-friendly error for unregistered wallets
+        if (errorMessage.includes('not registered') || errorMessage.includes('Wallet address not registered')) {
+          throw new Error(
+            `❌ Wallet address not registered.\n\n` +
+            `Your wallet address must be registered by an admin before you can log in.\n\n` +
+            `Wallet Address: ${walletAddress}\n\n` +
+            `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
+          );
         }
+        
+        throw new Error(errorMessage);
+      }
+
+      const data = await res.json();
+      
+      // Merge trading-bridge client info if available
+      if (clientInfo) {
+        data.user = {
+          ...data.user,
+          wallet_address: walletAddress,
+          account_identifier: clientInfo.account_identifier,
+          name: clientInfo.name || data.user?.name
+        };
       }
 
       // Store token and user data
