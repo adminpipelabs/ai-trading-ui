@@ -2719,7 +2719,6 @@ function Login({ onLogin }) {
 
       // Send to pipelabs-dashboard for verification (auth backend)
       setStatus('Verifying signature...');
-      const AUTH_BACKEND = 'https://pipelabs-dashboard-production.up.railway.app';
       const res = await fetch(`${AUTH_BACKEND}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
