@@ -3707,13 +3707,6 @@ function ClientSidebar({ user, theme, isDark, toggleTheme, onLogout }) {
         <span className="text-xs font-semibold uppercase px-2 py-1 rounded" style={{ background: theme.accentLight, color: theme.accent }}>Client</span>
       </div>
 
-      <div className="mb-8">
-        <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
-        <MetricCard icon={<Wallet size={16} />} label="Balance" value="$124,500" />
-        <MetricCard icon={<TrendingUp size={16} />} label="P&L" value="+$8,420" subvalue="+7.2%" positive />
-        <MetricCard icon={<Coins size={16} />} label="Tokens" value="2" />
-      </div>
-
       <div className="flex-1">
         <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Quick Actions</h3>
         {/* Order buttons removed - clients should not create orders */}
