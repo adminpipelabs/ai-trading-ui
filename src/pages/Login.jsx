@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BrowserProvider } from 'ethers';
-import { API_URL } from '../config/api';
+// All API calls use trading-bridge directly
 
 export default function Login() {
   const [status, setStatus] = useState('');
@@ -73,9 +73,9 @@ export default function Login() {
       
       // Get nonce/message from trading-bridge
       setStatus('Getting authentication message...');
-      const AUTH_URL = 'https://trading-bridge-production.up.railway.app';
-      console.log('🔗 Using AUTH_URL:', AUTH_URL);
-      const nonceRes = await fetch(`${AUTH_URL}/api/auth/nonce/${walletAddress}`, {
+      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+      console.log('🔗 Using TRADING_BRIDGE_URL:', TRADING_BRIDGE_URL);
+      const nonceRes = await fetch(`${TRADING_BRIDGE_URL}/api/auth/nonce/${walletAddress}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -110,9 +110,9 @@ export default function Login() {
 
       // Send to trading-bridge for verification
       setStatus('Verifying signature...');
-      const AUTH_URL = 'https://trading-bridge-production.up.railway.app';
-      console.log('🔐 Sending login request to:', `${AUTH_URL}/api/auth/wallet/login`);
-      const res = await fetch(`${AUTH_URL}/api/auth/wallet/login`, {
+      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+      console.log('🔐 Sending login request to:', `${TRADING_BRIDGE_URL}/api/auth/wallet/login`);
+      const res = await fetch(`${TRADING_BRIDGE_URL}/api/auth/wallet/login`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

@@ -12,7 +12,8 @@ import {
   MoreVertical, ExternalLink, Clock, Filter, Download, UserPlus, ArrowLeft,
   Coins, MessageSquare
 } from 'lucide-react';
-import { API_URL } from '../config/api';
+// All API calls use trading-bridge directly
+const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
 
 // ========== THEME CONTEXT ==========
 const ThemeContext = createContext();
