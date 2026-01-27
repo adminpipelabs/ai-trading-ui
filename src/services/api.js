@@ -251,22 +251,86 @@ export const tradingBridge = {
 
 // ========== CLIENT API ==========
 export const clientAPI = {
-  async getPortfolio() {
-    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/portfolio`);
+  async getPortfolio(walletAddress = null) {
+    // Get wallet_address from localStorage if not provided
+    if (!walletAddress) {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          walletAddress = user.wallet_address;
+        } catch (e) {
+          console.warn('Failed to parse user from localStorage');
+        }
+      }
+    }
+    if (!walletAddress) {
+      throw new Error('Wallet address is required. Please log in.');
+    }
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/portfolio?wallet_address=${encodeURIComponent(walletAddress)}`);
   },
 
-  async getBalances() {
-    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/balances`);
+  async getBalances(walletAddress = null) {
+    // Get wallet_address from localStorage if not provided
+    if (!walletAddress) {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          walletAddress = user.wallet_address;
+        } catch (e) {
+          console.warn('Failed to parse user from localStorage');
+        }
+      }
+    }
+    if (!walletAddress) {
+      throw new Error('Wallet address is required. Please log in.');
+    }
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/balances?wallet_address=${encodeURIComponent(walletAddress)}`);
   },
 
-  async getTrades(tradingPair = null, limit = 100, days = 7) {
-    const params = new URLSearchParams({ limit: limit.toString(), days: days.toString() });
+  async getTrades(tradingPair = null, limit = 100, days = 7, walletAddress = null) {
+    // Get wallet_address from localStorage if not provided
+    if (!walletAddress) {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          walletAddress = user.wallet_address;
+        } catch (e) {
+          console.warn('Failed to parse user from localStorage');
+        }
+      }
+    }
+    if (!walletAddress) {
+      throw new Error('Wallet address is required. Please log in.');
+    }
+    const params = new URLSearchParams({ 
+      wallet_address: walletAddress,
+      limit: limit.toString(), 
+      days: days.toString() 
+    });
     if (tradingPair) params.append('trading_pair', tradingPair);
     return apiCall(`${TRADING_BRIDGE_URL}/api/clients/trades?${params}`);
   },
 
-  async getVolume(days = 7) {
-    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/volume?days=${days}`);
+  async getVolume(days = 7, walletAddress = null) {
+    // Get wallet_address from localStorage if not provided
+    if (!walletAddress) {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          walletAddress = user.wallet_address;
+        } catch (e) {
+          console.warn('Failed to parse user from localStorage');
+        }
+      }
+    }
+    if (!walletAddress) {
+      throw new Error('Wallet address is required. Please log in.');
+    }
+    return apiCall(`${TRADING_BRIDGE_URL}/api/clients/volume?wallet_address=${encodeURIComponent(walletAddress)}&days=${days}`);
   },
 
   async getClientByWallet(walletAddress) {
