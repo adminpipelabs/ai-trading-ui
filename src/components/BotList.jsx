@@ -8,18 +8,23 @@ export function BotList({ account = null }) {
 
   const fetchBots = async () => {
     try {
+      console.log('🔍 BotList: Fetching bots for account:', account);
       const { tradingBridge } = await import('../services/api');
       const data = await tradingBridge.getBots(account);
       let botsList = Array.isArray(data) ? data : (data.bots || []);
+      console.log('📦 BotList: Received bots:', botsList.length, botsList);
       
       // If account filter not supported by backend, filter on frontend
       if (account && botsList.length > 0) {
+        const beforeFilter = botsList.length;
         botsList = botsList.filter(bot => bot.account === account);
+        console.log(`🔍 BotList: Filtered ${beforeFilter} bots by account "${account}", found ${botsList.length}`);
       }
       
       setBots(botsList);
+      console.log('✅ BotList: Set bots:', botsList.length);
     } catch (err) {
-      console.error("Failed to fetch bots", err);
+      console.error("❌ BotList: Failed to fetch bots", err);
     }
     setLoading(false);
   };
