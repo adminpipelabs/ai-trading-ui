@@ -64,8 +64,10 @@ export default function Login() {
           console.log('✅ Wallet found in trading-bridge:', clientInfo);
           
           // Auto-create in pipelabs-dashboard if wallet exists in trading-bridge
+          // NOTE: This endpoint might require admin auth, so we try but don't fail if it doesn't work
           setStatus('Syncing account...');
           try {
+            // Try without auth first (some endpoints allow public creation)
             const createRes = await fetch(`${API_URL}/api/admin/quick-client`, {
               method: 'POST',
               headers: {
@@ -82,15 +84,19 @@ export default function Login() {
             if (createRes.ok) {
               console.log('✅ Client auto-created in pipelabs-dashboard');
             } else {
-              // If already exists, that's fine - continue
+              // Check if it's an auth error or already exists
               const errorText = await createRes.text();
-              if (!errorText.includes('already exists') && !errorText.includes('duplicate')) {
-                console.warn('⚠️ Failed to auto-create client (non-critical):', createRes.status);
+              if (createRes.status === 401 || createRes.status === 403) {
+                console.log('ℹ️ Auto-create requires admin auth - will need manual creation');
+              } else if (errorText.includes('already exists') || errorText.includes('duplicate')) {
+                console.log('ℹ️ Client already exists in pipelabs-dashboard');
+              } else {
+                console.warn('⚠️ Failed to auto-create client:', createRes.status, errorText);
               }
             }
           } catch (e) {
             console.warn('⚠️ Auto-create failed (non-critical):', e.message);
-            // Continue with login anyway
+            // Continue with login anyway - admin can create manually if needed
           }
         }
       } catch (e) {
