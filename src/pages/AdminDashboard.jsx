@@ -2719,9 +2719,9 @@ function Login({ onLogin }) {
       const signer = await provider.getSigner();
       const signature = await signer.signMessage(message);
 
-      // Send to pipelabs-dashboard for verification (auth backend)
+      // Send to trading-bridge for verification (auth backend)
       setStatus('Verifying signature...');
-      const res = await fetch(`${AUTH_BACKEND}/api/auth/wallet/login`, {
+      const res = await fetch(`${TRADING_BRIDGE_URL}/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
