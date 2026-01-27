@@ -1833,7 +1833,7 @@ function ClientDashboard({ user, theme, isDark }) {
     // Refresh every 30 seconds
     const interval = setInterval(loadClientData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.wallet_address]); // Re-load when wallet address changes
 
   const loadClientData = async () => {
     try {

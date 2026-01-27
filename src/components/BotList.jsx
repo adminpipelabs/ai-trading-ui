@@ -38,7 +38,7 @@ export function BotList({ account = null }) {
     fetchBots(); 
     const interval = setInterval(fetchBots, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [account]); // Re-fetch when account changes
 
   if (loading) return <div style={{color: "#888", padding: "10px"}}>Loading bots...</div>;
   if (bots.length === 0) return <div style={{color: "#888", padding: "10px"}}>No bots configured</div>;
