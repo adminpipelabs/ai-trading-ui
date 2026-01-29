@@ -3138,11 +3138,28 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       
       // Format payload based on connector type
       let payload;
+      
+      // Debug: Log the account value
+      console.log('🔍 Creating bot with account:', newBot.account);
+      console.log('🔍 Available clients:', clients.map(c => ({ name: c.name, account_identifier: c.account_identifier })));
+      
+      // Ensure we're using account_identifier, not name
+      const selectedClient = clients.find(c => c.account_identifier === newBot.account || c.name === newBot.account);
+      const accountToUse = selectedClient ? selectedClient.account_identifier : newBot.account;
+      
+      if (!accountToUse) {
+        alert('Invalid account selected. Please select a client from the dropdown.');
+        return;
+      }
+      
+      console.log('✅ Using account_identifier:', accountToUse);
+      console.log('📦 Full payload will be sent with account:', accountToUse);
+      
       if (isDEXConnector) {
         // DEX bot payload
         payload = {
           name: newBot.name,
-          account: newBot.account,
+          account: accountToUse,
           bot_type: newBot.bot_type, // 'volume' or 'spread'
           connector: newBot.connector, // Include connector for consistency
           config: newBot.bot_type === 'volume' ? {
@@ -3171,7 +3188,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
         // CEX bot payload (existing format)
         payload = {
           name: newBot.name,
-          account: newBot.account,
+          account: accountToUse,
           strategy: newBot.strategy,
           connector: newBot.connector,
           pair: newBot.pair,
@@ -3182,6 +3199,19 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
           }
         };
       }
+      
+      // Final validation - ensure account_identifier format
+      if (!payload.account.startsWith('client_')) {
+        console.warn('⚠️ Account does not start with "client_":', payload.account);
+        // Try to find and fix it
+        const fixedClient = clients.find(c => c.name === payload.account);
+        if (fixedClient && fixedClient.account_identifier) {
+          console.log('✅ Fixed account from', payload.account, 'to', fixedClient.account_identifier);
+          payload.account = fixedClient.account_identifier;
+        }
+      }
+      
+      console.log('📤 Sending bot creation payload:', JSON.stringify(payload, null, 2));
       
       // Show loading state
       setError(null);
