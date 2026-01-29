@@ -2014,7 +2014,7 @@ function ClientDashboard({ user, theme, isDark }) {
                       Loading account...
                     </div>
                   ) : clientAccount ? (
-                    <BotList account={clientAccount} />
+                    <BotList account={clientAccount} readOnly={true} />
                   ) : (
                     <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>
                       No account linked. Please contact support.

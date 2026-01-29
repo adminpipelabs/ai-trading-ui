@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
 
-export function BotList({ account = null, onEditBot = null }) {
+export function BotList({ account = null, onEditBot = null, readOnly = false }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -145,62 +145,71 @@ export function BotList({ account = null, onEditBot = null }) {
           <span style={{fontSize: "11px", fontWeight: 500, color: bot.status === "running" ? "#10b981" : bot.status === "error" ? "#ef4444" : "#6b7280", textTransform: "uppercase"}}>
             {bot.status || "stopped"}
           </span>
-          <button 
-            onClick={() => toggleBot(bot.id, bot.status)} 
-            style={{
-              padding: "6px 12px", 
-              borderRadius: "6px", 
-              border: "none", 
-              cursor: "pointer", 
-              fontSize: "11px", 
-              fontWeight: 500,
-              backgroundColor: bot.status === "running" ? "#fee2e2" : "#d1fae5", 
-              color: bot.status === "running" ? "#dc2626" : "#059669",
-              transition: "all 0.2s"
-            }}
-            onMouseOver={(e) => e.target.style.opacity = "0.8"}
-            onMouseOut={(e) => e.target.style.opacity = "1"}
-          >
-            {bot.status === "running" ? "Stop" : "Start"}
-          </button>
-          <div style={{display: "flex", gap: "4px"}}>
-            <button 
-              onClick={() => handleEditBot(bot)} 
-              style={{
-                padding: "6px 10px", 
-                borderRadius: "6px", 
-                border: "1px solid #d1d5db", 
-                cursor: "pointer", 
-                fontSize: "11px", 
-                backgroundColor: "#fff",
-                color: "#6b7280",
-                transition: "all 0.2s"
-              }}
-              onMouseOver={(e) => { e.target.style.backgroundColor = "#f3f4f6"; }}
-              onMouseOut={(e) => { e.target.style.backgroundColor = "#fff"; }}
-              title="Edit bot"
-            >
-              Edit
-            </button>
-            <button 
-              onClick={() => handleDeleteBot(bot.id, bot.name)} 
-              style={{
-                padding: "6px 10px", 
-                borderRadius: "6px", 
-                border: "1px solid #fee2e2", 
-                cursor: "pointer", 
-                fontSize: "11px", 
-                backgroundColor: "#fff",
-                color: "#dc2626",
-                transition: "all 0.2s"
-              }}
-              onMouseOver={(e) => { e.target.style.backgroundColor = "#fee2e2"; }}
-              onMouseOut={(e) => { e.target.style.backgroundColor = "#fff"; }}
-              title="Delete bot"
-            >
-              Delete
-            </button>
-          </div>
+          {!readOnly && (
+            <>
+              <button 
+                onClick={() => toggleBot(bot.id, bot.status)} 
+                style={{
+                  padding: "6px 12px", 
+                  borderRadius: "6px", 
+                  border: "none", 
+                  cursor: "pointer", 
+                  fontSize: "11px", 
+                  fontWeight: 500,
+                  backgroundColor: bot.status === "running" ? "#fee2e2" : "#d1fae5", 
+                  color: bot.status === "running" ? "#dc2626" : "#059669",
+                  transition: "all 0.2s"
+                }}
+                onMouseOver={(e) => e.target.style.opacity = "0.8"}
+                onMouseOut={(e) => e.target.style.opacity = "1"}
+              >
+                {bot.status === "running" ? "Stop" : "Start"}
+              </button>
+              <div style={{display: "flex", gap: "4px"}}>
+                <button 
+                  onClick={() => handleEditBot(bot)} 
+                  style={{
+                    padding: "6px 10px", 
+                    borderRadius: "6px", 
+                    border: "1px solid #d1d5db", 
+                    cursor: "pointer", 
+                    fontSize: "11px", 
+                    backgroundColor: "#fff",
+                    color: "#6b7280",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseOver={(e) => { e.target.style.backgroundColor = "#f3f4f6"; }}
+                  onMouseOut={(e) => { e.target.style.backgroundColor = "#fff"; }}
+                  title="Edit bot"
+                >
+                  Edit
+                </button>
+                <button 
+                  onClick={() => handleDeleteBot(bot.id, bot.name)} 
+                  style={{
+                    padding: "6px 10px", 
+                    borderRadius: "6px", 
+                    border: "1px solid #fee2e2", 
+                    cursor: "pointer", 
+                    fontSize: "11px", 
+                    backgroundColor: "#fff",
+                    color: "#dc2626",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseOver={(e) => { e.target.style.backgroundColor = "#fee2e2"; }}
+                  onMouseOut={(e) => { e.target.style.backgroundColor = "#fff"; }}
+                  title="Delete bot"
+                >
+                  Delete
+                </button>
+              </div>
+            </>
+          )}
+          {readOnly && (
+            <div style={{gridColumn: "span 2", fontSize: "11px", color: "#9ca3af", fontStyle: "italic"}}>
+              Read-only view
+            </div>
+          )}
         </div>
       ))}
     </div>
