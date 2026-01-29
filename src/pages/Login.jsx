@@ -148,10 +148,16 @@ export default function Login() {
       try {
         // Encode message to Uint8Array for Phantom
         const messageBytes = new TextEncoder().encode(message);
+        console.log('📝 Signing message:', message);
+        console.log('📝 Message bytes length:', messageBytes.length);
+        
         // Phantom signMessage API: signMessage(message: Uint8Array, display?: 'utf8' | 'hex')
-        // Some versions may need just the Uint8Array without display parameter
         const signedMessage = await window.solana.signMessage(messageBytes);
+        console.log('✅ Signed message response:', signedMessage);
+        console.log('✅ Signature (raw):', signedMessage.signature);
+        
         signature = bs58.encode(signedMessage.signature);
+        console.log('✅ Signature (base58):', signature);
       } catch (signError) {
         if (signError.code === 4001) {
           setError('Signature cancelled. Please try again and approve the signature in Phantom.');
@@ -174,14 +180,24 @@ export default function Login() {
   const verifyAndLogin = async (walletAddress, message, signature) => {
     setStatus('Verifying signature...');
     
+    const verifyPayload = {
+      wallet_address: walletAddress,
+      message: message,
+      signature: signature
+    };
+    
+    console.log('🔐 Verifying signature with payload:', {
+      wallet_address: walletAddress,
+      message: message,
+      signature: signature.substring(0, 20) + '...',
+      messageLength: message.length,
+      signatureLength: signature.length
+    });
+    
     const res = await fetch(`${TRADING_BRIDGE_URL}/auth/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        wallet_address: walletAddress, 
-        message, 
-        signature 
-      })
+      body: JSON.stringify(verifyPayload)
     });
 
     if (!res.ok) {
