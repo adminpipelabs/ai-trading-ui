@@ -513,20 +513,8 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
               </div>
               
               {/* Quick Actions Bar */}
-        <SpreadOrderButton token="SHARP" />
-        <VolumeOrderButton token="SHARP" />
-        <BalanceButton account="client_sharp" />
               <div className="mb-4 p-3 rounded-lg" style={{ background: theme.bgSecondary }}>
                 <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted }}>Quick Actions</div>
-        <SpreadOrderButton token="SHARP" />
-        <VolumeOrderButton token="SHARP" />
-        <BalanceButton account="client_sharp" />
-        <SpreadOrderButton token="SHARP" />
-        <VolumeOrderButton token="SHARP" />
-        <BalanceButton account="client_sharp" />
-        <VolumeOrderButton token="SHARP" />
-        <div style={{marginTop: "20px"}}><h3 style={{marginBottom: "10px", fontWeight: 600}}>Running Bots</h3><BotList /></div>
-        <BalanceButton account="client_sharp" />
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => handleManageApiKeys(selectedClient)}
@@ -724,7 +712,7 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                    Bots ({selectedClient.pairs?.length || 0})
+                    Running Bots
                   </div>
                   <button 
                     onClick={() => handleManageBots(selectedClient)}
@@ -734,52 +722,23 @@ function ClientManagement({ onBack, onAddClient, clients, setClients }) {
                     <Plus size={12} className="inline mr-1" /> Add Bot
                   </button>
                 </div>
-                {selectedClient.pairs && selectedClient.pairs.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedClient.pairs.map(pair => (
-                      <div key={pair.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
-                            {pair.trading_pair} on {pair.exchange}
-                          </div>
-                          <div className="text-xs flex items-center gap-2 mt-1" style={{ color: theme.textMuted }}>
-                            <span>{pair.bot_type}</span>
-                            <span>•</span>
-                            <span className={`px-1.5 py-0.5 rounded text-xs ${
-                              pair.status === 'active' ? 'bg-green-100 text-green-700' : 
-                              pair.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {pair.status}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleToggleBot(selectedClient, pair)}
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ background: pair.status === 'active' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', color: pair.status === 'active' ? theme.negative : theme.positive }}
-                            title={pair.status === 'active' ? 'Pause' : 'Start'}
-                          >
-                            {pair.status === 'active' ? <Activity size={14} /> : <CheckCircle2 size={14} />}
-                          </button>
-                          <button 
-                            onClick={() => handleRemoveBot(selectedClient, pair.id)}
-                            className="p-1.5 rounded-lg transition-all"
-                            style={{ background: 'rgba(239, 68, 68, 0.1)', color: theme.negative }}
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                {(() => {
+                  // Get account_identifier from client - try multiple sources
+                  const accountIdentifier = selectedClient.account_identifier || 
+                    (selectedClient.wallet_address ? 
+                      `client_${selectedClient.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}` : 
+                      null);
+                  
+                  if (!accountIdentifier) {
+                    return (
+                      <div className="text-xs p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                        No account identifier found for this client
                       </div>
-                  ))}
-                </div>
-                ) : (
-                  <div className="text-xs p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
-                    No bots configured
-                  </div>
-                )}
+                    );
+                  }
+                  
+                  return <BotList account={accountIdentifier} />;
+                })()}
               </div>
             </div>
           </div>
@@ -3885,6 +3844,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
           email: client.email,
           wallet_address: client.wallet_address,
           wallet_type: client.wallet_type || 'EVM',
+          account_identifier: client.account_identifier || `client_${client.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`,
           company: client.settings?.contactPerson || '',
           phone: client.settings?.telegramId || '',
           status: client.status || 'active',
