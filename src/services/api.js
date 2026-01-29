@@ -276,6 +276,13 @@ export const tradingBridge = {
       method: 'DELETE',
     });
   },
+
+  async updateBot(botId, payload) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
 };
 
 // ========== CLIENT API ==========

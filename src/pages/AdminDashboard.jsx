@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import { BotList } from "../components/BotList";
+import EditBotModal from "../components/EditBotModal";
 import React, { useState, useRef, useEffect, useMemo, createContext, useContext } from 'react';
 import { 
   Send, Bot, User, TrendingUp, Wallet, Activity, Users, Plus, BarChart3, 
@@ -2941,6 +2942,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
+  const [editingBot, setEditingBot] = useState(null);
   const [newBot, setNewBot] = useState({
     name: '',
     account: '',
@@ -3794,11 +3796,28 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       ) : (
         <div className="rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, padding: '16px' }}>
           <BotList account={null} readOnly={false} activeChain={activeChain} onEditBot={(bot) => {
-            // TODO: Open edit modal with bot data
-            alert(`Edit bot: ${bot.name} (functionality coming soon)`);
+            setEditingBot(bot);
           }} />
         </div>
       )}
+      
+      {/* Edit Bot Modal */}
+      <EditBotModal
+        bot={editingBot}
+        isOpen={!!editingBot}
+        onClose={() => setEditingBot(null)}
+        onSave={async (botId, payload) => {
+          try {
+            const { tradingBridge } = await import('../services/api');
+            await tradingBridge.updateBot(botId, payload);
+            alert(`Bot "${payload.name}" updated successfully.`);
+            fetchBots(); // Refresh bot list
+          } catch (err) {
+            console.error("Failed to update bot", err);
+            throw new Error(err.message || 'Failed to update bot');
+          }
+        }}
+      />
     </div>
   );
 }

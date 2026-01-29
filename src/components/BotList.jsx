@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import EditBotModal from "./EditBotModal";
 
 const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
 
 export function BotList({ account = null, onEditBot = null, readOnly = false, activeChain = "all" }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingBot, setEditingBot] = useState(null);
 
   const fetchBots = async () => {
     // If account is null, fetch all bots (admin view)
@@ -67,7 +69,19 @@ export function BotList({ account = null, onEditBot = null, readOnly = false, ac
     if (onEditBot) {
       onEditBot(bot);
     } else {
-      alert('Edit functionality: Open bot edit modal with bot data');
+      setEditingBot(bot);
+    }
+  };
+
+  const handleSaveBot = async (botId, payload) => {
+    try {
+      const { tradingBridge } = await import('../services/api');
+      await tradingBridge.updateBot(botId, payload);
+      alert(`Bot "${payload.name}" updated successfully.`);
+      fetchBots(); // Refresh bot list
+    } catch (err) {
+      console.error("Failed to update bot", err);
+      throw new Error(err.message || 'Failed to update bot');
     }
   };
 
@@ -205,6 +219,14 @@ export function BotList({ account = null, onEditBot = null, readOnly = false, ac
           )}
         </div>
       ))}
+      
+      {/* Edit Bot Modal */}
+      <EditBotModal
+        bot={editingBot}
+        isOpen={!!editingBot}
+        onClose={() => setEditingBot(null)}
+        onSave={handleSaveBot}
+      />
     </div>
   );
 }
