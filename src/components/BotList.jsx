@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
 
-export function BotList({ account = null, onEditBot = null, readOnly = false }) {
+export function BotList({ account = null, onEditBot = null, readOnly = false, activeChain = "all" }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,7 +75,7 @@ export function BotList({ account = null, onEditBot = null, readOnly = false }) 
     fetchBots(); 
     const interval = setInterval(fetchBots, 10000);
     return () => clearInterval(interval);
-  }, [account]); // Re-fetch when account changes
+  }, [account, activeChain]); // Re-fetch when account or chain filter changes
 
   if (loading) return <div style={{color: "#888", padding: "10px"}}>Loading bots...</div>;
   if (bots.length === 0) return <div style={{color: "#888", padding: "10px"}}>No bots configured</div>;

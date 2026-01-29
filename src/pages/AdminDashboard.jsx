@@ -3793,7 +3793,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
         </div>
       ) : (
         <div className="rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, padding: '16px' }}>
-          <BotList account={null} readOnly={false} onEditBot={(bot) => {
+          <BotList account={null} readOnly={false} activeChain={activeChain} onEditBot={(bot) => {
             // TODO: Open edit modal with bot data
             alert(`Edit bot: ${bot.name} (functionality coming soon)`);
           }} />
