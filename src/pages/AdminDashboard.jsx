@@ -3020,14 +3020,21 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
     try {
       setLoading(true);
       setError(null);
+      
+      // Debug: Check if user is logged in
+      const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+      const walletAddress = userStr ? JSON.parse(userStr)?.wallet_address : null;
+      console.log('🔍 Fetching bots - Wallet address:', walletAddress ? `${walletAddress.substring(0, 8)}...` : 'NOT FOUND');
+      
       const { tradingBridge } = await import('../services/api');
       const data = await tradingBridge.getBots();
       // Handle both {bots: [...]} and [...] response formats
       const botsList = Array.isArray(data) ? data : (data.bots || []);
       setBots(botsList);
-      console.log('✅ Loaded bots:', botsList);
+      console.log('✅ Loaded bots:', botsList.length, botsList);
     } catch (err) {
       console.error('❌ Failed to fetch bots:', err);
+      console.error('Error details:', err.message, err.status, err.data);
       setError(err.message || 'Failed to load bots');
     } finally {
       setLoading(false);
