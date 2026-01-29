@@ -222,6 +222,11 @@ export default function Login() {
     }
 
     const data = await res.json();
+    
+    // Debug: Log backend response
+    console.log('📥 Backend login response:', JSON.stringify(data, null, 2));
+    console.log('🔑 Wallet address from login:', walletAddress);
+    console.log('👤 User object from backend:', data.user);
 
     // Ensure wallet_address is passed to login function
     const userData = login({
@@ -229,6 +234,11 @@ export default function Login() {
       access_token: data.access_token,
       wallet_address: walletAddress // Pass the wallet address used for login
     });
+    
+    // Debug: Verify what was stored
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    console.log('💾 Stored user in localStorage:', storedUser);
+    console.log('✅ Wallet address in stored user:', storedUser?.wallet_address);
     
     if (userData.role === 'admin') {
       navigate('/admin');
