@@ -2806,11 +2806,11 @@ function Login({ onLogin }) {
       setStatus('Please sign the message in your wallet...');
       let signature;
       try {
+        // Encode message to Uint8Array for Phantom
         const messageBytes = new TextEncoder().encode(message);
-        const signedMessage = await window.solana.signMessage({
-          message: messageBytes,
-          display: 'utf8'
-        });
+        // Phantom signMessage API: signMessage(message: Uint8Array, display?: 'utf8' | 'hex')
+        // Some versions may need just the Uint8Array without display parameter
+        const signedMessage = await window.solana.signMessage(messageBytes);
         // Import bs58 dynamically
         const bs58 = (await import('bs58')).default;
         signature = bs58.encode(signedMessage.signature);
