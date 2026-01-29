@@ -121,9 +121,14 @@ export function BotList({ account = null, onEditBot = null, readOnly = false }) 
     return '-';
   };
 
+  // Adjust grid columns based on readOnly mode
+  const gridColumns = readOnly 
+    ? "20px 1fr 90px 100px 120px 120px 80px" // No button columns for read-only
+    : "20px 1fr 90px 100px 120px 120px 80px 80px 80px"; // Full columns with buttons
+
   return (
     <div style={{fontSize: "14px"}}>
-      <div style={{display: "grid", gridTemplateColumns: "20px 1fr 90px 100px 120px 120px 80px 80px 80px", gap: "10px", padding: "8px 0", borderBottom: "1px solid #eee", color: "#888", fontSize: "12px", fontWeight: 600}}>
+      <div style={{display: "grid", gridTemplateColumns: gridColumns, gap: "10px", padding: "8px 0", borderBottom: "1px solid #eee", color: "#888", fontSize: "12px", fontWeight: 600}}>
         <span></span>
         <span>NAME</span>
         <span>TYPE</span>
@@ -131,11 +136,10 @@ export function BotList({ account = null, onEditBot = null, readOnly = false }) 
         <span>EXCHANGE</span>
         <span>STATS</span>
         <span>STATUS</span>
-        <span></span>
-        <span></span>
+        {!readOnly && <><span></span><span></span></>}
       </div>
       {bots.map(bot => (
-        <div key={bot.id} style={{display: "grid", gridTemplateColumns: "20px 1fr 90px 100px 120px 120px 80px 80px 80px", gap: "10px", padding: "12px 0", borderBottom: "1px solid #f5f5f5", alignItems: "center"}}>
+        <div key={bot.id} style={{display: "grid", gridTemplateColumns: gridColumns, gap: "10px", padding: "12px 0", borderBottom: "1px solid #f5f5f5", alignItems: "center"}}>
           <span style={{width: "10px", height: "10px", borderRadius: "50%", backgroundColor: bot.status === "running" ? "#10b981" : bot.status === "error" ? "#ef4444" : "#d1d5db"}} title={bot.status || "stopped"}></span>
           <span style={{fontWeight: 500}}>{bot.name}</span>
           <span style={{color: "#888", fontSize: "12px"}}>{getBotTypeDisplay(bot)}</span>
@@ -204,11 +208,6 @@ export function BotList({ account = null, onEditBot = null, readOnly = false }) 
                 </button>
               </div>
             </>
-          )}
-          {readOnly && (
-            <div style={{gridColumn: "span 2", fontSize: "11px", color: "#9ca3af", fontStyle: "italic"}}>
-              Read-only view
-            </div>
           )}
         </div>
       ))}
