@@ -43,10 +43,13 @@ export function BotList({ account = null }) {
   const toggleBot = async (botId, currentStatus) => {
     const action = currentStatus === "running" ? "stop" : "start";
     try {
-      await fetch(`${TRADING_BRIDGE}/bots/${botId}/${action}`, { method: "POST" });
+      // Use apiCall helper to ensure auth headers are included
+      const { tradingBridge } = await import('../services/api');
+      await tradingBridge[action === 'start' ? 'startBot' : 'stopBot'](botId);
       fetchBots();
     } catch (err) {
       console.error("Failed to toggle bot", err);
+      alert(`Failed to ${action} bot: ${err.message || 'Unknown error'}`);
     }
   };
 

@@ -2983,7 +2983,16 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       // Debug: Check if user is logged in
       const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
       const walletAddress = userStr ? JSON.parse(userStr)?.wallet_address : null;
+      const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
+      
       console.log('🔍 Fetching bots - Wallet address:', walletAddress ? `${walletAddress.substring(0, 8)}...` : 'NOT FOUND');
+      console.log('🔍 Token present:', token ? 'YES' : 'NO');
+      
+      if (!walletAddress) {
+        setError('Please log in to view bots. Your wallet address is required.');
+        setLoading(false);
+        return;
+      }
       
       const { tradingBridge } = await import('../services/api');
       const data = await tradingBridge.getBots();
@@ -2994,7 +3003,13 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
     } catch (err) {
       console.error('❌ Failed to fetch bots:', err);
       console.error('Error details:', err.message, err.status, err.data);
-      setError(err.message || 'Failed to load bots');
+      
+      // More helpful error message
+      if (err.message?.includes('X-Wallet-Address')) {
+        setError('Authentication error: Please refresh the page and log in again.');
+      } else {
+        setError(err.message || 'Failed to load bots');
+      }
     } finally {
       setLoading(false);
     }
@@ -3216,7 +3231,11 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
         expire_hours: 1
       });
       setShowPrivateKey(false);
-      fetchBots(); // Refresh list
+      
+      // Wait a moment for backend to process, then refresh list
+      setTimeout(() => {
+        fetchBots();
+      }, 1000);
     } catch (err) {
       console.error('Failed to create bot:', err);
       const errorMessage = err.message || err.data?.detail || err.detail || 'Unknown error';
