@@ -2980,9 +2980,11 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
   const [error, setError] = useState(null);
   const [showCreateBot, setShowCreateBot] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [clients, setClients] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(true);
   const [newBot, setNewBot] = useState({
     name: '',
-    account: 'client_sharp',
+    account: '',
     strategy: 'spread',
     connector: 'bitmart',
     pair: 'SHARP/USDT',
@@ -3128,6 +3130,12 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
         }
       }
       
+      // Validate account is selected
+      if (!newBot.account) {
+        alert('Please select a client account.');
+        return;
+      }
+      
       // Format payload based on connector type
       let payload;
       if (isDEXConnector) {
@@ -3187,7 +3195,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       // Reset form
       setNewBot({
         name: '',
-        account: 'client_sharp',
+        account: clients.length > 0 ? clients[0].account_identifier : '',
         strategy: 'spread',
         connector: 'bitmart',
         pair: 'SHARP/USDT',
@@ -3220,6 +3228,34 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       alert(`❌ Failed to create bot:\n\n${errorMessage}\n\nPlease check:\n- All required fields are filled\n- Wallet address format is correct\n- You are logged in`);
     }
   };
+
+  // Load clients for account dropdown
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        setClientsLoading(true);
+        const { adminAPI } = await import('../services/api');
+        const data = await adminAPI.getClients();
+        // Transform to include account_identifier
+        const transformedClients = (data || []).map(client => ({
+          id: client.id,
+          name: client.name,
+          account_identifier: client.account_identifier || `client_${client.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')}`
+        }));
+        setClients(transformedClients);
+        // Set default account if available
+        if (transformedClients.length > 0 && !newBot.account) {
+          setNewBot(prev => ({ ...prev, account: transformedClients[0].account_identifier }));
+        }
+      } catch (err) {
+        console.error('Failed to load clients:', err);
+        setClients([]);
+      } finally {
+        setClientsLoading(false);
+      }
+    };
+    loadClients();
+  }, []);
 
   useEffect(() => {
     fetchBots();
@@ -3276,15 +3312,29 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Account</label>
-                <input
-                  type="text"
-                  value={newBot.account}
-                  onChange={(e) => setNewBot({...newBot, account: e.target.value})}
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                  required
-                />
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Account (Client)</label>
+                {clientsLoading ? (
+                  <div className="px-3 py-2 text-sm" style={{ color: theme.textMuted }}>Loading clients...</div>
+                ) : clients.length === 0 ? (
+                  <div className="px-3 py-2 text-sm rounded-lg" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
+                    ⚠️ No clients found. Please create a client first.
+                  </div>
+                ) : (
+                  <select
+                    value={newBot.account}
+                    onChange={(e) => setNewBot({...newBot, account: e.target.value})}
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    required
+                  >
+                    <option value="">Select a client...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.account_identifier}>
+                        {client.name} ({client.account_identifier})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               {/* Connector - Always visible */}
               <div>
