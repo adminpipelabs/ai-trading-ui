@@ -3792,50 +3792,11 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
           <p style={{ color: theme.textMuted }}>Create your first trading bot to get started</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {bots
-            .filter(bot => {
-              // Determine chain from connector/exchange
-              const chain = bot.connector === 'jupiter' || bot.exchange === 'jupiter' ? 'solana' : 'evm';
-              return activeChain === "all" || chain === activeChain;
-            })
-            .map(bot => {
-              // Determine chain for badge
-              const botChain = bot.chain || (bot.connector === 'jupiter' || bot.exchange === 'jupiter' ? 'solana' : 'evm');
-              return (
-            <div key={bot.id} className="p-4 rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}` }}>
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold" style={{ color: theme.textPrimary }}>{bot.name || bot.id}</h3>
-                    <ChainBadge chain={botChain} />
-                  </div>
-                  <p className="text-sm" style={{ color: theme.textMuted }}>
-                    {bot.strategy} • {bot.connector} • {bot.pair}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    bot.status === 'running' ? 'bg-green-500/20 text-green-500' : 'bg-gray-500/20 text-gray-500'
-                  }`}>
-                    {bot.status || 'stopped'}
-                  </span>
-                  {bot.status === 'running' ? (
-                    <button onClick={() => handleStopBot(bot.id)} className="px-3 py-1 rounded text-sm"
-                            style={{ background: theme.negative, color: 'white' }}>
-                      Stop
-                    </button>
-                  ) : (
-                    <button onClick={() => handleStartBot(bot.id)} className="px-3 py-1 rounded text-sm"
-                            style={{ background: theme.positive, color: 'white' }}>
-                      Start
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-              );
-            })}
+        <div className="rounded-xl" style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, padding: '16px' }}>
+          <BotList account={null} readOnly={false} onEditBot={(bot) => {
+            // TODO: Open edit modal with bot data
+            alert(`Edit bot: ${bot.name} (functionality coming soon)`);
+          }} />
         </div>
       )}
     </div>
