@@ -2315,107 +2315,58 @@ function AddClientModal({ isOpen, onClose, onSave }) {
         return;
       }
       
-      // Call backend API to create client
-      const requestBody = {
+      // Import adminAPI
+      const { adminAPI } = await import('../services/api');
+      
+      // Determine wallet type for API call
+      const walletType = isEVM ? 'evm' : 'solana';
+      
+      console.log('Creating client with:', {
         name: clientData.name,
         wallet_address: clientData.wallet_address,
-        email: clientData.email || null,
-        status: 'Active'
-      };
-      
-      console.log('Creating client with:', requestBody);
-      console.log('API URL:', `${TRADING_BRIDGE_URL}/api/admin/quick-client`);
-      console.log('Token present:', !!token);
-      
-      // Use trading-bridge for client creation
-      const response = await fetch(`${TRADING_BRIDGE_URL}/api/admin/quick-client`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: clientData.name,
-          wallet_address: clientData.wallet_address,
-          email: clientData.email || null,
-          tier: 'Standard'
-        })
+        wallet_type: walletType,
+        email: clientData.email
       });
       
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
+      // Use adminAPI.createClient() which handles the transformation and calls /clients/create
+      const newClient = await adminAPI.createClient({
+        name: clientData.name,
+        wallet_address: clientData.wallet_address,
+        wallet_type: walletType, // 'evm' or 'solana' (will be lowercased by adminAPI if needed)
+        account_identifier: `client_${clientData.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`
+      });
       
-      if (!response.ok) {
-        let errorMessage = 'Failed to create client';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.detail || errorData.message || `Server returned ${response.status}`;
-        } catch (e) {
-          errorMessage = `Server error: ${response.status} ${response.statusText}`;
-        }
-        throw new Error(errorMessage);
-      }
+      console.log('✅ Client created successfully:', newClient);
       
-      const newClient = await response.json();
-      
-      // Auto-sync client to trading-bridge for wallet-to-account mapping
-      try {
-        const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-        const walletChain = isEVM ? 'evm' : 'solana';
-        
-        await fetch(`${TRADING_BRIDGE_URL}/clients/create`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: clientData.name,
-            account_identifier: `client_${clientData.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`,
-            wallets: [{
-              chain: walletChain,
-              address: clientData.wallet_address
-            }],
-            connectors: connectors.map(c => ({
-              name: c.exchange,
-              api_key: c.apiKey,
-              api_secret: c.apiSecret,
-              memo: c.memo || null
-            }))
-          })
-        });
-        console.log('✅ Client synced to trading-bridge');
-      } catch (syncError) {
-        console.warn('⚠️ Failed to sync client to trading-bridge (non-critical):', syncError);
-        // Non-critical - client still created in Pipe Labs dashboard
-      }
-      
-      // If connectors were added, add them via API keys endpoint
+      // If connectors were added, add them via connectors endpoint
       if (connectors.length > 0 && newClient.id) {
+        const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
         for (const connector of connectors) {
           try {
-            await fetch(`${TRADING_BRIDGE_URL}/api/admin/api-keys`, {
-              method: 'POST',
+            // Add connector to client via PUT endpoint
+            await fetch(`${TRADING_BRIDGE_URL}/clients/${newClient.id}/connector`, {
+              method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
               },
               body: JSON.stringify({
-                client_id: newClient.id,
-                exchange: connector.exchange,
+                name: connector.exchange,
                 api_key: connector.apiKey,
                 api_secret: connector.apiSecret,
-                passphrase: connector.memo || null
+                memo: connector.memo || null
               })
             });
+            console.log(`✅ Added connector: ${connector.exchange}`);
           } catch (err) {
-            console.error('Failed to add API key:', err);
+            console.error(`Failed to add connector ${connector.exchange}:`, err);
           }
         }
       }
     
-    onSave?.(newClient);
-    setIsSubmitting(false);
-    setShowSuccess(true);
+      onSave?.(newClient);
+      setIsSubmitting(false);
+      setShowSuccess(true);
     } catch (error) {
       console.error('Client creation error:', error);
       const errorMessage = error?.message || error?.detail || (typeof error === 'string' ? error : JSON.stringify(error)) || 'Failed to create client';
