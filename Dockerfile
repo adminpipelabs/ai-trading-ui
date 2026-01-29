@@ -3,8 +3,11 @@ FROM node:18-alpine as builder
 
 WORKDIR /app
 
+# Clear npm cache
+RUN npm cache clean --force
+
 COPY package*.json ./
-RUN npm install
+RUN npm install --no-cache
 
 COPY . .
 RUN npm run build
