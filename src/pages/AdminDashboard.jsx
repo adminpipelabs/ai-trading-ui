@@ -3035,7 +3035,8 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       
       // More helpful error message
       if (err.message?.includes('X-Wallet-Address') || err.status === 401) {
-        if (userRole === 'admin') {
+        const currentUserRole = user?.role; // Get role again for error handling
+        if (currentUserRole === 'admin') {
           setError('Backend authentication error. Admin should be able to view all bots. Please check backend logs.');
         } else {
           setError('Authentication error: Please refresh the page and log in again.');
