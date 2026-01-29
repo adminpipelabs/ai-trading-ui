@@ -3175,7 +3175,14 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
         };
       }
       
-      await tradingBridge.createBot(payload);
+      // Show loading state
+      setError(null);
+      
+      const result = await tradingBridge.createBot(payload);
+      
+      // Success - show confirmation
+      alert(`✅ Bot "${newBot.name}" created successfully!${result.id ? `\nBot ID: ${result.id}` : ''}\n\nYou can now start the bot from the bot list.`);
+      
       setShowCreateBot(false);
       // Reset form
       setNewBot({
@@ -3208,7 +3215,9 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       fetchBots(); // Refresh list
     } catch (err) {
       console.error('Failed to create bot:', err);
-      alert(`Failed to create bot: ${err.message || err.detail || 'Unknown error'}`);
+      const errorMessage = err.message || err.data?.detail || err.detail || 'Unknown error';
+      setError(errorMessage);
+      alert(`❌ Failed to create bot:\n\n${errorMessage}\n\nPlease check:\n- All required fields are filled\n- Wallet address format is correct\n- You are logged in`);
     }
   };
 
@@ -3245,6 +3254,14 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                 <X size={20} />
               </button>
             </div>
+            {error && (
+              <div className="mb-4 p-3 rounded-lg text-sm" style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b' }}>
+                <div className="flex items-center gap-2">
+                  <AlertCircle size={16} />
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
             <form onSubmit={handleCreateBot} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Bot Name</label>

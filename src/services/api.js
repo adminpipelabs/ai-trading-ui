@@ -9,11 +9,24 @@ async function apiCall(url, options = {}) {
                 localStorage.getItem('pipelabs_token') || 
                 localStorage.getItem('auth_token');
   
+  // Get wallet address from localStorage for X-Wallet-Address header
+  let walletAddress = null;
+  try {
+    const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      walletAddress = user.wallet_address;
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
+  
   const response = await fetch(url, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
       ...options.headers,
     },
   });
