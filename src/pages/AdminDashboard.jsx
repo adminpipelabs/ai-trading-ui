@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import { BotList } from "../components/BotList";
-import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
+import React, { useState, useRef, useEffect, useMemo, createContext, useContext } from 'react';
 import { 
   Send, Bot, User, TrendingUp, Wallet, Activity, Users, Plus, BarChart3, 
   Settings, LogOut, ChevronRight, Sparkles, ArrowUpRight, Mail, Lock, 
@@ -3010,9 +3010,9 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
     expire_hours: 1
   });
 
-  // Helper functions
-  const isDEX = ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector);
-  const isSolana = ['jupiter', 'raydium'].includes(newBot.connector);
+  // Helper functions - use useMemo to make them reactive
+  const isDEX = useMemo(() => ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector), [newBot.connector]);
+  const isSolana = useMemo(() => ['jupiter', 'raydium'].includes(newBot.connector), [newBot.connector]);
 
   const fetchBots = async () => {
     try {
@@ -3059,33 +3059,84 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
     try {
       const { tradingBridge } = await import('../services/api');
       
+      // Recompute helpers at submit time (not render time)
+      const isDEXConnector = ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector);
+      
       // Validate DEX fields if DEX connector
-      if (isDEX) {
-        // Validate Solana wallet address
+      if (isDEXConnector) {
+        // Validate required DEX fields
+        if (!newBot.wallet_address || !newBot.private_key || !newBot.base_mint) {
+          alert('Please fill in all required DEX fields: wallet address, private key, and base token.');
+          return;
+        }
+        
+        // Validate Solana wallet address format
         if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newBot.wallet_address)) {
           alert('Invalid Solana wallet address. Must be 32-44 base58 characters.');
           return;
         }
-        // Validate token mint
+        
+        // Validate token mint format
         if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newBot.base_mint)) {
           alert('Invalid base token mint address. Must be 32-44 base58 characters.');
           return;
         }
-        // Validate trade size
-        if (parseFloat(newBot.max_trade_usd) <= parseFloat(newBot.min_trade_usd)) {
-          alert('Max trade size must be greater than min trade size.');
+        
+        // Validate bot type specific fields
+        if (newBot.bot_type === 'volume') {
+          // Volume bot validation
+          if (!newBot.daily_volume_usd || parseFloat(newBot.daily_volume_usd) < 100) {
+            alert('Daily volume target must be at least $100.');
+            return;
+          }
+          if (!newBot.min_trade_usd || !newBot.max_trade_usd) {
+            alert('Please specify min and max trade sizes.');
+            return;
+          }
+          if (parseFloat(newBot.max_trade_usd) <= parseFloat(newBot.min_trade_usd)) {
+            alert('Max trade size must be greater than min trade size.');
+            return;
+          }
+          if (!newBot.interval_min_minutes || !newBot.interval_max_minutes) {
+            alert('Please specify min and max intervals.');
+            return;
+          }
+          if (parseFloat(newBot.interval_max_minutes) <= parseFloat(newBot.interval_min_minutes)) {
+            alert('Max interval must be greater than min interval.');
+            return;
+          }
+        } else if (newBot.bot_type === 'spread') {
+          // Spread bot validation
+          if (!newBot.spread_pct || parseFloat(newBot.spread_pct) < 0.1) {
+            alert('Spread must be at least 0.1%.');
+            return;
+          }
+          if (!newBot.order_size_usd || parseFloat(newBot.order_size_usd) < 10) {
+            alert('Order size must be at least $10.');
+            return;
+          }
+          if (!newBot.refresh_seconds || parseFloat(newBot.refresh_seconds) < 10) {
+            alert('Refresh interval must be at least 10 seconds.');
+            return;
+          }
+        }
+      } else {
+        // Validate CEX fields
+        if (!newBot.pair || !newBot.strategy) {
+          alert('Please fill in all required CEX fields: trading pair and strategy.');
           return;
         }
       }
       
       // Format payload based on connector type
       let payload;
-      if (isDEX) {
+      if (isDEXConnector) {
         // DEX bot payload
         payload = {
           name: newBot.name,
           account: newBot.account,
           bot_type: newBot.bot_type, // 'volume' or 'spread'
+          connector: newBot.connector, // Include connector for consistency
           config: newBot.bot_type === 'volume' ? {
             base_mint: newBot.base_mint,
             quote_mint: newBot.quote_mint,
@@ -3255,7 +3306,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
               </div>
 
               {/* CEX Fields - Show only when CEX connector selected */}
-              {!isDEX && (
+              {!['jupiter', 'raydium', 'uniswap'].includes(newBot.connector) && (
                 <>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Strategy</label>
@@ -3270,44 +3321,43 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                     </select>
                   </div>
                   <div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Trading Pair</label>
-                <input
-                  type="text"
-                  value={newBot.pair}
-                  onChange={(e) => setNewBot({...newBot, pair: e.target.value})}
-                  className="w-full px-3 py-2 rounded-lg text-sm"
-                  style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                  placeholder="SHARP/USDT"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Bid Spread</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={newBot.bid_spread}
-                    onChange={(e) => setNewBot({...newBot, bid_spread: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Ask Spread</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={newBot.ask_spread}
-                    onChange={(e) => setNewBot({...newBot, ask_spread: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg text-sm"
-                    style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                    required
-                  />
-                </div>
-              </div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Trading Pair</label>
+                    <input
+                      type="text"
+                      value={newBot.pair}
+                      onChange={(e) => setNewBot({...newBot, pair: e.target.value})}
+                      className="w-full px-3 py-2 rounded-lg text-sm"
+                      style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      placeholder="SHARP/USDT"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Bid Spread</label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={newBot.bid_spread}
+                        onChange={(e) => setNewBot({...newBot, bid_spread: e.target.value})}
+                        className="w-full px-3 py-2 rounded-lg text-sm"
+                        style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Ask Spread</label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        value={newBot.ask_spread}
+                        onChange={(e) => setNewBot({...newBot, ask_spread: e.target.value})}
+                        className="w-full px-3 py-2 rounded-lg text-sm"
+                        style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                        required
+                      />
+                    </div>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Order Amount</label>
                     <input
@@ -3323,7 +3373,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
               )}
 
               {/* DEX Fields - Show only when DEX connector selected */}
-              {isDEX && (
+              {['jupiter', 'raydium', 'uniswap'].includes(newBot.connector) && (
                 <>
                   <div>
                     <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Bot Type</label>
@@ -3351,7 +3401,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                           className="w-full px-3 py-2 rounded-lg text-sm font-mono"
                           style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                           placeholder="BrLyvX5p7HYXsc94AQXXNUfe7zbCYriDfUT1p3DafuCV"
-                          required={isDEX}
+                          required
                         />
                       </div>
                       <div>
@@ -3364,7 +3414,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                             className="w-full px-3 py-2 pr-10 rounded-lg text-sm font-mono"
                             style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                             placeholder="Base58 encoded private key"
-                            required={isDEX}
+                            required
                           />
                           <button
                             type="button"
@@ -3395,7 +3445,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                           className="w-full px-3 py-2 rounded-lg text-sm font-mono"
                           style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                           placeholder="HZG1RVn4zcRM7zEFEVGYPGoPzPAWAj2AAdvQivfmLYNK"
-                          required={isDEX}
+                          required
                         />
                       </div>
                       <div>
@@ -3405,7 +3455,7 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
                           onChange={(e) => setNewBot({...newBot, quote_mint: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg text-sm"
                           style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          required={isDEX}
+                          required
                         >
                           <option value="So11111111111111111111111111111111111111112">SOL</option>
                           <option value="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</option>
