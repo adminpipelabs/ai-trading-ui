@@ -2982,20 +2982,47 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       
       // Debug: Check if user is logged in
       const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
-      const walletAddress = userStr ? JSON.parse(userStr)?.wallet_address : null;
+      const user = userStr ? JSON.parse(userStr) : null;
+      const walletAddress = user?.wallet_address;
+      const userRole = user?.role;
       const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
       
-      console.log('🔍 Fetching bots - Wallet address:', walletAddress ? `${walletAddress.substring(0, 8)}...` : 'NOT FOUND');
+      console.log('🔍 Fetching bots - Role:', userRole, 'Wallet address:', walletAddress ? `${walletAddress.substring(0, 8)}...` : 'NOT FOUND');
       console.log('🔍 Token present:', token ? 'YES' : 'NO');
       
-      if (!walletAddress) {
-        setError('Please log in to view bots. Your wallet address is required.');
+      // Admin users should be able to see all bots even without wallet address
+      // The backend should check JWT token role
+      if (!token) {
+        setError('Please log in to view bots.');
         setLoading(false);
         return;
       }
       
       const { tradingBridge } = await import('../services/api');
-      const data = await tradingBridge.getBots();
+      
+      // Try admin endpoint first if admin, fallback to regular endpoint
+      let data;
+      if (userRole === 'admin') {
+        try {
+          // Try admin-specific endpoint if it exists
+          const { adminAPI } = await import('../services/api');
+          // For now, use regular endpoint - backend should handle admin via JWT
+          data = await tradingBridge.getBots();
+        } catch (adminErr) {
+          // Fallback to regular endpoint
+          console.log('Admin endpoint failed, trying regular endpoint:', adminErr);
+          data = await tradingBridge.getBots();
+        }
+      } else {
+        // Client users need wallet address
+        if (!walletAddress) {
+          setError('Please log in to view bots. Your wallet address is required.');
+          setLoading(false);
+          return;
+        }
+        data = await tradingBridge.getBots();
+      }
+      
       // Handle both {bots: [...]} and [...] response formats
       const botsList = Array.isArray(data) ? data : (data.bots || []);
       setBots(botsList);
@@ -3005,8 +3032,12 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
       console.error('Error details:', err.message, err.status, err.data);
       
       // More helpful error message
-      if (err.message?.includes('X-Wallet-Address')) {
-        setError('Authentication error: Please refresh the page and log in again.');
+      if (err.message?.includes('X-Wallet-Address') || err.status === 401) {
+        if (userRole === 'admin') {
+          setError('Backend authentication error. Admin should be able to view all bots. Please check backend logs.');
+        } else {
+          setError('Authentication error: Please refresh the page and log in again.');
+        }
       } else {
         setError(err.message || 'Failed to load bots');
       }
