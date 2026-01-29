@@ -18,17 +18,30 @@ async function apiCall(url, options = {}) {
       walletAddress = user.wallet_address;
     }
   } catch (e) {
-    // Ignore parse errors
+    console.warn('Failed to parse user from localStorage:', e);
+  }
+  
+  // Build headers - always include X-Wallet-Address if available
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+    ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
+    ...options.headers,
+  };
+  
+  // Debug log for bot endpoints
+  if (url.includes('/bots')) {
+    console.log('🔍 API Call to /bots:', {
+      url,
+      hasWalletAddress: !!walletAddress,
+      walletAddress: walletAddress ? `${walletAddress.substring(0, 8)}...` : 'MISSING',
+      hasToken: !!token
+    });
   }
   
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
-      ...options.headers,
-    },
+    headers,
   });
   
   if (!response.ok) {
