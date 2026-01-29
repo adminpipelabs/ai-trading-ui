@@ -223,10 +223,13 @@ export const tradingBridge = {
     return apiCall(url);
   },
 
-  async createBot({ name, account, strategy, connector, pair, config }) {
+  async createBot(payload) {
+    // Accept full payload - supports both CEX and DEX bots
+    // CEX: { name, account, strategy, connector, pair, config }
+    // DEX: { name, account, bot_type, config, wallets }
     return apiCall(`${TRADING_BRIDGE_URL}/bots/create`, {
       method: 'POST',
-      body: JSON.stringify({ name, account, strategy, connector, pair, config }),
+      body: JSON.stringify(payload),
     });
   },
 
