@@ -2976,15 +2976,17 @@ function BotManagementView({ theme, isDark, onBack, activeChain = "all", setActi
   const isSolana = useMemo(() => ['jupiter', 'raydium'].includes(newBot.connector), [newBot.connector]);
 
   const fetchBots = async () => {
+    // Get user info outside try block so it's available in catch
+    const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+    const user = userStr ? JSON.parse(userStr) : null;
+    const userRole = user?.role;
+    
     try {
       setLoading(true);
       setError(null);
       
       // Debug: Check if user is logged in
-      const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
-      const user = userStr ? JSON.parse(userStr) : null;
       const walletAddress = user?.wallet_address;
-      const userRole = user?.role;
       const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
       
       console.log('🔍 Fetching bots - Role:', userRole, 'Wallet address:', walletAddress ? `${walletAddress.substring(0, 8)}...` : 'NOT FOUND');
