@@ -147,16 +147,15 @@ export default function Login() {
       let signature;
       try {
         // Encode message to Uint8Array for Phantom
-        const messageBytes = new TextEncoder().encode(message);
+        const encodedMessage = new TextEncoder().encode(message);
         console.log('📝 Signing message:', message);
-        console.log('📝 Message bytes length:', messageBytes.length);
+        console.log('📝 Message bytes length:', encodedMessage.length);
         
         // Phantom signMessage API: signMessage(message: Uint8Array, display?: 'utf8' | 'hex')
-        const signedMessage = await window.solana.signMessage(messageBytes);
-        console.log('✅ Signed message response:', signedMessage);
-        console.log('✅ Signature (raw):', signedMessage.signature);
+        const { signature: signatureBytes } = await window.solana.signMessage(encodedMessage, "utf8");
+        console.log('✅ Signature (raw bytes):', signatureBytes);
         
-        signature = bs58.encode(signedMessage.signature);
+        signature = bs58.encode(signatureBytes);
         console.log('✅ Signature (base58):', signature);
       } catch (signError) {
         if (signError.code === 4001) {
