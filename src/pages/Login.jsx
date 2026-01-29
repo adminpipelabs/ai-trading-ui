@@ -223,9 +223,11 @@ export default function Login() {
 
     const data = await res.json();
 
+    // Ensure wallet_address is passed to login function
     const userData = login({
       user: data.user,
-      access_token: data.access_token
+      access_token: data.access_token,
+      wallet_address: walletAddress // Pass the wallet address used for login
     });
     
     if (userData.role === 'admin') {

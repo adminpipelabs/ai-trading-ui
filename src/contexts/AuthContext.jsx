@@ -26,13 +26,18 @@ export function AuthProvider({ children }) {
     const userObj = authData.user || authData;
     const token = authData.access_token || authData.token;
     
+    // Ensure wallet_address is included - use from userObj or from authData if provided
+    const walletAddress = userObj.wallet_address || authData.wallet_address || userObj.wallet;
+    
     const userData = {
       id: userObj.id,
       email: userObj.email,
-      wallet_address: userObj.wallet_address,
+      wallet_address: walletAddress, // Always include wallet address
       role: (userObj.role || 'client').toLowerCase(), // Use actual role, don't default to client
-      name: userObj.email || userObj.wallet_address?.slice(0, 8) + '...',
+      name: userObj.email || walletAddress?.slice(0, 8) + '...',
     };
+    
+    console.log('💾 Storing user data:', { ...userData, wallet_address: walletAddress ? `${walletAddress.substring(0, 8)}...` : 'MISSING' });
     
     setUser(userData);
     // Store in both formats for compatibility
