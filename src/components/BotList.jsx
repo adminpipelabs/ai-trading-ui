@@ -7,19 +7,13 @@ export function BotList({ account = null, onEditBot = null, readOnly = false }) 
   const [loading, setLoading] = useState(true);
 
   const fetchBots = async () => {
-    // Don't fetch if account is not set yet (for client view)
-    if (account === null || account === undefined) {
-      console.log('⏳ BotList: Waiting for account to be set...');
-      setBots([]);
-      setLoading(false);
-      return;
-    }
-    
+    // If account is null, fetch all bots (admin view)
+    // If account is set, fetch bots for that account (client view)
     try {
       setLoading(true); // Set loading when we start fetching
-      console.log('🔍 BotList: Fetching bots for account:', account);
+      console.log('🔍 BotList: Fetching bots for account:', account || 'ALL (admin view)');
       const { tradingBridge } = await import('../services/api');
-      const data = await tradingBridge.getBots(account);
+      const data = await tradingBridge.getBots(account || null);
       let botsList = Array.isArray(data) ? data : (data.bots || []);
       console.log('📦 BotList: Received bots:', botsList.length, botsList);
       
