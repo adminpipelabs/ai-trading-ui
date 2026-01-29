@@ -2671,37 +2671,46 @@ function Login({ onLogin }) {
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [walletType, setWalletType] = useState(null); // 'evm' or 'solana'
 
-  // Import BrowserProvider dynamically to avoid SSR issues
-  const connectWallet = async () => {
+  const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+
+  const detectWallets = () => {
+    const wallets = { evm: null, solana: null };
+    
+    if (window.ethereum) {
+      if (window.ethereum.isMetaMask) wallets.evm = { name: 'MetaMask', provider: window.ethereum };
+      else if (window.ethereum.isCoinbaseWallet) wallets.evm = { name: 'Coinbase Wallet', provider: window.ethereum };
+      else if (window.ethereum.isTrust) wallets.evm = { name: 'Trust Wallet', provider: window.ethereum };
+      else wallets.evm = { name: 'Ethereum Wallet', provider: window.ethereum };
+    }
+    
+    if (window.solana && window.solana.isPhantom) {
+      wallets.solana = { name: 'Phantom', provider: window.solana };
+    }
+    
+    return wallets;
+  };
+
+  const connectEVM = async () => {
     setLoading(true);
     setError('');
     setStatus('');
+    setWalletType('evm');
 
     try {
-      // Dynamic import of ethers
       const { BrowserProvider } = await import('ethers');
+      const wallets = detectWallets();
       
-      // Detect wallet
-      let wallet = null;
-      if (window.ethereum) {
-        if (window.ethereum.isMetaMask) wallet = { name: 'MetaMask', provider: window.ethereum };
-        else if (window.ethereum.isPhantom) wallet = { name: 'Phantom', provider: window.ethereum };
-        else if (window.ethereum.isCoinbaseWallet) wallet = { name: 'Coinbase Wallet', provider: window.ethereum };
-        else if (window.ethereum.isTrust) wallet = { name: 'Trust Wallet', provider: window.ethereum };
-        else wallet = { name: 'Ethereum Wallet', provider: window.ethereum };
-      }
-      
-      if (!wallet) {
-        setError('No wallet detected. Please install MetaMask, Phantom, or another EVM-compatible wallet.');
+      if (!wallets.evm) {
+        setError('No EVM wallet detected. Please install MetaMask, Coinbase Wallet, or another EVM-compatible wallet.');
         setLoading(false);
         return;
       }
 
-      setStatus(`Connecting to ${wallet.name}...`);
+      setStatus(`Connecting to ${wallets.evm.name}...`);
       
-      // Request account access
-      const provider = new BrowserProvider(wallet.provider);
+      const provider = new BrowserProvider(wallets.evm.provider);
       const accounts = await provider.send('eth_requestAccounts', []);
       
       if (!accounts || accounts.length === 0) {
@@ -2710,10 +2719,6 @@ function Login({ onLogin }) {
 
       const walletAddress = accounts[0];
       
-      // Use trading-bridge for auth (consolidated backend)
-      const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-      
-      // Get nonce/message from trading-bridge (auth backend)
       setStatus('Getting authentication message...');
       const nonceRes = await fetch(`${TRADING_BRIDGE_URL}/auth/message/${walletAddress}`, {
         method: 'GET',
@@ -2728,65 +2733,152 @@ function Login({ onLogin }) {
       const nonceData = await nonceRes.json();
       const message = nonceData.message;
 
-      // Sign message
       setStatus('Please sign the message in your wallet...');
       const signer = await provider.getSigner();
-      const signature = await signer.signMessage(message);
-
-      // Send to trading-bridge for verification (auth backend)
-      setStatus('Verifying signature...');
-      const res = await fetch(`${TRADING_BRIDGE_URL}/auth/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          wallet_address: walletAddress, 
-          message, 
-          signature 
-        })
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        const errorMessage = errorData.detail || 'Login failed';
-        
-        // Show user-friendly error for unregistered wallets
-        if (errorMessage.includes('not registered') || errorMessage.includes('Wallet address not registered')) {
-          throw new Error(
-            `❌ Wallet address not registered.\n\n` +
-            `Your wallet address must be registered by an admin before you can log in.\n\n` +
-            `Wallet Address: ${walletAddress}\n\n` +
-            `Please contact your admin to create your account. Once registered, you can log in with this wallet.`
-          );
+      let signature;
+      try {
+        signature = await signer.signMessage(message);
+      } catch (signError) {
+        if (signError?.code === 'ACTION_REJECTED' || signError?.reason === 'rejected' || signError?.message?.includes('rejected')) {
+          setError('Signature cancelled. Please try again and approve the signature in your wallet.');
+          setStatus('');
+          setLoading(false);
+          return;
         }
-        
-        throw new Error(errorMessage);
+        throw signError;
       }
 
-      const data = await res.json();
-
-      // Store token and user data
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Call onLogin callback with user data - IMPORTANT: Use exact role from backend
-      const userData = {
-        email: data.user?.email,
-        wallet_address: data.user?.wallet_address || walletAddress,
-        role: data.user?.role || data.role || 'client', // Check both places
-        id: data.user?.id
-      };
-      
-      console.log('Login response:', data); // Debug log
-      console.log('User role:', userData.role); // Debug log
-      
-      onLogin(userData);
+      await verifyAndLogin(walletAddress, message, signature);
 
     } catch (e) {
-      setError(e.message || 'Failed to connect wallet');
+      setError(e.message || 'Failed to connect EVM wallet');
       setStatus('');
-    } finally {
       setLoading(false);
     }
+  };
+
+  const connectSolana = async () => {
+    setLoading(true);
+    setError('');
+    setStatus('');
+    setWalletType('solana');
+
+    try {
+      const wallets = detectWallets();
+      
+      if (!wallets.solana) {
+        setError('No Solana wallet detected. Please install Phantom wallet.');
+        setLoading(false);
+        return;
+      }
+
+      setStatus(`Connecting to ${wallets.solana.name}...`);
+      
+      let response;
+      try {
+        response = await window.solana.connect();
+      } catch (connectError) {
+        if (connectError.code === 4001) {
+          setError('Connection cancelled. Please try again and approve the connection in Phantom.');
+          setStatus('');
+          setLoading(false);
+          return;
+        }
+        throw new Error(`Failed to connect: ${connectError.message}`);
+      }
+
+      const walletAddress = response.publicKey.toString();
+      
+      setStatus('Getting authentication message...');
+      const nonceRes = await fetch(`${TRADING_BRIDGE_URL}/auth/message/${walletAddress}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (!nonceRes.ok) {
+        const errorText = await nonceRes.text();
+        throw new Error(`Failed to get authentication message: ${nonceRes.status} ${errorText}`);
+      }
+
+      const nonceData = await nonceRes.json();
+      const message = nonceData.message;
+
+      setStatus('Please sign the message in your wallet...');
+      let signature;
+      try {
+        const messageBytes = new TextEncoder().encode(message);
+        const signedMessage = await window.solana.signMessage({
+          message: messageBytes,
+          display: 'utf8'
+        });
+        // Import bs58 dynamically
+        const bs58 = (await import('bs58')).default;
+        signature = bs58.encode(signedMessage.signature);
+      } catch (signError) {
+        if (signError.code === 4001) {
+          setError('Signature cancelled. Please try again and approve the signature in Phantom.');
+          setStatus('');
+          setLoading(false);
+          return;
+        }
+        throw new Error(`Failed to sign message: ${signError.message}`);
+      }
+
+      await verifyAndLogin(walletAddress, message, signature);
+
+    } catch (e) {
+      setError(e.message || 'Failed to connect Solana wallet');
+      setStatus('');
+      setLoading(false);
+    }
+  };
+
+  const verifyAndLogin = async (walletAddress, message, signature) => {
+    setStatus('Verifying signature...');
+    
+    const res = await fetch(`${TRADING_BRIDGE_URL}/auth/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        wallet_address: walletAddress, 
+        message, 
+        signature 
+      })
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json();
+      const errorMessage = errorData.detail || 'Login failed';
+      
+      if (errorMessage.includes('not registered') || errorMessage.includes('Wallet address not registered')) {
+        throw new Error(
+          `Wallet address not registered.\n\n` +
+          `Please contact your admin to create your account with this wallet address:\n` +
+          `${walletAddress}\n\n` +
+          `Once your wallet is registered, you can log in.`
+        );
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    const data = await res.json();
+
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+    const userData = {
+      email: data.user?.email,
+      wallet_address: data.user?.wallet_address || walletAddress,
+      role: data.user?.role || data.role || 'client',
+      id: data.user?.id
+    };
+    
+    console.log('Login response:', data);
+    console.log('User role:', userData.role);
+    
+    onLogin(userData);
+    setLoading(false);
   };
 
   return (
@@ -2821,31 +2913,47 @@ function Login({ onLogin }) {
           </div>
         )}
 
-        {/* Connect Wallet Button */}
-        <button 
-          onClick={connectWallet} 
-          disabled={loading}
-          className="w-full py-3.5 rounded-xl text-white font-semibold transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{ 
-            background: loading ? '#4b5563' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-            boxShadow: loading ? 'none' : '0 4px 16px rgba(102, 126, 234, 0.4)' 
-          }}>
-          {status || (loading ? 'Connecting...' : '🔐 Connect Wallet')}
-              </button>
+        {/* TWO BUTTONS - EVM AND SOLANA */}
+        <div className="flex gap-3 mb-4">
+          <button 
+            onClick={connectEVM} 
+            disabled={loading}
+            className="flex-1 py-3.5 rounded-xl text-white font-semibold transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{ 
+              background: loading && walletType === 'evm' ? '#4b5563' : 'linear-gradient(135deg, #627eea 0%, #764ba2 100%)', 
+              boxShadow: loading ? 'none' : '0 4px 16px rgba(98, 126, 234, 0.4)' 
+            }}>
+            <span>⟠</span>
+            <span>{loading && walletType === 'evm' ? 'Connecting...' : 'Connect EVM Wallet'}</span>
+          </button>
+
+          <button 
+            onClick={connectSolana} 
+            disabled={loading}
+            className="flex-1 py-3.5 rounded-xl text-white font-semibold transition-all hover:translate-y-[-1px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{ 
+              background: loading && walletType === 'solana' ? '#4b5563' : 'linear-gradient(135deg, #9945ff 0%, #14f195 100%)', 
+              boxShadow: loading ? 'none' : '0 4px 16px rgba(153, 69, 255, 0.4)' 
+            }}>
+            <span>◎</span>
+            <span>{loading && walletType === 'solana' ? 'Connecting...' : 'Connect Solana Wallet'}</span>
+          </button>
+        </div>
 
         {/* Supported Wallets Info */}
         <div className="mt-6 text-center">
           <p className="text-xs font-medium mb-2" style={{ color: theme.textMuted }}>Supported Wallets:</p>
-          <p className="text-xs" style={{ color: theme.textMuted }}>
-            MetaMask • Phantom • Coinbase Wallet • Trust Wallet • WalletConnect
-          </p>
+          <div className="text-xs" style={{ color: theme.textMuted }}>
+            <p><strong>EVM:</strong> MetaMask • Coinbase Wallet • Trust Wallet</p>
+            <p><strong>Solana:</strong> Phantom</p>
+          </div>
         </div>
 
         {/* Info Box */}
         <div className="mt-6 p-4 rounded-xl text-xs" 
              style={{ background: theme.accentLight, border: `1px solid ${theme.border}`, color: theme.textSecondary }}>
           <p className="font-semibold mb-2" style={{ color: theme.accent }}>ℹ️ How it works:</p>
-          <p className="mb-1">1. Click "Connect Wallet" to connect your wallet</p>
+          <p className="mb-1">1. Click "Connect EVM Wallet" or "Connect Solana Wallet"</p>
           <p className="mb-1">2. Approve the connection request</p>
           <p className="mb-1">3. Sign the authentication message (no gas fees)</p>
           <p className="mt-2 font-semibold" style={{ color: theme.accent }}>Note: Your wallet address must be registered by an admin.</p>
