@@ -54,7 +54,7 @@ export function BotList({ account = null, onEditBot = null }) {
   };
 
   const handleDeleteBot = async (botId, botName) => {
-    if (!confirm(`Are you sure you want to delete "${botName}"?\n\nThis action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to delete "${botName}"?\n\nThis action cannot be undone.`)) {
       return;
     }
     
