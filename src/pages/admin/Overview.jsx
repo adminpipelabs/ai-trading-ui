@@ -1,12 +1,14 @@
 import React, { useRef, useEffect } from 'react';
 import { Bot, User, Users, BarChart3, TrendingUp, Activity, ChevronRight, ArrowUpRight } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+// Removed useTheme import - using theme prop instead
 
 // ========== METRIC CARD ==========
-export function MetricCard({ icon, label, value, subvalue, positive, onClick, theme: themeProp }) {
-  // Use theme prop if provided, otherwise fallback to context
-  const { theme: themeFromContext } = useTheme();
-  const theme = themeProp || themeFromContext;
+export function MetricCard({ icon, label, value, subvalue, positive, onClick, theme }) {
+  // Theme must be provided as prop - no fallback to context
+  if (!theme) {
+    console.error('MetricCard: theme prop is required');
+    return null;
+  }
   return (
     <div onClick={onClick} className={`flex items-center gap-3 p-3 rounded-xl mb-2 transition-all ${onClick ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, boxShadow: theme.shadow }}>
@@ -50,8 +52,12 @@ function Message({ message, theme, isDark }) {
 
 // ========== OVERVIEW COMPONENT ==========
 export default function Overview({ user, metrics, messages, input, setInput, isLoading, handleSend, quickPrompts, messagesEndRef, navigate, theme, isDark }) {
-  const { theme: themeFromContext } = useTheme();
-  const finalTheme = theme || themeFromContext;
+  // Theme must be provided as prop - no fallback to context
+  if (!theme) {
+    console.error('Overview: theme prop is required');
+    return <div>Error: Theme not provided</div>;
+  }
+  const finalTheme = theme;
 
   useEffect(() => { 
     if (messagesEndRef?.current) {
