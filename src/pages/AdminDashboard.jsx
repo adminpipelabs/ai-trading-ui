@@ -962,7 +962,32 @@ function PipeLabsApp() {
     setLoading(false);
   }, []);
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Disconnect EVM wallet if connected
+    if (window.ethereum && window.ethereum.removeListener) {
+      try {
+        // Try to disconnect if wallet supports it
+        if (window.ethereum.disconnect) {
+          await window.ethereum.disconnect();
+        }
+        // Clear any stored EVM wallet info
+        localStorage.removeItem('evm_wallet');
+      } catch (e) {
+        console.log('EVM wallet disconnect:', e);
+      }
+    }
+    
+    // Disconnect Solana wallet if connected
+    if (window.solana && window.solana.isPhantom && window.solana.isConnected) {
+      try {
+        await window.solana.disconnect();
+        localStorage.removeItem('solana_wallet');
+      } catch (e) {
+        console.log('Solana wallet disconnect:', e);
+      }
+    }
+    
+    // Clear auth data
     localStorage.removeItem('user');
     localStorage.removeItem('access_token');
     localStorage.removeItem('pipelabs_user');
