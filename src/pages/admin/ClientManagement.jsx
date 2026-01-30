@@ -1373,13 +1373,25 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   const [pairs, setPairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [clientConnectors, setClientConnectors] = useState(client.connectors || []);
   const [formData, setFormData] = useState({
-    exchange: client.connectors?.[0]?.exchange || 'bitmart',
-    trading_pair: '',
-    bot_type: 'both',
+    connector: 'bitmart', // CEX connector or 'jupiter'/'uniswap' for DEX
+    chain: 'solana', // For DEX: solana, polygon, arbitrum, base, ethereum
+    exchange: client.connectors?.[0]?.exchange || 'bitmart', // CEX exchange (legacy)
+    trading_pair: '', // CEX pair
+    bot_type: 'both', // CEX bot type
     spread_target: 0.3,
     volume_target_daily: 10000,
+    // DEX fields
+    wallet_address: '',
+    private_key: '',
+    base_mint: '',
+    quote_mint: 'So11111111111111111111111111111111111111112', // SOL default
+    bot_type_dex: 'volume', // volume or spread
+    daily_volume_usd: 5000,
+    min_trade_usd: 10,
+    max_trade_usd: 25,
   });
 
   useEffect(() => {
@@ -1426,25 +1438,88 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   };
 
   const handleAdd = async () => {
-    if (!formData.trading_pair) {
+    const isDEX = ['jupiter', 'uniswap', 'raydium'].includes(formData.connector);
+    
+    // Validation
+    if (!isDEX && !formData.trading_pair) {
       alert('Please enter a trading pair');
       return;
     }
+    if (isDEX && !formData.wallet_address) {
+      alert('Please enter wallet address');
+      return;
+    }
+    if (isDEX && !formData.private_key) {
+      alert('Please enter private key');
+      return;
+    }
+    if (isDEX && !formData.base_mint) {
+      alert('Please enter base token address');
+      return;
+    }
+    
     try {
-      const { adminAPI } = await import('../services/api');
-      await adminAPI.createPair(client.id, {
-        exchange: formData.exchange,
-        trading_pair: formData.trading_pair.toUpperCase(),
-        bot_type: formData.bot_type,
-        spread_target: formData.spread_target,
-        volume_target_daily: formData.volume_target_daily,
-      });
+      const { tradingBridge, adminAPI } = await import('../services/api');
+      const clientData = await adminAPI.getClient(client.id);
+      const account = clientData.account_identifier || `client_${client.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
+      
+      if (isDEX) {
+        // Create DEX bot
+        const payload = {
+          name: `${client.name} ${formData.connector} ${formData.bot_type_dex}`,
+          account: account,
+          bot_type: formData.bot_type_dex,
+          connector: formData.connector,
+          chain: formData.chain,
+          config: {
+            base_mint: formData.base_mint,
+            quote_mint: formData.quote_mint,
+            daily_volume_usd: formData.daily_volume_usd || 5000,
+            min_trade_usd: formData.min_trade_usd || 10,
+            max_trade_usd: formData.max_trade_usd || 25,
+            interval_min_seconds: 900,
+            interval_max_seconds: 2700,
+            slippage_bps: 50,
+            ...(formData.bot_type_dex === 'spread' && {
+              spread_bps: formData.spread_target * 100,
+              order_size_usd: formData.volume_target_daily || 500,
+              refresh_seconds: 30,
+            }),
+          },
+          wallets: [{
+            address: formData.wallet_address,
+            private_key: formData.private_key,
+          }],
+        };
+        await tradingBridge.createBot(payload);
+      } else {
+        // Create CEX bot (legacy)
+        await adminAPI.createPair(client.id, {
+          exchange: formData.exchange,
+          trading_pair: formData.trading_pair.toUpperCase(),
+          bot_type: formData.bot_type,
+          spread_target: formData.spread_target,
+          volume_target_daily: formData.volume_target_daily,
+        });
+      }
+      
+      // Reset form
       setFormData({
+        connector: 'bitmart',
+        chain: 'solana',
         exchange: client.connectors?.[0]?.exchange || 'bitmart',
         trading_pair: '',
         bot_type: 'both',
         spread_target: 0.3,
         volume_target_daily: 10000,
+        wallet_address: '',
+        private_key: '',
+        base_mint: '',
+        quote_mint: 'So11111111111111111111111111111111111111112',
+        bot_type_dex: 'volume',
+        daily_volume_usd: 5000,
+        min_trade_usd: 10,
+        max_trade_usd: 25,
       });
       setShowAdd(false);
       await loadBots();
@@ -1510,24 +1585,81 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
               <div className="mb-6 p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
                 <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Create New Bot</h3>
                 <div className="space-y-3">
-                  {clientConnectors.length === 0 ? (
-                    <div className="text-sm p-3 rounded-lg" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }}>
-                      ⚠️ No exchanges configured. Add an API key first.
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        value={formData.exchange}
-                        onChange={e => setFormData({ ...formData, exchange: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                      >
+                  {/* Connector Selection */}
+                  <div>
+                    <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Connector</label>
+                    <select
+                      value={formData.connector}
+                      onChange={e => {
+                        const connector = e.target.value;
+                        const isDEX = ['jupiter', 'uniswap', 'raydium'].includes(connector);
+                        setFormData(prev => ({
+                          ...prev,
+                          connector,
+                          chain: connector === 'uniswap' ? 'polygon' : (connector === 'jupiter' ? 'solana' : prev.chain),
+                          exchange: !isDEX && clientConnectors.length > 0 ? clientConnectors[0].exchange : prev.exchange,
+                        }));
+                      }}
+                      className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                      style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    >
+                      <optgroup label="CEX">
                         {clientConnectors.map(conn => (
                           <option key={conn.id} value={conn.exchange}>
                             {EXCHANGES.find(e => e.id === conn.exchange)?.name || conn.exchange}
                           </option>
                         ))}
+                        {clientConnectors.length === 0 && (
+                          <>
+                            <option value="bitmart">BitMart</option>
+                            <option value="binance">Binance</option>
+                            <option value="kucoin">KuCoin</option>
+                          </>
+                        )}
+                      </optgroup>
+                      <optgroup label="DEX (Solana)">
+                        <option value="jupiter">Jupiter</option>
+                      </optgroup>
+                      <optgroup label="DEX (EVM)">
+                        <option value="uniswap">Uniswap</option>
+                      </optgroup>
+                    </select>
+                  </div>
+
+                  {/* Chain Selection - Show for DEX */}
+                  {['jupiter', 'uniswap', 'raydium'].includes(formData.connector) && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Chain</label>
+                      <select
+                        value={formData.chain}
+                        onChange={e => {
+                          const chain = e.target.value;
+                          setFormData(prev => ({
+                            ...prev,
+                            chain,
+                            connector: chain === 'solana' ? 'jupiter' : 'uniswap',
+                            quote_mint: chain === 'solana' 
+                              ? 'So11111111111111111111111111111111111111112'
+                              : (chain === 'polygon' 
+                                ? '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'
+                                : '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'),
+                          }));
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                        style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                      >
+                        <option value="solana">◎ Solana</option>
+                        <option value="polygon">⟠ Polygon</option>
+                        <option value="arbitrum">⟠ Arbitrum</option>
+                        <option value="base">⟠ Base</option>
+                        <option value="ethereum">⟠ Ethereum</option>
                       </select>
+                    </div>
+                  )}
+
+                  {/* CEX Fields */}
+                  {!['jupiter', 'uniswap', 'raydium'].includes(formData.connector) && (
+                    <>
                       <input
                         type="text"
                         placeholder="Trading Pair (e.g., SHARP/USDT)"
@@ -1564,27 +1696,167 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                         className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                         style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                       />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleAdd}
-                          className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
-                          style={{ background: theme.accent, color: 'white' }}
-                        >
-                          Create Bot
-                        </button>
-                        <button
-                          onClick={() => setShowAdd(false)}
-                          className="px-4 py-2 rounded-lg text-sm font-medium"
-                          style={{ background: theme.bgSecondary, color: theme.textSecondary }}
-                        >
-                          Cancel
-                        </button>
-                </div>
                     </>
                   )}
+
+                  {/* DEX Fields */}
+                  {['jupiter', 'uniswap', 'raydium'].includes(formData.connector) && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Bot Type</label>
+                        <select
+                          value={formData.bot_type_dex}
+                          onChange={e => setFormData({ ...formData, bot_type_dex: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                        >
+                          <option value="volume">Volume Generation</option>
+                          <option value="spread">Market Making (Spread)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Wallet Address</label>
+                        <input
+                          type="text"
+                          value={formData.wallet_address}
+                          onChange={e => setFormData({ ...formData, wallet_address: e.target.value })}
+                          placeholder={formData.chain === 'solana' ? 'BrLyvX5p7HYXsc94AQXXNUfe7zbCYriDfUT1p3DafuCV' : '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb'}
+                          className="w-full px-3 py-2 rounded-lg text-sm font-mono outline-none"
+                          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Private Key</label>
+                        <div className="relative">
+                          <input
+                            type={showPrivateKey ? "text" : "password"}
+                            value={formData.private_key}
+                            onChange={e => setFormData({ ...formData, private_key: e.target.value })}
+                            placeholder="Base58 encoded private key"
+                            className="w-full px-3 py-2 pr-10 rounded-lg text-sm font-mono outline-none"
+                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPrivateKey(!showPrivateKey)}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1"
+                            style={{ color: theme.textMuted }}
+                          >
+                            {showPrivateKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>
+                          {formData.chain === 'solana' ? 'Base Token Mint' : 'Base Token Address'}
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.base_mint}
+                          onChange={e => setFormData({ ...formData, base_mint: e.target.value })}
+                          placeholder={formData.chain === 'solana' ? 'HZG1RVn4zcRM7zEFEVGYPGoPzPAWAj2AAdvQivfmLYNK' : '0xb36b62929762acf8a9cc27ecebf6d353ebb48244'}
+                          className="w-full px-3 py-2 rounded-lg text-sm font-mono outline-none"
+                          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>
+                          {formData.chain === 'solana' ? 'Quote Token Mint' : 'Quote Token Address'}
+                        </label>
+                        {formData.chain === 'solana' ? (
+                          <select
+                            value={formData.quote_mint}
+                            onChange={e => setFormData({ ...formData, quote_mint: e.target.value })}
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          >
+                            <option value="So11111111111111111111111111111111111111112">SOL</option>
+                            <option value="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</option>
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={formData.quote_mint}
+                            onChange={e => setFormData({ ...formData, quote_mint: e.target.value })}
+                            placeholder="0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+                            className="w-full px-3 py-2 rounded-lg text-sm font-mono outline-none"
+                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          />
+                        )}
+                      </div>
+                      {formData.bot_type_dex === 'volume' && (
+                        <>
+                          <input
+                            type="number"
+                            placeholder="Daily Volume Target (USD)"
+                            value={formData.daily_volume_usd}
+                            onChange={e => setFormData({ ...formData, daily_volume_usd: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="number"
+                              placeholder="Min Trade (USD)"
+                              value={formData.min_trade_usd}
+                              onChange={e => setFormData({ ...formData, min_trade_usd: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            />
+                            <input
+                              type="number"
+                              placeholder="Max Trade (USD)"
+                              value={formData.max_trade_usd}
+                              onChange={e => setFormData({ ...formData, max_trade_usd: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            />
+                          </div>
+                        </>
+                      )}
+                      {formData.bot_type_dex === 'spread' && (
+                        <>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Spread Target (%)"
+                            value={formData.spread_target}
+                            onChange={e => setFormData({ ...formData, spread_target: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          />
+                          <input
+                            type="number"
+                            placeholder="Order Size (USD)"
+                            value={formData.volume_target_daily}
+                            onChange={e => setFormData({ ...formData, volume_target_daily: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                          />
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={handleAdd}
+                      className="flex-1 px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{ background: theme.accent, color: 'white' }}
+                    >
+                      Create Bot
+                    </button>
+                    <button
+                      onClick={() => setShowAdd(false)}
+                      className="px-4 py-2 rounded-lg text-sm font-medium"
+                      style={{ background: theme.bgSecondary, color: theme.textSecondary }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
             <div className="space-y-2">
               {pairs.length === 0 ? (
