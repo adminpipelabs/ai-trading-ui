@@ -5,6 +5,7 @@ import { VolumeOrderButton } from "../components/VolumeOrderButton";
 import BotManagement from "./admin/BotManagement";
 import ClientManagement, { AddClientModal } from "./admin/ClientManagement";
 import Overview, { MetricCard } from "./admin/Overview";
+import ErrorBoundary from "../components/ErrorBoundary";
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   Bot, User, Activity, Users, Plus, BarChart3, TrendingUp, LogOut, ChevronRight, Moon, Sun, MessageSquare
@@ -857,43 +858,49 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
 
   if (showClientManagement) {
     return (
-      <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
-        <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} />
-        {renderSidebar('clients')}
-        <ClientManagement onBack={() => navigate('/')} onAddClient={() => setShowAddClient(true)} clients={clients} setClients={setClients} theme={theme} isDark={isDark} />
-      </div>
+      <ErrorBoundary title="Client Management Error" message="Failed to load client management. Please try again or refresh the page.">
+        <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
+          <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} />
+          {renderSidebar('clients')}
+          <ClientManagement onBack={() => navigate('/')} onAddClient={() => setShowAddClient(true)} clients={clients} setClients={setClients} theme={theme} isDark={isDark} />
+        </div>
+      </ErrorBoundary>
     );
   }
 
   if (isBotManagement) {
     return (
-      <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
-        {renderSidebar('bots')}
-        <main className="flex-1 p-6">
-          <BotManagement theme={theme} isDark={isDark} onBack={() => navigate('/')} activeChain={activeChain} setActiveChain={setActiveChain} />
-        </main>
-      </div>
+      <ErrorBoundary title="Bot Management Error" message="Failed to load bot management. Please try again or refresh the page.">
+        <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
+          {renderSidebar('bots')}
+          <main className="flex-1 p-6">
+            <BotManagement theme={theme} isDark={isDark} onBack={() => navigate('/')} activeChain={activeChain} setActiveChain={setActiveChain} />
+          </main>
+        </div>
+      </ErrorBoundary>
     );
   }
 
   return (
-    <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
-      {renderSidebar('overview')}
-      <Overview 
-        user={user}
-        metrics={metrics}
-        messages={messages}
-        input={input}
-        setInput={setInput}
-        isLoading={isLoading}
-        handleSend={handleSend}
-        quickPrompts={quickPrompts}
-        messagesEndRef={messagesEndRef}
-        navigate={navigate}
-        theme={theme}
-        isDark={isDark}
-      />
-    </div>
+    <ErrorBoundary title="Dashboard Error" message="Failed to load dashboard overview. Please try again or refresh the page.">
+      <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
+        {renderSidebar('overview')}
+        <Overview 
+          user={user}
+          metrics={metrics}
+          messages={messages}
+          input={input}
+          setInput={setInput}
+          isLoading={isLoading}
+          handleSend={handleSend}
+          quickPrompts={quickPrompts}
+          messagesEndRef={messagesEndRef}
+          navigate={navigate}
+          theme={theme}
+          isDark={isDark}
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
