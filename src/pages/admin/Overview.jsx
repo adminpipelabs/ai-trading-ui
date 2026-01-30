@@ -53,19 +53,25 @@ function Message({ message, theme, isDark }) {
 // ========== OVERVIEW COMPONENT ==========
 export default function Overview({ user, metrics, messages, input, setInput, isLoading, handleSend, quickPrompts, messagesEndRef, navigate, theme, isDark }) {
   // Theme must be provided as prop - no fallback to context
-  const finalTheme = theme;
+  const finalTheme = theme || { 
+    bgCard: '#ffffff', 
+    border: '#e2e8f0', 
+    textPrimary: '#0f172a', 
+    textSecondary: '#475569', 
+    textMuted: '#94a3b8',
+    accent: '#0d9488',
+    accentLight: 'rgba(13, 148, 136, 0.1)',
+    bgSecondary: '#f8fafc',
+    bgInput: '#f1f5f9',
+    positive: '#10b981',
+    negative: '#ef4444'
+  };
 
   useEffect(() => { 
     if (messagesEndRef?.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }); 
     }
   }, [messages, messagesEndRef]);
-
-  // Early return after hooks (React rules)
-  if (!theme) {
-    console.error('Overview: theme prop is required');
-    return <div>Error: Theme not provided</div>;
-  }
 
   return (
     <main className="flex-1 p-6 overflow-y-auto">
