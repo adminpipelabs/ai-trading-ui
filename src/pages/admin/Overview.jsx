@@ -69,10 +69,10 @@ export default function Overview({ user, metrics, messages, input, setInput, isL
 
         {/* Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
-          <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
-          <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
-          <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
+          <MetricCard theme={finalTheme} icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
+          <MetricCard theme={finalTheme} icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
+          <MetricCard theme={finalTheme} icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
+          <MetricCard theme={finalTheme} icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
         </div>
 
         {/* Chat Interface */}
