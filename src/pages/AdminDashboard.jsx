@@ -128,32 +128,49 @@ function Login({ onLogin }) {
   const detectWallets = () => {
     const wallets = { evm: null, solana: null };
     
-    // Check for EVM wallets - prioritize MetaMask, Coinbase, Trust over generic ethereum
-    // Phantom sometimes injects window.ethereum, so we need to be more specific
+    // Check for EVM wallets - prioritize MetaMask aggressively
+    // Phantom sometimes injects window.ethereum, so we need to check providers array first
     if (window.ethereum) {
-      // Check for specific wallet identifiers first
-      if (window.ethereum.isMetaMask) {
-        wallets.evm = { name: 'MetaMask', provider: window.ethereum };
-      } else if (window.ethereum.isCoinbaseWallet) {
-        wallets.evm = { name: 'Coinbase Wallet', provider: window.ethereum };
-      } else if (window.ethereum.isTrust) {
-        wallets.evm = { name: 'Trust Wallet', provider: window.ethereum };
-      } else if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
-        // Multiple wallets detected - find MetaMask first
+      // If multiple providers exist (MetaMask + Phantom), check providers array first
+      if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+        // Prioritize MetaMask in providers array
         const metamask = window.ethereum.providers.find(p => p.isMetaMask);
         if (metamask) {
           wallets.evm = { name: 'MetaMask', provider: metamask };
         } else {
-          // Use first non-Phantom provider
-          const nonPhantom = window.ethereum.providers.find(p => !p.isPhantom);
-          if (nonPhantom) {
-            wallets.evm = { name: 'Ethereum Wallet', provider: nonPhantom };
+          // Fallback to Coinbase or Trust
+          const coinbase = window.ethereum.providers.find(p => p.isCoinbaseWallet);
+          const trust = window.ethereum.providers.find(p => p.isTrust);
+          if (coinbase) {
+            wallets.evm = { name: 'Coinbase Wallet', provider: coinbase };
+          } else if (trust) {
+            wallets.evm = { name: 'Trust Wallet', provider: trust };
+          } else {
+            // Use first non-Phantom provider
+            const nonPhantom = window.ethereum.providers.find(p => !p.isPhantom);
+            if (nonPhantom) {
+              wallets.evm = { name: 'Ethereum Wallet', provider: nonPhantom };
+            }
           }
         }
-      } else if (!window.ethereum.isPhantom) {
-        // Only use generic ethereum if it's not Phantom
-        wallets.evm = { name: 'Ethereum Wallet', provider: window.ethereum };
+      } else {
+        // Single provider - check if it's MetaMask first
+        if (window.ethereum.isMetaMask) {
+          wallets.evm = { name: 'MetaMask', provider: window.ethereum };
+        } else if (window.ethereum.isCoinbaseWallet) {
+          wallets.evm = { name: 'Coinbase Wallet', provider: window.ethereum };
+        } else if (window.ethereum.isTrust) {
+          wallets.evm = { name: 'Trust Wallet', provider: window.ethereum };
+        } else if (!window.ethereum.isPhantom) {
+          // Only use generic ethereum if it's not Phantom
+          wallets.evm = { name: 'Ethereum Wallet', provider: window.ethereum };
+        }
       }
+    }
+    
+    // Also check for MetaMask directly (some setups)
+    if (!wallets.evm && window.ethereum && window.ethereum.isMetaMask) {
+      wallets.evm = { name: 'MetaMask', provider: window.ethereum };
     }
     
     // Check for Solana wallets
