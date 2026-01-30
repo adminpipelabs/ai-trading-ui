@@ -15,6 +15,7 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
   const [newBot, setNewBot] = useState({
     name: '',
     account: '',
+    chain: 'solana', // 'solana', 'polygon', 'arbitrum', 'base', 'ethereum'
     strategy: 'spread',
     connector: 'bitmart',
     pair: 'SHARP/USDT',
@@ -44,7 +45,8 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
 
   // Helper functions - use useMemo to make them reactive
   const isDEX = useMemo(() => ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector), [newBot.connector]);
-  const isSolana = useMemo(() => ['jupiter', 'raydium'].includes(newBot.connector), [newBot.connector]);
+  const isSolana = useMemo(() => newBot.chain === 'solana' || ['jupiter', 'raydium'].includes(newBot.connector), [newBot.chain, newBot.connector]);
+  const isEVM = useMemo(() => ['polygon', 'arbitrum', 'base', 'ethereum'].includes(newBot.chain), [newBot.chain]);
 
   const fetchBots = async () => {
     // Get user info outside try block so it's available in catch
@@ -158,16 +160,37 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
           return;
         }
         
-        // Validate Solana wallet address format
-        if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newBot.wallet_address)) {
-          alert('Invalid Solana wallet address. Must be 32-44 base58 characters.');
-          return;
+        // Validate wallet address format based on chain
+        if (isSolanaChain) {
+          if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newBot.wallet_address)) {
+            alert('Invalid Solana wallet address. Must be 32-44 base58 characters.');
+            return;
+          }
+        } else {
+          // EVM address validation (0x followed by 40 hex characters)
+          if (!/^0x[a-fA-F0-9]{40}$/.test(newBot.wallet_address)) {
+            alert('Invalid EVM wallet address. Must be 0x followed by 40 hex characters.');
+            return;
+          }
         }
         
-        // Validate token mint format
-        if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newBot.base_mint)) {
-          alert('Invalid base token mint address. Must be 32-44 base58 characters.');
-          return;
+        // Validate token address format based on chain
+        if (isSolanaChain) {
+          if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newBot.base_mint)) {
+            alert('Invalid base token mint address. Must be 32-44 base58 characters.');
+            return;
+          }
+        } else {
+          // EVM address validation
+          if (!/^0x[a-fA-F0-9]{40}$/.test(newBot.base_mint)) {
+            alert('Invalid base token address. Must be 0x followed by 40 hex characters.');
+            return;
+          }
+          // Validate quote token if provided (not using default)
+          if (newBot.quote_mint && !/^0x[a-fA-F0-9]{40}$/.test(newBot.quote_mint)) {
+            alert('Invalid quote token address. Must be 0x followed by 40 hex characters.');
+            return;
+          }
         }
         
         // Validate bot type specific fields
@@ -243,14 +266,29 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
       
       if (isDEXConnector) {
         // DEX bot payload
+        const baseConfig = {
+          chain: newBot.chain || 'solana', // Include chain in config
+        };
+        
+        if (isSolanaChain) {
+          // Solana config uses mint addresses
+          baseConfig.base_mint = newBot.base_mint;
+          baseConfig.quote_mint = newBot.quote_mint;
+        } else {
+          // EVM config uses token addresses
+          baseConfig.base_token = newBot.base_mint;
+          baseConfig.quote_token = newBot.quote_mint || (newBot.chain === 'polygon' 
+            ? '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' // USDC Polygon
+            : '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'); // USDC Arbitrum/Base
+        }
+        
         payload = {
           name: newBot.name,
           account: accountToUse,
           bot_type: newBot.bot_type, // 'volume' or 'spread'
           connector: newBot.connector, // Include connector for consistency
           config: newBot.bot_type === 'volume' ? {
-            base_mint: newBot.base_mint,
-            quote_mint: newBot.quote_mint,
+            ...baseConfig,
             daily_volume_usd: parseFloat(newBot.daily_volume_usd),
             min_trade_usd: parseFloat(newBot.min_trade_usd),
             max_trade_usd: parseFloat(newBot.max_trade_usd),
@@ -258,8 +296,7 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
             interval_max_seconds: parseFloat(newBot.interval_max_minutes) * 60,
             slippage_bps: parseFloat(newBot.slippage_pct) * 100
           } : {
-            base_mint: newBot.base_mint,
-            quote_mint: newBot.quote_mint,
+            ...baseConfig,
             spread_bps: parseFloat(newBot.spread_pct) * 100,
             order_size_usd: parseFloat(newBot.order_size_usd),
             refresh_seconds: parseFloat(newBot.refresh_seconds),
@@ -318,6 +355,7 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
         bid_spread: 0.003,
         ask_spread: 0.003,
         order_amount: 1000,
+        chain: 'solana',
         bot_type: 'volume',
         wallet_address: '',
         private_key: '',
@@ -456,6 +494,42 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
                   </select>
                 )}
               </div>
+              
+              {/* Chain Selection - Show for DEX bots */}
+              {['jupiter', 'raydium', 'uniswap'].includes(newBot.connector) && (
+                <div>
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Chain</label>
+                  <select
+                    value={newBot.chain}
+                    onChange={(e) => {
+                      const chain = e.target.value;
+                      setNewBot(prev => ({
+                        ...prev,
+                        chain,
+                        // Auto-set connector based on chain
+                        connector: chain === 'solana' ? 'jupiter' : 'uniswap',
+                        // Reset token addresses when switching chains
+                        base_mint: '',
+                        quote_mint: chain === 'solana' 
+                          ? 'So11111111111111111111111111111111111111112' // SOL
+                          : (chain === 'polygon' 
+                            ? '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359' // USDC Polygon
+                            : '0xaf88d065e77c8cC2239327C5EDb3A432268e5831'), // USDC Arbitrum/Base
+                      }));
+                    }}
+                    className="w-full px-3 py-2 rounded-lg text-sm"
+                    style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                    required
+                  >
+                    <option value="solana">◎ Solana</option>
+                    <option value="polygon">⟠ Polygon</option>
+                    <option value="arbitrum">⟠ Arbitrum</option>
+                    <option value="base">⟠ Base</option>
+                    <option value="ethereum">⟠ Ethereum</option>
+                  </select>
+                </div>
+              )}
+              
               {/* Connector - Always visible */}
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Connector</label>
@@ -482,13 +556,17 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
                     <option value="binance">Binance</option>
                     <option value="kucoin">KuCoin</option>
                   </optgroup>
-                  <optgroup label="DEX (Solana)">
-                    <option value="jupiter">Jupiter</option>
-                    <option value="raydium" disabled>Raydium (Coming Soon)</option>
-                  </optgroup>
-                  <optgroup label="DEX (EVM)">
-                    <option value="uniswap" disabled>Uniswap (Coming Soon)</option>
-                  </optgroup>
+                  {newBot.chain === 'solana' && (
+                    <optgroup label="DEX (Solana)">
+                      <option value="jupiter">Jupiter</option>
+                      <option value="raydium" disabled>Raydium (Coming Soon)</option>
+                    </optgroup>
+                  )}
+                  {isEVM && (
+                    <optgroup label="DEX (EVM)">
+                      <option value="uniswap">Uniswap</option>
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
@@ -587,9 +665,16 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
                           onChange={(e) => setNewBot({...newBot, wallet_address: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg text-sm font-mono"
                           style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          placeholder="BrLyvX5p7HYXsc94AQXXNUfe7zbCYriDfUT1p3DafuCV"
+                          placeholder={isSolana 
+                            ? "BrLyvX5p7HYXsc94AQXXNUfe7zbCYriDfUT1p3DafuCV"
+                            : "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"}
                           required
                         />
+                        <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                          {isSolana 
+                            ? "Solana wallet address (base58)"
+                            : "EVM wallet address (0x...)"}
+                        </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Private Key</label>
@@ -624,29 +709,59 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
                     <h3 className="text-sm font-semibold mb-3" style={{ color: theme.textPrimary }}>Token Configuration</h3>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Base Token (Your Token)</label>
+                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>
+                          {isSolana ? 'Base Token Mint Address' : 'Base Token Address'}
+                        </label>
                         <input
                           type="text"
                           value={newBot.base_mint}
                           onChange={(e) => setNewBot({...newBot, base_mint: e.target.value})}
                           className="w-full px-3 py-2 rounded-lg text-sm font-mono"
                           style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          placeholder="HZG1RVn4zcRM7zEFEVGYPGoPzPAWAj2AAdvQivfmLYNK"
+                          placeholder={isSolana 
+                            ? "HZG1RVn4zcRM7zEFEVGYPGoPzPAWAj2AAdvQivfmLYNK"
+                            : "0xb36b62929762acf8a9cc27ecebf6d353ebb48244"}
                           required
                         />
+                        <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                          {isSolana 
+                            ? "Solana token mint address (base58)"
+                            : "EVM token contract address (0x...)"}
+                        </p>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>Quote Token</label>
-                        <select
-                          value={newBot.quote_mint}
-                          onChange={(e) => setNewBot({...newBot, quote_mint: e.target.value})}
-                          className="w-full px-3 py-2 rounded-lg text-sm"
-                          style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          required
-                        >
-                          <option value="So11111111111111111111111111111111111111112">SOL</option>
-                          <option value="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</option>
-                        </select>
+                        <label className="block text-sm font-medium mb-1" style={{ color: theme.textPrimary }}>
+                          {isSolana ? 'Quote Token Mint' : 'Quote Token Address'}
+                        </label>
+                        {isSolana ? (
+                          <select
+                            value={newBot.quote_mint}
+                            onChange={(e) => setNewBot({...newBot, quote_mint: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg text-sm"
+                            style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            required
+                          >
+                            <option value="So11111111111111111111111111111111111111112">SOL</option>
+                            <option value="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</option>
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={newBot.quote_mint}
+                            onChange={(e) => setNewBot({...newBot, quote_mint: e.target.value})}
+                            className="w-full px-3 py-2 rounded-lg text-sm font-mono"
+                            style={{ background: theme.bgInput, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            placeholder={newBot.chain === 'polygon' 
+                              ? "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"
+                              : "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"}
+                            required
+                          />
+                        )}
+                        {!isSolana && (
+                          <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                            Default: USDC for {newBot.chain}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
