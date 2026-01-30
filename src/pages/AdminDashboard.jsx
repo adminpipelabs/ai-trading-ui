@@ -980,12 +980,26 @@ function PipeLabsApp() {
   }, []);
   
   const handleLogout = async () => {
-    // Disconnect EVM wallet if connected
-    if (window.ethereum && window.ethereum.removeListener) {
+    // Disconnect EVM wallets if connected
+    if (window.ethereum) {
       try {
-        // Try to disconnect if wallet supports it
-        if (window.ethereum.disconnect) {
-          await window.ethereum.disconnect();
+        // If multiple providers exist, disconnect from each
+        if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+          for (const provider of window.ethereum.providers) {
+            if (provider.disconnect && typeof provider.disconnect === 'function') {
+              try {
+                await provider.disconnect();
+              } catch (e) {
+                // Some wallets don't support disconnect, that's ok
+                console.log('Provider disconnect:', e);
+              }
+            }
+          }
+        } else {
+          // Single provider - try to disconnect if supported
+          if (window.ethereum.disconnect && typeof window.ethereum.disconnect === 'function') {
+            await window.ethereum.disconnect();
+          }
         }
         // Clear any stored EVM wallet info
         localStorage.removeItem('evm_wallet');
@@ -995,9 +1009,11 @@ function PipeLabsApp() {
     }
     
     // Disconnect Solana wallet if connected
-    if (window.solana && window.solana.isPhantom && window.solana.isConnected) {
+    if (window.solana && window.solana.isPhantom) {
       try {
-        await window.solana.disconnect();
+        if (window.solana.isConnected) {
+          await window.solana.disconnect();
+        }
         localStorage.removeItem('solana_wallet');
       } catch (e) {
         console.log('Solana wallet disconnect:', e);
