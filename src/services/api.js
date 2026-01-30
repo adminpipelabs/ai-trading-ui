@@ -131,6 +131,8 @@ export const adminAPI = {
 
   async addClientApiKey(clientId, data) {
     // Add connector to trading-bridge
+    // Note: Only CEX connectors are supported here (api_key/api_secret)
+    // DEX connectors (Uniswap, Jupiter) use wallets in bot creation, not client connectors
     return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/connector`, {
       method: 'PUT',
       body: JSON.stringify({

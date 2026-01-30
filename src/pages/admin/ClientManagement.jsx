@@ -875,6 +875,13 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
                       required
                     />
                   </div>
+                  {/* Note: DEX connectors (Uniswap, Jupiter) are not added here - they use wallets in bot creation */}
+                  {['uniswap', 'jupiter', 'raydium'].includes(formData.exchange) && (
+                    <div className="p-3 rounded-lg text-xs" style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#f59e0b' }}>
+                      ⚠️ <strong>Note:</strong> DEX connectors (Uniswap, Jupiter, Raydium) are not configured here. 
+                      Instead, provide wallet address and private key when creating a bot in Bot Management.
+                    </div>
+                  )}
                   {EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo && (
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Memo/Passphrase</label>
