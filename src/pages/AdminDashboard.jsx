@@ -1,20 +1,13 @@
 import { BalanceButton } from "../components/BalanceButton";
-import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { SpreadOrderButton } from "../components/SpreadOrderButton";
 import { VolumeOrderButton } from "../components/VolumeOrderButton";
-import { BotList } from "../components/BotList";
-import EditBotModal from "../components/EditBotModal";
 import BotManagement from "./admin/BotManagement";
 import ClientManagement, { AddClientModal } from "./admin/ClientManagement";
 import Overview, { MetricCard } from "./admin/Overview";
-import React, { useState, useRef, useEffect, useMemo, createContext, useContext } from 'react';
+import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
-  Send, Bot, User, TrendingUp, Wallet, Activity, Users, Plus, BarChart3, 
-  Settings, LogOut, ChevronRight, Sparkles, ArrowUpRight, Mail, Lock, 
-  Eye, EyeOff, Shield, Moon, Sun, X, Check, ChevronDown, Key, Building,
-  Copy, RefreshCw, AlertCircle, CheckCircle2, Trash2, Edit2, Search,
-  MoreVertical, ExternalLink, Clock, Filter, Download, UserPlus, ArrowLeft,
-  Coins, MessageSquare
+  Bot, User, Activity, Users, Plus, BarChart3, LogOut, ChevronRight, Moon, Sun, MessageSquare
 } from 'lucide-react';
 // All API calls use trading-bridge directly
 const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
@@ -114,93 +107,8 @@ const EXCHANGES = [
   { id: 'gateway', name: 'Gateway DEX', requiresMemo: false },
 ];
 
-// ========== CHAIN BADGE COMPONENT ==========
-const ChainBadge = ({ chain }) => (
-  <span style={{
-    padding: "2px 6px",
-    borderRadius: 4,
-    fontSize: 10,
-    fontWeight: 600,
-    background: chain === "solana" ? "#9945FF20" : "#627EEA20",
-    color: chain === "solana" ? "#9945FF" : "#627EEA",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4
-  }}>
-    {chain === "solana" ? "◎" : "⟠"} {chain?.toUpperCase() || "EVM"}
-  </span>
-);
-
-// Mock client data
-const MOCK_CLIENTS = [
-  {
-    id: 1,
-    name: 'John Smith',
-    email: 'john@acmecrypto.com',
-    company: 'Acme Crypto',
-    phone: '+1 555-0123',
-    status: 'active',
-    createdAt: '2025-12-15T10:00:00Z',
-    lastActive: '2026-01-21T14:30:00Z',
-    connectors: [
-      { id: 1, exchange: 'bitmart', label: 'Main Account', apiKey: 'd8550cca6914e2b2...' },
-      { id: 2, exchange: 'binance', label: 'Trading', apiKey: 'abc123def456...' }
-    ],
-    tokens: ['SHARP/USDT', 'BTC/USDT', 'ETH/USDT'],
-    balance: '$245,000',
-    pnl: '+$12,450',
-    pnlPercent: '+5.4%'
-  },
-  {
-    id: 2,
-    name: 'Sarah Johnson',
-    email: 'sarah@tokenventures.io',
-    company: 'Token Ventures',
-    phone: '+1 555-0456',
-    status: 'active',
-    createdAt: '2026-01-05T09:00:00Z',
-    lastActive: '2026-01-21T12:15:00Z',
-    connectors: [
-      { id: 3, exchange: 'kucoin', label: 'Primary', apiKey: 'kc789xyz...' }
-    ],
-    tokens: ['SHARP/USDT', 'SOL/USDT'],
-    balance: '$89,500',
-    pnl: '+$3,200',
-    pnlPercent: '+3.7%'
-  },
-  {
-    id: 3,
-    name: 'Michael Chen',
-    email: 'mchen@defifund.co',
-    company: 'DeFi Fund',
-    phone: '+1 555-0789',
-    status: 'invited',
-    createdAt: '2026-01-20T16:00:00Z',
-    lastActive: null,
-    connectors: [
-      { id: 4, exchange: 'bitmart', label: 'Trading Account', apiKey: 'bm456abc...' }
-    ],
-    tokens: ['SHARP/USDT'],
-    balance: '$0',
-    pnl: '$0',
-    pnlPercent: '0%'
-  },
-  {
-    id: 4,
-    name: 'Emily Davis',
-    email: 'emily@blockassets.com',
-    company: 'Block Assets',
-    phone: '+1 555-0321',
-    status: 'inactive',
-    createdAt: '2025-11-10T11:00:00Z',
-    lastActive: '2025-12-28T09:45:00Z',
-    connectors: [],
-    tokens: ['BTC/USDT'],
-    balance: '$15,000',
-    pnl: '-$500',
-    pnlPercent: '-3.2%'
-  }
-];
+// ========== UNUSED CODE REMOVED ==========
+// ChainBadge and MOCK_CLIENTS removed - not used in production
 
 // ========== CLIENT MANAGEMENT PAGE ==========
 // Moved to src/pages/admin/ClientManagement.jsx - component extracted
