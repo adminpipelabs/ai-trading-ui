@@ -7,7 +7,7 @@ import ClientManagement, { AddClientModal } from "./admin/ClientManagement";
 import Overview, { MetricCard } from "./admin/Overview";
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
-  Bot, User, Activity, Users, Plus, BarChart3, LogOut, ChevronRight, Moon, Sun, MessageSquare
+  Bot, User, Activity, Users, Plus, BarChart3, TrendingUp, LogOut, ChevronRight, Moon, Sun, MessageSquare
 } from 'lucide-react';
 // All API calls use trading-bridge directly
 const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
