@@ -908,12 +908,21 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
   );
 }
 
-// ========== MAIN APP WRAPPER ==========
-function PipeLabsApp() {
+// ========== THEME PROVIDER ==========
+function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(false);
   const theme = isDark ? themes.dark : themes.light;
   const toggleTheme = () => setIsDark(!isDark);
   
+  return (
+    <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+// ========== MAIN APP WRAPPER ==========
+function PipeLabsApp() {
   // Get user from localStorage
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -941,17 +950,35 @@ function PipeLabsApp() {
   };
   
   if (loading) {
-    return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
+    return (
+      <ThemeProvider>
+        <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>
+      </ThemeProvider>
+    );
   }
   
-  if (!user) {
-    return <Login onLogin={(userData) => setUser(userData)} />;
-  }
+  return (
+    <ThemeProvider>
+      {!user ? (
+        <Login onLogin={(userData) => setUser(userData)} />
+      ) : (
+        <AdminDashboardWrapper 
+          user={user} 
+          onLogout={handleLogout}
+        />
+      )}
+    </ThemeProvider>
+  );
+}
+
+// ========== ADMIN DASHBOARD WRAPPER ==========
+function AdminDashboardWrapper({ user, onLogout }) {
+  const { theme, isDark, toggleTheme } = useContext(ThemeContext);
   
   return (
     <AdminDashboard 
       user={user} 
-      onLogout={handleLogout} 
+      onLogout={onLogout} 
       theme={theme} 
       isDark={isDark} 
       toggleTheme={toggleTheme} 
