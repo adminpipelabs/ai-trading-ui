@@ -448,9 +448,13 @@ function Login({ onLogin }) {
 // ========== BOT MANAGEMENT VIEW ==========
 // Moved to src/pages/admin/BotManagement.jsx - component extracted
 // ========== ADMIN DASHBOARD ==========
-function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
+function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, toggleTheme }) {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Use theme from prop or fallback to default theme (defensive)
+  const theme = themeProp || (isDarkProp ? themes.dark : themes.light);
+  const isDark = isDarkProp !== undefined ? isDarkProp : false;
   const [messages, setMessages] = useState([{ role: 'assistant', content: "Welcome back. I can help you manage clients, monitor bots, and analyze performance across your platform." }]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -860,7 +864,7 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
     return (
       <ErrorBoundary title="Client Management Error" message="Failed to load client management. Please try again or refresh the page.">
         <div className="flex min-h-screen" style={{ background: theme.bgSecondary, fontFamily: "'Inter', sans-serif" }}>
-          <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} />
+          <AddClientModal isOpen={showAddClient} onClose={() => setShowAddClient(false)} onSave={handleAddClient} theme={theme} isDark={isDark} />
           {renderSidebar('clients')}
           <ClientManagement onBack={() => navigate('/')} onAddClient={() => setShowAddClient(true)} clients={clients} setClients={setClients} theme={theme} isDark={isDark} />
         </div>
@@ -904,4 +908,55 @@ function AdminDashboard({ user, onLogout, theme, isDark, toggleTheme }) {
   );
 }
 
-export default AdminDashboard;
+// ========== MAIN APP WRAPPER ==========
+function PipeLabsApp() {
+  const [isDark, setIsDark] = useState(false);
+  const theme = isDark ? themes.dark : themes.light;
+  const toggleTheme = () => setIsDark(!isDark);
+  
+  // Get user from localStorage
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const stored = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+    if (stored) {
+      try {
+        const userData = JSON.parse(stored);
+        setUser(userData);
+      } catch (e) {
+        console.error('Failed to parse stored user:', e);
+      }
+    }
+    setLoading(false);
+  }, []);
+  
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('pipelabs_user');
+    localStorage.removeItem('pipelabs_token');
+    setUser(null);
+    window.location.href = '/#/login';
+  };
+  
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center' }}>Loading...</div>;
+  }
+  
+  if (!user) {
+    return <Login onLogin={(userData) => setUser(userData)} />;
+  }
+  
+  return (
+    <AdminDashboard 
+      user={user} 
+      onLogout={handleLogout} 
+      theme={theme} 
+      isDark={isDark} 
+      toggleTheme={toggleTheme} 
+    />
+  );
+}
+
+export default PipeLabsApp;

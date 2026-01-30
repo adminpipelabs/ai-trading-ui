@@ -5,7 +5,7 @@ import {
   Clock, Wallet, Edit2, Trash2, AlertCircle, CheckCircle2, X, Eye, EyeOff, 
   Activity, RefreshCw
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+// Theme is passed as props, no need to import useTheme
 
 // EXCHANGES constant - list of supported exchanges
 const EXCHANGES = [
@@ -1626,8 +1626,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
 }
 
 // ========== ADD CLIENT MODAL ==========
-export function AddClientModal({ isOpen, onClose, onSave }) {
-  const { theme, isDark } = useTheme();
+export function AddClientModal({ isOpen, onClose, onSave, theme, isDark }) {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);

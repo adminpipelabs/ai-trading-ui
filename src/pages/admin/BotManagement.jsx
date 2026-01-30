@@ -146,13 +146,14 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
 
   const handleCreateBot = async (e) => {
     e.preventDefault();
+    
+    // Recompute helpers at submit time (not render time) - define outside try block for ESLint
+    const isDEXConnector = ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector);
+    const isSolanaChain = newBot.chain === 'solana' || ['jupiter', 'raydium'].includes(newBot.connector);
+    const isEVMChain = ['polygon', 'arbitrum', 'base', 'ethereum'].includes(newBot.chain);
+    
     try {
       const { tradingBridge } = await import('../../services/api');
-      
-      // Recompute helpers at submit time (not render time)
-      const isDEXConnector = ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector);
-      const isSolanaChain = newBot.chain === 'solana' || ['jupiter', 'raydium'].includes(newBot.connector);
-      const isEVMChain = ['polygon', 'arbitrum', 'base', 'ethereum'].includes(newBot.chain);
       
       // Validate DEX fields if DEX connector
       if (isDEXConnector) {
