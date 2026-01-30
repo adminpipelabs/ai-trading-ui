@@ -801,7 +801,12 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
       <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose} />
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl" style={{ background: theme.bgPrimary, boxShadow: theme.shadowXl }}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold" style={{ color: theme.textPrimary }}>API Keys - {client.name}</h2>
+          <div>
+            <h2 className="text-xl font-semibold" style={{ color: theme.textPrimary }}>API Keys - {client.name}</h2>
+            <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+              CEX connectors only (Bitmart, Binance, etc.). DEX connectors (Uniswap, Jupiter) are configured when creating bots.
+            </p>
+          </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-gray-100" style={{ color: theme.textMuted }}>
             <X size={20} />
           </button>
@@ -835,7 +840,8 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
                       required
                     >
                       <option value="">Select exchange</option>
-                      {EXCHANGES.map(ex => (
+                      {/* Only show CEX exchanges - DEX connectors (Uniswap, Jupiter) use wallets in bot creation */}
+                      {EXCHANGES.filter(ex => !['uniswap', 'jupiter', 'raydium'].includes(ex.id)).map(ex => (
                         <option key={ex.id} value={ex.id}>{ex.name}</option>
                       ))}
                     </select>
