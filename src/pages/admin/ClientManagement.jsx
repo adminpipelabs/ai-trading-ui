@@ -1392,6 +1392,8 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
     daily_volume_usd: 5000,
     min_trade_usd: 10,
     max_trade_usd: 25,
+    interval_min_minutes: 15, // Minimum wait time between trades (minutes)
+    interval_max_minutes: 45, // Maximum wait time between trades (minutes)
   });
 
   useEffect(() => {
@@ -1477,8 +1479,8 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
             daily_volume_usd: formData.daily_volume_usd || 5000,
             min_trade_usd: formData.min_trade_usd || 10,
             max_trade_usd: formData.max_trade_usd || 25,
-            interval_min_seconds: 900,
-            interval_max_seconds: 2700,
+            interval_min_seconds: (formData.interval_min_minutes || 15) * 60,
+            interval_max_seconds: (formData.interval_max_minutes || 45) * 60,
             slippage_bps: 50,
             ...(formData.bot_type_dex === 'spread' && {
               spread_bps: formData.spread_target * 100,
@@ -1520,6 +1522,8 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
         daily_volume_usd: 5000,
         min_trade_usd: 10,
         max_trade_usd: 25,
+        interval_min_minutes: 15,
+        interval_max_minutes: 45,
       });
       setShowAdd(false);
       await loadBots();
@@ -1830,8 +1834,38 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                               </p>
                             </div>
                           </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Min Interval (minutes)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g., 15"
+                                value={formData.interval_min_minutes}
+                                onChange={e => setFormData({ ...formData, interval_min_minutes: parseFloat(e.target.value) || 15 })}
+                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                              />
+                              <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                                Min wait between trades
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Max Interval (minutes)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g., 45"
+                                value={formData.interval_max_minutes}
+                                onChange={e => setFormData({ ...formData, interval_max_minutes: parseFloat(e.target.value) || 45 })}
+                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                              />
+                              <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                                Max wait between trades
+                              </p>
+                            </div>
+                          </div>
                           <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6' }}>
-                            ℹ️ <strong>How it works:</strong> Bot randomly sizes each trade between Min and Max, alternating buy/sell. Continues until Daily Volume Target is reached.
+                            ℹ️ <strong>How it works:</strong> Bot randomly sizes each trade between Min and Max, alternating buy/sell. Waits a random time between Min and Max Interval between trades. Continues until Daily Volume Target is reached (spread over 24 hours).
                           </div>
                         </>
                       )}
@@ -1895,24 +1929,37 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
               {pairs.length === 0 ? (
                 <div className="text-center py-8 text-sm" style={{ color: theme.textMuted }}>No bots configured</div>
               ) : (
-                pairs.map(pair => (
+                pairs.map(pair => {
+                  // Check if this is a DEX bot (has connector instead of exchange)
+                  const isDEX = pair.connector && ['jupiter', 'uniswap', 'raydium'].includes(pair.connector);
+                  const displayName = isDEX 
+                    ? `${pair.name || `${pair.connector} ${pair.bot_type || 'bot'}`}`
+                    : `${pair.trading_pair || 'Unknown'} on ${EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange || 'Unknown'}`;
+                  const connectorDisplay = isDEX
+                    ? `${pair.connector === 'uniswap' ? 'Uniswap' : pair.connector === 'jupiter' ? 'Jupiter' : pair.connector}${pair.chain ? ` (${pair.chain})` : ''}`
+                    : EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange || 'Unknown';
+                  
+                  return (
                   <div key={pair.id} className="flex items-center justify-between p-4 rounded-xl" style={{ background: theme.bgSecondary, border: `1px solid ${theme.border}` }}>
                     <div className="flex-1">
                       <div className="text-sm font-medium" style={{ color: theme.textPrimary }}>
-                        {pair.trading_pair} on {EXCHANGES.find(e => e.id === pair.exchange)?.name || pair.exchange}
-        </div>
+                        {displayName}
+                      </div>
                       <div className="text-xs mt-1 flex items-center gap-3" style={{ color: theme.textMuted }}>
-                        <span>{pair.bot_type}</span>
+                        <span>{pair.bot_type || pair.strategy || 'N/A'}</span>
+                        <span>•</span>
+                        <span>{connectorDisplay}</span>
                         <span>•</span>
                         <span className={`px-1.5 py-0.5 rounded ${
                           pair.status === 'active' ? 'bg-green-100 text-green-700' : 
                           pair.status === 'paused' ? 'bg-yellow-100 text-yellow-700' : 
                           'bg-gray-100 text-gray-700'
                         }`}>
-                          {pair.status}
+                          {pair.status || 'inactive'}
                         </span>
                         {pair.spread_target && <span>• Spread: {pair.spread_target}%</span>}
                         {pair.volume_target_daily && <span>• Volume: ${pair.volume_target_daily.toLocaleString()}/day</span>}
+                        {pair.config?.daily_volume_usd && <span>• Target: ${pair.config.daily_volume_usd.toLocaleString()}/day</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1933,7 +1980,8 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                       </button>
                     </div>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </>

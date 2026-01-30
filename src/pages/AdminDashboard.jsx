@@ -645,7 +645,12 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
     if (savedSolana) setSolanaWallet(savedSolana);
   }, []);
 
-  const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: bots?.filter(b => b.status === 'running').length || 0 };
+  // Calculate active bots count - check both 'running' and 'active' status
+  const activeBotsCount = bots?.filter(b => {
+    const status = b.status?.toLowerCase();
+    return status === 'running' || status === 'active';
+  }).length || 0;
+  const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: activeBotsCount };
   const quickPrompts = ["Show all client balances", "Global P&L this week", "List active bots", "SHARP/USDT price"];
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
