@@ -53,10 +53,6 @@ function Message({ message, theme, isDark }) {
 // ========== OVERVIEW COMPONENT ==========
 export default function Overview({ user, metrics, messages, input, setInput, isLoading, handleSend, quickPrompts, messagesEndRef, navigate, theme, isDark }) {
   // Theme must be provided as prop - no fallback to context
-  if (!theme) {
-    console.error('Overview: theme prop is required');
-    return <div>Error: Theme not provided</div>;
-  }
   const finalTheme = theme;
 
   useEffect(() => { 
@@ -64,6 +60,12 @@ export default function Overview({ user, metrics, messages, input, setInput, isL
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }); 
     }
   }, [messages, messagesEndRef]);
+
+  // Early return after hooks (React rules)
+  if (!theme) {
+    console.error('Overview: theme prop is required');
+    return <div>Error: Theme not provided</div>;
+  }
 
   return (
     <main className="flex-1 p-6 overflow-y-auto">
