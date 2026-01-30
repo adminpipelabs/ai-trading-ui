@@ -165,7 +165,7 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const handleToggleBot = async (client, pair) => {
     const newStatus = pair.status === 'active' ? 'paused' : 'active';
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.updatePair(pair.id, { status: newStatus });
       // Reload clients
       const data = await adminAPI.getClients();
@@ -199,7 +199,7 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const handleRemoveBot = async (client, botId) => {
     if (!window.confirm('Delete this bot?')) return;
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.deletePair(botId);
       // Reload clients
       const data = await adminAPI.getClients();
@@ -758,7 +758,7 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
   const loadApiKeys = async () => {
     try {
       setLoading(true);
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       const keys = await adminAPI.getClientApiKeys(client.id);
       setApiKeys(keys || []);
     } catch (error) {
@@ -771,7 +771,7 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
 
   const handleAdd = async () => {
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.addClientApiKey(client.id, formData);
       setFormData({ exchange: 'bitmart', api_key: '', api_secret: '', passphrase: '', label: '', is_testnet: false });
       setShowAdd(false);
@@ -786,7 +786,7 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
   const handleDelete = async (keyId) => {
     if (!window.confirm('Delete this API key?')) return;
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.deleteClientApiKey(client.id, keyId);
       await loadApiKeys();
       await onUpdate();
@@ -980,7 +980,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
 
   const loadClientConnectors = async () => {
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       const apiKeys = await adminAPI.getClientApiKeys(client.id);
       // Transform API keys to connectors format
       const connectors = (apiKeys || [])
@@ -1005,7 +1005,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
   const loadPairs = async () => {
     try {
       setLoading(true);
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       const data = await adminAPI.getClientPairs(client.id);
       setPairs(data || []);
     } catch (error) {
@@ -1026,7 +1026,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
       return;
     }
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.createPair(client.id, {
         exchange: formData.exchange,
         trading_pair: formData.trading_pair.toUpperCase().replace(/\s+/g, ''),
@@ -1049,7 +1049,7 @@ function PairsModal({ client, onClose, onUpdate, theme }) {
   const handleDelete = async (pairId) => {
     if (!window.confirm('Delete this trading pair?')) return;
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.deletePair(pairId);
       await loadPairs();
       await onUpdate();
@@ -1194,7 +1194,7 @@ function SendOrderModal({ client, onClose, theme }) {
 
   const loadClientConnectors = async () => {
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       const apiKeys = await adminAPI.getClientApiKeys(client.id);
       // Transform API keys to connectors format
       const connectors = (apiKeys || [])
@@ -1401,7 +1401,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
 
   const loadClientConnectors = async () => {
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       const apiKeys = await adminAPI.getClientApiKeys(client.id);
       // Transform API keys to connectors format
       const connectors = (apiKeys || [])
@@ -1426,7 +1426,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   const loadBots = async () => {
     try {
       setLoading(true);
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       const data = await adminAPI.getClientPairs(client.id);
       setPairs(data || []);
     } catch (error) {
@@ -1459,7 +1459,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
     }
     
     try {
-      const { tradingBridge, adminAPI } = await import('../services/api');
+      const { tradingBridge, adminAPI } = await import('../../services/api');
       const clientData = await adminAPI.getClient(client.id);
       const account = clientData.account_identifier || `client_${client.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
       
@@ -1533,7 +1533,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   const handleToggle = async (pair) => {
     const newStatus = pair.status === 'active' ? 'paused' : 'active';
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.updatePair(pair.id, { status: newStatus });
       await loadBots();
       await onUpdate();
@@ -1546,7 +1546,7 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
   const handleDelete = async (pairId) => {
     if (!window.confirm('Delete this bot?')) return;
     try {
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       await adminAPI.deletePair(pairId);
       await loadBots();
       await onUpdate();
@@ -1786,53 +1786,86 @@ function BotsModal({ client, onClose, onUpdate, theme }) {
                       </div>
                       {formData.bot_type_dex === 'volume' && (
                         <>
-                          <input
-                            type="number"
-                            placeholder="Daily Volume Target (USD)"
-                            value={formData.daily_volume_usd}
-                            onChange={e => setFormData({ ...formData, daily_volume_usd: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          />
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Daily Volume Target (USD)</label>
+                            <input
+                              type="number"
+                              placeholder="e.g., 3000"
+                              value={formData.daily_volume_usd}
+                              onChange={e => setFormData({ ...formData, daily_volume_usd: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            />
+                            <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                              Total trading volume per 24 hours. Bot will trade until this target is reached.
+                            </p>
+                          </div>
                           <div className="grid grid-cols-2 gap-2">
-                            <input
-                              type="number"
-                              placeholder="Min Trade (USD)"
-                              value={formData.min_trade_usd}
-                              onChange={e => setFormData({ ...formData, min_trade_usd: parseFloat(e.target.value) || 0 })}
-                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                            />
-                            <input
-                              type="number"
-                              placeholder="Max Trade (USD)"
-                              value={formData.max_trade_usd}
-                              onChange={e => setFormData({ ...formData, max_trade_usd: parseFloat(e.target.value) || 0 })}
-                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                            />
+                            <div>
+                              <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Min Trade Size (USD)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g., 20"
+                                value={formData.min_trade_usd}
+                                onChange={e => setFormData({ ...formData, min_trade_usd: parseFloat(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                              />
+                              <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                                Minimum per trade
+                              </p>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Max Trade Size (USD)</label>
+                              <input
+                                type="number"
+                                placeholder="e.g., 25"
+                                value={formData.max_trade_usd}
+                                onChange={e => setFormData({ ...formData, max_trade_usd: parseFloat(e.target.value) || 0 })}
+                                className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                                style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                              />
+                              <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                                Maximum per trade
+                              </p>
+                            </div>
+                          </div>
+                          <div className="p-2 rounded-lg text-xs" style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6' }}>
+                            ℹ️ <strong>How it works:</strong> Bot randomly sizes each trade between Min and Max, alternating buy/sell. Continues until Daily Volume Target is reached.
                           </div>
                         </>
                       )}
                       {formData.bot_type_dex === 'spread' && (
                         <>
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Spread Target (%)"
-                            value={formData.spread_target}
-                            onChange={e => setFormData({ ...formData, spread_target: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          />
-                          <input
-                            type="number"
-                            placeholder="Order Size (USD)"
-                            value={formData.volume_target_daily}
-                            onChange={e => setFormData({ ...formData, volume_target_daily: parseFloat(e.target.value) || 0 })}
-                            className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-                            style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
-                          />
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Spread Target (%)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="e.g., 0.3"
+                              value={formData.spread_target}
+                              onChange={e => setFormData({ ...formData, spread_target: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            />
+                            <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                              Target spread between bid and ask orders (e.g., 0.3% = $0.30 spread on $100 order)
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Order Size (USD)</label>
+                            <input
+                              type="number"
+                              placeholder="e.g., 500"
+                              value={formData.volume_target_daily}
+                              onChange={e => setFormData({ ...formData, volume_target_daily: parseFloat(e.target.value) || 0 })}
+                              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+                              style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, color: theme.textPrimary }}
+                            />
+                            <p className="text-xs mt-1" style={{ color: theme.textMuted }}>
+                              Size of each limit order placed on both sides (bid and ask)
+                            </p>
+                          </div>
                         </>
                       )}
                     </>
@@ -1993,7 +2026,7 @@ export function AddClientModal({ isOpen, onClose, onSave, theme, isDark }) {
       }
       
       // Import adminAPI
-      const { adminAPI } = await import('../services/api');
+      const { adminAPI } = await import('../../services/api');
       
       // Determine wallet type for API call
       const walletType = isEVM ? 'evm' : 'solana';
