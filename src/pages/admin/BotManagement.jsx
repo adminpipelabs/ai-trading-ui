@@ -151,6 +151,8 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
       
       // Recompute helpers at submit time (not render time)
       const isDEXConnector = ['jupiter', 'raydium', 'uniswap'].includes(newBot.connector);
+      const isSolanaChain = newBot.chain === 'solana' || ['jupiter', 'raydium'].includes(newBot.connector);
+      const isEVMChain = ['polygon', 'arbitrum', 'base', 'ethereum'].includes(newBot.chain);
       
       // Validate DEX fields if DEX connector
       if (isDEXConnector) {
@@ -274,7 +276,7 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
           // Solana config uses mint addresses
           baseConfig.base_mint = newBot.base_mint;
           baseConfig.quote_mint = newBot.quote_mint;
-        } else {
+        } else if (isEVMChain) {
           // EVM config uses token addresses
           baseConfig.base_token = newBot.base_mint;
           baseConfig.quote_token = newBot.quote_mint || (newBot.chain === 'polygon' 
