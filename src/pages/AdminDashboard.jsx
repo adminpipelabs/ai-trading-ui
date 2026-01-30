@@ -745,10 +745,10 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
 
       <div className="mb-8">
         <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
-        <MetricCard icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
-        <MetricCard icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
-        <MetricCard icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
-        <MetricCard icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
+        <MetricCard theme={theme} icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
+        <MetricCard theme={theme} icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
+        <MetricCard theme={theme} icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
+        <MetricCard theme={theme} icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
       </div>
 
       <div className="flex-1">

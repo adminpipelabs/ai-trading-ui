@@ -3,8 +3,10 @@ import { Bot, User, Users, BarChart3, TrendingUp, Activity, ChevronRight, ArrowU
 import { useTheme } from '../../contexts/ThemeContext';
 
 // ========== METRIC CARD ==========
-export function MetricCard({ icon, label, value, subvalue, positive, onClick }) {
-  const { theme } = useTheme();
+export function MetricCard({ icon, label, value, subvalue, positive, onClick, theme: themeProp }) {
+  // Use theme prop if provided, otherwise fallback to context
+  const { theme: themeFromContext } = useTheme();
+  const theme = themeProp || themeFromContext;
   return (
     <div onClick={onClick} className={`flex items-center gap-3 p-3 rounded-xl mb-2 transition-all ${onClick ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
          style={{ background: theme.bgCard, border: `1px solid ${theme.border}`, boxShadow: theme.shadow }}>
