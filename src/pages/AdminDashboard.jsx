@@ -128,13 +128,35 @@ function Login({ onLogin }) {
   const detectWallets = () => {
     const wallets = { evm: null, solana: null };
     
+    // Check for EVM wallets - prioritize MetaMask, Coinbase, Trust over generic ethereum
+    // Phantom sometimes injects window.ethereum, so we need to be more specific
     if (window.ethereum) {
-      if (window.ethereum.isMetaMask) wallets.evm = { name: 'MetaMask', provider: window.ethereum };
-      else if (window.ethereum.isCoinbaseWallet) wallets.evm = { name: 'Coinbase Wallet', provider: window.ethereum };
-      else if (window.ethereum.isTrust) wallets.evm = { name: 'Trust Wallet', provider: window.ethereum };
-      else wallets.evm = { name: 'Ethereum Wallet', provider: window.ethereum };
+      // Check for specific wallet identifiers first
+      if (window.ethereum.isMetaMask) {
+        wallets.evm = { name: 'MetaMask', provider: window.ethereum };
+      } else if (window.ethereum.isCoinbaseWallet) {
+        wallets.evm = { name: 'Coinbase Wallet', provider: window.ethereum };
+      } else if (window.ethereum.isTrust) {
+        wallets.evm = { name: 'Trust Wallet', provider: window.ethereum };
+      } else if (window.ethereum.providers && Array.isArray(window.ethereum.providers)) {
+        // Multiple wallets detected - find MetaMask first
+        const metamask = window.ethereum.providers.find(p => p.isMetaMask);
+        if (metamask) {
+          wallets.evm = { name: 'MetaMask', provider: metamask };
+        } else {
+          // Use first non-Phantom provider
+          const nonPhantom = window.ethereum.providers.find(p => !p.isPhantom);
+          if (nonPhantom) {
+            wallets.evm = { name: 'Ethereum Wallet', provider: nonPhantom };
+          }
+        }
+      } else if (!window.ethereum.isPhantom) {
+        // Only use generic ethereum if it's not Phantom
+        wallets.evm = { name: 'Ethereum Wallet', provider: window.ethereum };
+      }
     }
     
+    // Check for Solana wallets
     if (window.solana && window.solana.isPhantom) {
       wallets.solana = { name: 'Phantom', provider: window.solana };
     }
