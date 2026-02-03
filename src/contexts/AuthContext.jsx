@@ -29,15 +29,25 @@ export function AuthProvider({ children }) {
     // Ensure wallet_address is included - use from userObj or from authData if provided
     const walletAddress = userObj.wallet_address || authData.wallet_address || userObj.wallet;
     
+    // CRITICAL: Role must default to 'client' if missing (security)
+    // Only 'admin' role should see admin dashboard
+    const role = (userObj.role || 'client').toLowerCase();
+    
     const userData = {
       id: userObj.id,
       email: userObj.email,
       wallet_address: walletAddress, // Always include wallet address
-      role: (userObj.role || 'client').toLowerCase(), // Use actual role, don't default to client
-      name: userObj.email || walletAddress?.slice(0, 8) + '...',
+      role: role, // Default to 'client' if missing (security)
+      name: userObj.name || userObj.email || walletAddress?.slice(0, 8) + '...',
+      account_identifier: userObj.account_identifier,
     };
     
-    console.log('💾 Storing user data:', { ...userData, wallet_address: walletAddress ? `${walletAddress.substring(0, 8)}...` : 'MISSING' });
+    console.log('💾 Storing user data:', { 
+      ...userData, 
+      wallet_address: walletAddress ? `${walletAddress.substring(0, 8)}...` : 'MISSING',
+      role: role,
+      '⚠️ SECURITY CHECK': role === 'admin' ? 'ADMIN USER' : 'CLIENT USER'
+    });
     
     setUser(userData);
     // Store in both formats for compatibility
