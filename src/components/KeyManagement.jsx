@@ -64,7 +64,7 @@ export default function KeyManagement({ clientId, hasKey, chain = 'solana', onKe
   };
 
   const handleRevoke = async () => {
-    if (!confirm('This will stop your bot and remove your trading key. Continue?')) return;
+    if (!window.confirm('This will stop your bot and remove your trading key. Continue?')) return;
     setLoading(true);
     setError(null);
     try {
