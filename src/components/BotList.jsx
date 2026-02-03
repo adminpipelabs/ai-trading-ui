@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import EditBotModal from "./EditBotModal";
+import BotHealthBadge from "./BotHealthBadge";
 
 const TRADING_BRIDGE = "https://trading-bridge-production.up.railway.app";
 
@@ -154,9 +155,14 @@ export function BotList({ account = null, onEditBot = null, readOnly = false, ac
           <span style={{fontSize: "12px"}}>{bot.pair || '-'}</span>
           <span style={{color: "#888", fontSize: "12px"}}>{getConnectorDisplay(bot)}</span>
           <span style={{color: "#10b981", fontSize: "12px"}}>{getStatsDisplay(bot)}</span>
-          <span style={{fontSize: "11px", fontWeight: 500, color: bot.status === "running" ? "#10b981" : bot.status === "error" ? "#ef4444" : "#6b7280", textTransform: "uppercase"}}>
-            {bot.status || "stopped"}
-          </span>
+          <BotHealthBadge
+            status={bot.status}
+            healthStatus={bot.health_status}
+            healthMessage={bot.health_message}
+            lastTradeTime={bot.last_trade_time}
+            botId={bot.id}
+            onRefresh={fetchBots}
+          />
           {!readOnly && (
             <>
               <button 

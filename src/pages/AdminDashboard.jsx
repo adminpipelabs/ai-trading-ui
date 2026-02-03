@@ -645,12 +645,47 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
     if (savedSolana) setSolanaWallet(savedSolana);
   }, []);
 
-  // Calculate active bots count - check both 'running' and 'active' status
-  const activeBotsCount = bots?.filter(b => {
-    const status = b.status?.toLowerCase();
-    return status === 'running' || status === 'active';
-  }).length || 0;
-  const metrics = { clients: clients.length, volume: '$2.4M', pnl: '+$45,230', pnlPct: '+12.5%', bots: activeBotsCount };
+  // Fetch health summary for real bot counts
+  const [healthSummary, setHealthSummary] = useState(null);
+  useEffect(() => {
+    const fetchHealthSummary = async () => {
+      try {
+        const { tradingBridge } = await import('../services/api');
+        const summary = await tradingBridge.getHealthSummary();
+        setHealthSummary(summary);
+      } catch (err) {
+        console.error('Failed to fetch health summary:', err);
+        // Fallback to calculating from bots array
+        const activeBotsCount = bots?.filter(b => {
+          const status = b.status?.toLowerCase();
+          return status === 'running' || status === 'active';
+        }).length || 0;
+        setHealthSummary({ healthy: activeBotsCount, stale: 0, stopped: 0, total_bots: bots?.length || 0 });
+      }
+    };
+    fetchHealthSummary();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchHealthSummary, 30000);
+    return () => clearInterval(interval);
+  }, [bots]);
+
+  // Calculate active bots count - use health summary if available, otherwise fallback
+  const activeBotsCount = healthSummary 
+    ? healthSummary.healthy + healthSummary.stale  // Actually running (healthy + stale)
+    : bots?.filter(b => {
+        const status = b.status?.toLowerCase();
+        return status === 'running' || status === 'active';
+      }).length || 0;
+  
+  const metrics = { 
+    clients: clients.length, 
+    volume: '$2.4M', 
+    pnl: '+$45,230', 
+    pnlPct: '+12.5%', 
+    bots: activeBotsCount,
+    totalBots: healthSummary?.total_bots || bots?.length || 0,
+    stoppedBots: healthSummary?.stopped || 0
+  };
   const quickPrompts = ["Show all client balances", "Global P&L this week", "List active bots", "SHARP/USDT price"];
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);

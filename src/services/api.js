@@ -285,6 +285,31 @@ export const tradingBridge = {
       body: JSON.stringify(payload),
     });
   },
+
+  // Health monitoring endpoints
+  async getBotHealth(botId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/health`);
+  },
+
+  async getHealthSummary(account = null) {
+    const url = account
+      ? `${TRADING_BRIDGE_URL}/bots/health/summary?account=${encodeURIComponent(account)}`
+      : `${TRADING_BRIDGE_URL}/bots/health/summary`;
+    return apiCall(url);
+  },
+
+  async forceHealthCheck(botId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/health/check`, {
+      method: 'POST',
+    });
+  },
+
+  async getBotBalance(botId, chain = null) {
+    const endpoint = chain === 'solana'
+      ? `${TRADING_BRIDGE_URL}/bots/${botId}/balance/solana`
+      : `${TRADING_BRIDGE_URL}/bots/${botId}/balance`;
+    return apiCall(endpoint);
+  },
 };
 
 // ========== CLIENT API ==========
