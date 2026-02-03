@@ -2,12 +2,22 @@
 // This is a complete, self-contained application
 
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import AdminDashboard from './pages/AdminDashboard';
+import PipeLabsApp from './pages/AdminDashboard';
 import ClientDashboard from './pages/ClientDashboard';
 import Login from './pages/Login';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './styles/globals.css';
+
+// AdminDashboard wrapper that uses AuthContext instead of its own user state
+function AdminDashboardWrapper() {
+  const { user, logout } = useAuth();
+  
+  // PipeLabsApp expects user and onLogout props
+  // But it also has its own user state management, so we need to handle this differently
+  // For now, let's use the existing PipeLabsApp but ensure it gets the right user
+  return <PipeLabsApp />;
+}
 
 // Protected route wrapper
 function ProtectedRoute({ children, requireAdmin = false }) {
@@ -66,7 +76,7 @@ function AppRouter() {
         path="/admin/*" 
         element={
           <ProtectedRoute requireAdmin={true}>
-            <AdminDashboard />
+            <AdminDashboardWrapper />
           </ProtectedRoute>
         } 
       />
@@ -74,7 +84,7 @@ function AppRouter() {
         path="/*" 
         element={
           <ProtectedRoute>
-            {user?.role === 'admin' ? <AdminDashboard /> : <ClientDashboard />}
+            {user?.role === 'admin' ? <AdminDashboardWrapper /> : <ClientDashboard />}
           </ProtectedRoute>
         } 
       />

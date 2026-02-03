@@ -6,6 +6,7 @@ import BotManagement from "./admin/BotManagement";
 import ClientManagement, { AddClientModal } from "./admin/ClientManagement";
 import Overview, { MetricCard } from "./admin/Overview";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { useAuth } from "../contexts/AuthContext";
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
   Bot, User, Activity, Users, Plus, BarChart3, TrendingUp, LogOut, ChevronRight, Moon, Sun, MessageSquare
@@ -1002,22 +1003,9 @@ function ThemeProvider({ children }) {
 
 // ========== MAIN APP WRAPPER ==========
 function PipeLabsApp() {
-  // Get user from localStorage
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    const stored = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
-    if (stored) {
-      try {
-        const userData = JSON.parse(stored);
-        setUser(userData);
-      } catch (e) {
-        console.error('Failed to parse stored user:', e);
-      }
-    }
-    setLoading(false);
-  }, []);
+  // Use AuthContext instead of managing own user state
+  // App.jsx now handles routing, so this component should always have a user
+  const { user, logout, loading } = useAuth();
   
   const handleLogout = async () => {
     // Disconnect EVM wallets if connected
@@ -1060,12 +1048,8 @@ function PipeLabsApp() {
       }
     }
     
-    // Clear auth data
-    localStorage.removeItem('user');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('pipelabs_user');
-    localStorage.removeItem('pipelabs_token');
-    setUser(null);
+    // Use AuthContext logout
+    logout();
     window.location.href = '/#/login';
   };
   
@@ -1077,16 +1061,22 @@ function PipeLabsApp() {
     );
   }
   
+  // App.jsx handles routing, so if we reach here, user should be authenticated
+  // But add safety check just in case
+  if (!user) {
+    return (
+      <ThemeProvider>
+        <div style={{ padding: 40, textAlign: 'center' }}>Please log in</div>
+      </ThemeProvider>
+    );
+  }
+  
   return (
     <ThemeProvider>
-      {!user ? (
-        <Login onLogin={(userData) => setUser(userData)} />
-      ) : (
-        <AdminDashboardWrapper 
-          user={user} 
-          onLogout={handleLogout}
-        />
-      )}
+      <AdminDashboardWrapper 
+        user={user} 
+        onLogout={handleLogout}
+      />
     </ThemeProvider>
   );
 }
