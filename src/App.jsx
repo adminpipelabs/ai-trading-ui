@@ -84,6 +84,8 @@ function AppRouter() {
         path="/*" 
         element={
           <ProtectedRoute>
+            {/* CRITICAL SECURITY: Only route to admin if role is EXPLICITLY 'admin' */}
+            {/* Default to ClientDashboard for safety */}
             {user?.role === 'admin' ? <AdminDashboardWrapper /> : <ClientDashboard />}
           </ProtectedRoute>
         } 

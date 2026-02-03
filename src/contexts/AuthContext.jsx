@@ -29,25 +29,39 @@ export function AuthProvider({ children }) {
     // Ensure wallet_address is included - use from userObj or from authData if provided
     const walletAddress = userObj.wallet_address || authData.wallet_address || userObj.wallet;
     
-    // CRITICAL: Role must default to 'client' if missing (security)
-    // Only 'admin' role should see admin dashboard
-    const role = (userObj.role || 'client').toLowerCase();
+    // CRITICAL SECURITY: Role MUST default to 'client' if missing or invalid
+    // ONLY 'admin' role explicitly set to 'admin' should be admin
+    // This prevents clients from seeing admin dashboard even if backend is wrong
+    const roleFromBackend = (userObj.role || '').toLowerCase();
+    const role = roleFromBackend === 'admin' ? 'admin' : 'client';  // EXPLICIT check, default to client
     
     const userData = {
       id: userObj.id,
       email: userObj.email,
       wallet_address: walletAddress, // Always include wallet address
-      role: role, // Default to 'client' if missing (security)
+      role: role, // CRITICAL: Only 'admin' if explicitly 'admin', otherwise 'client'
       name: userObj.name || userObj.email || walletAddress?.slice(0, 8) + '...',
       account_identifier: userObj.account_identifier,
     };
     
-    console.log('💾 Storing user data:', { 
-      ...userData, 
+    // Security audit logging
+    console.log('🔒 SECURITY: Storing user data:', { 
+      id: userData.id,
+      name: userData.name,
       wallet_address: walletAddress ? `${walletAddress.substring(0, 8)}...` : 'MISSING',
-      role: role,
-      '⚠️ SECURITY CHECK': role === 'admin' ? 'ADMIN USER' : 'CLIENT USER'
+      role_from_backend: roleFromBackend,
+      role_assigned: role,
+      '⚠️ SECURITY CHECK': role === 'admin' ? '⚠️ ADMIN USER ⚠️' : '✅ CLIENT USER',
+      account_identifier: userObj.account_identifier
     });
+    
+    // Additional security check - log warning if role seems wrong
+    if (role === 'admin' && userObj.account_identifier !== 'admin') {
+      console.error('🚨 SECURITY WARNING: Non-admin account assigned admin role!', {
+        account_identifier: userObj.account_identifier,
+        role_from_backend: roleFromBackend
+      });
+    }
     
     setUser(userData);
     // Store in both formats for compatibility
