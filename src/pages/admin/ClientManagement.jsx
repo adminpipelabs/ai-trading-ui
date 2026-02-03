@@ -66,6 +66,7 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const [showApiKeysModal, setShowApiKeysModal] = useState(null);
   const [showPairsModal, setShowPairsModal] = useState(null);
   const [showBotsModal, setShowBotsModal] = useState(null);
+  const [clientKeyStatuses, setClientKeyStatuses] = useState({});
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -117,6 +118,27 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const handleManageBots = (client) => {
     setShowBotsModal(client);
   };
+
+  // Fetch key status for all clients
+  useEffect(() => {
+    const fetchKeyStatuses = async () => {
+      const statuses = {};
+      for (const client of clients) {
+        try {
+          const { tradingBridge } = await import('../../services/api');
+          const status = await tradingBridge.getClientKeyStatus(client.id);
+          statuses[client.id] = status;
+        } catch (error) {
+          console.error(`Failed to fetch key status for client ${client.id}:`, error);
+          statuses[client.id] = { has_key: false };
+        }
+      }
+      setClientKeyStatuses(statuses);
+    };
+    if (clients.length > 0) {
+      fetchKeyStatuses();
+    }
+  }, [clients]);
 
   const [showSendOrderModal, setShowSendOrderModal] = useState(null);
 
@@ -329,6 +351,17 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                     <span style={{ color: theme.textMuted }}>
                       <span style={{ color: theme.textSecondary }}>{client.tokens.length}</span> tokens
                     </span>
+                    {clientKeyStatuses[client.id] && (
+                      <span style={{ color: theme.textMuted }}>
+                        {clientKeyStatuses[client.id].has_key ? (
+                          <span style={{ color: theme.positive }}>
+                            ✅ Key ({clientKeyStatuses[client.id].key_added_by || 'unknown'})
+                          </span>
+                        ) : (
+                          <span style={{ color: theme.textMuted }}>⬜ No key</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                   <span style={{ color: client.pnlPercent.startsWith('+') ? theme.positive : client.pnlPercent.startsWith('-') ? theme.negative : theme.textMuted }}>
                     {client.pnl}
@@ -465,6 +498,52 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                   </div>
                 </div>
               </div>
+
+              {/* Trading Key Status */}
+              {clientKeyStatuses[selectedClient.id] && (
+                <div>
+                  <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
+                    Trading Key
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {clientKeyStatuses[selectedClient.id].has_key ? (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 size={14} style={{ color: theme.positive }} />
+                          <span style={{ color: theme.textPrimary }}>
+                            ✅ Connected by {clientKeyStatuses[selectedClient.id].key_added_by || 'unknown'}
+                          </span>
+                        </div>
+                        {clientKeyStatuses[selectedClient.id].key_connected_at && (
+                          <div className="flex items-center gap-3">
+                            <Clock size={14} style={{ color: theme.textMuted }} />
+                            <span style={{ color: theme.textMuted }}>
+                              Connected {formatDate(clientKeyStatuses[selectedClient.id].key_connected_at)}
+                            </span>
+                          </div>
+                        )}
+                        {clientKeyStatuses[selectedClient.id].wallet_address && (
+                          <div className="flex items-center gap-3">
+                            <Wallet size={14} style={{ color: theme.textMuted }} />
+                            <span className="font-mono text-xs" style={{ color: theme.textPrimary }}>
+                              {clientKeyStatuses[selectedClient.id].wallet_address}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs px-2 py-1 rounded" style={{ background: theme.bgSecondary, color: theme.textSecondary }}>
+                            {clientKeyStatuses[selectedClient.id].chain || 'solana'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                        ⬜ No trading key connected
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Performance */}
               <div>

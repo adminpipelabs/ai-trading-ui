@@ -23,7 +23,7 @@ const secondaryBtnSm = {
   cursor: 'pointer',
 };
 
-export default function KeyManagement({ clientId, hasKey, chain = 'solana' }) {
+export default function KeyManagement({ clientId, hasKey, chain = 'solana', onKeyRotated }) {
   const [showRotate, setShowRotate] = useState(false);
   const [newKey, setNewKey] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,6 +54,9 @@ export default function KeyManagement({ clientId, hasKey, chain = 'solana' }) {
       setNewKey('');
       setShowRotate(false);
       alert('Key rotated successfully. Bot will use the new key.');
+      if (onKeyRotated) {
+        onKeyRotated();
+      }
     } catch (err) {
       setError(err.message || 'Failed to rotate key');
     }

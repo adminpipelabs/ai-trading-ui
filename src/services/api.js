@@ -298,6 +298,35 @@ export const tradingBridge = {
     return apiCall(url);
   },
 
+  // Client key management endpoints
+  async getClientKeyStatus(clientId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/key-status`);
+  },
+
+  async getClientBotOptions(clientId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/bot-options`);
+  },
+
+  async setupClientBot(clientId, payload) {
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/setup-bot`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async rotateClientKey(clientId, privateKey) {
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/rotate-key`, {
+      method: 'PUT',
+      body: JSON.stringify({ private_key: privateKey }),
+    });
+  },
+
+  async revokeClientKey(clientId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/revoke-key`, {
+      method: 'DELETE',
+    });
+  },
+
   async forceHealthCheck(botId) {
     return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/health/check`, {
       method: 'POST',
