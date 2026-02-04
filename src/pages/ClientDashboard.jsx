@@ -39,16 +39,53 @@ export default function ClientDashboard() {
     
     setLoading(true);
     try {
-      // Get client info
+      // Get client info - use wallet-based endpoint instead of fetching all clients
       try {
-        const { adminAPI } = await import('../services/api');
-        const clients = await adminAPI.getClients();
-        const foundClient = clients.find(c => 
-          c.wallet_address?.toLowerCase() === (user.wallet_address || user.wallet)?.toLowerCase() ||
-          c.account_identifier === user.account_identifier ||
-          c.wallets?.some(w => w.address?.toLowerCase() === (user.wallet_address || user.wallet)?.toLowerCase())
-        );
-        setClient(foundClient || user);
+        const walletAddress = user.wallet_address || user.wallet;
+        if (walletAddress) {
+          try {
+            const clientRes = await fetch(`${API_BASE}/clients/by-wallet/${walletAddress}`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token')}`,
+                'X-Wallet-Address': walletAddress,
+              },
+            });
+            if (clientRes.ok) {
+              const clientData = await clientRes.json();
+              setClient({
+                id: clientData.client_id,
+                name: clientData.name,
+                account_identifier: clientData.account_identifier,
+                wallet_address: walletAddress,
+                wallets: clientData.wallets || [],
+                role: clientData.role || 'client',
+              });
+            } else {
+              // Fallback: try adminAPI if wallet endpoint fails
+              const { adminAPI } = await import('../services/api');
+              const clients = await adminAPI.getClients();
+              const foundClient = clients.find(c => 
+                c.wallet_address?.toLowerCase() === walletAddress.toLowerCase() ||
+                c.account_identifier === user.account_identifier ||
+                c.wallets?.some(w => w.address?.toLowerCase() === walletAddress.toLowerCase())
+              );
+              setClient(foundClient || user);
+            }
+          } catch (walletError) {
+            console.warn('Wallet-based client fetch failed, trying adminAPI:', walletError);
+            // Fallback to adminAPI
+            const { adminAPI } = await import('../services/api');
+            const clients = await adminAPI.getClients();
+            const foundClient = clients.find(c => 
+              c.wallet_address?.toLowerCase() === walletAddress.toLowerCase() ||
+              c.account_identifier === user.account_identifier ||
+              c.wallets?.some(w => w.address?.toLowerCase() === walletAddress.toLowerCase())
+            );
+            setClient(foundClient || user);
+          }
+        } else {
+          setClient(user);
+        }
       } catch (e) {
         console.error('Failed to fetch client:', e);
         setClient(user);
