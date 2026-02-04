@@ -296,6 +296,11 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 
 // ─── Dashboard Tab ────────────────────────────────────────
 function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType }) {
+  const [dashboardSubTab, setDashboardSubTab] = useState('overview');
+  const [balances, setBalances] = useState([]);
+  const [trades, setTrades] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
+  
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
@@ -305,14 +310,74 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
 
   const clientChain = client?.chain || (client?.wallets?.[0]?.chain) || 'solana';
   const clientId = client?.id || user.id;
+  const walletAddress = user?.wallet_address || user?.wallet || client?.wallets?.[0]?.address;
+
+  // Fetch balances and trades when switching to those tabs
+  useEffect(() => {
+    if (dashboardSubTab === 'balances' && walletAddress) {
+      setLoadingData(true);
+      tradingBridge.getBalances(walletAddress)
+        .then(data => setBalances(Array.isArray(data) ? data : []))
+        .catch(err => {
+          console.error('Failed to fetch balances:', err);
+          setBalances([]);
+        })
+        .finally(() => setLoadingData(false));
+    } else if (dashboardSubTab === 'trades' && walletAddress) {
+      setLoadingData(true);
+      tradingBridge.getTrades(null, 100, 30, walletAddress)
+        .then(data => setTrades(Array.isArray(data?.trades) ? data.trades : Array.isArray(data) ? data : []))
+        .catch(err => {
+          console.error('Failed to fetch trades:', err);
+          setTrades([]);
+        })
+        .finally(() => setLoadingData(false));
+    }
+  }, [dashboardSubTab, walletAddress]);
 
   return (
     <div>
-      {/* Welcome */}
-      <div style={styles.welcomeSection}>
-        <h1 style={styles.welcomeTitle}>Welcome back, {user.name || client?.name || 'User'}</h1>
-        <p style={styles.welcomeSubtitle}>{user.account_identifier || client?.account_identifier}</p>
+      {/* Dashboard Sub-Tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '24px',
+        borderBottom: '2px solid #e5e7eb',
+      }}>
+        {[
+          { key: 'overview', label: 'Overview' },
+          { key: 'balances', label: 'Balances' },
+          { key: 'trades', label: 'Trades' },
+          { key: 'reports', label: 'Reports' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setDashboardSubTab(tab.key)}
+            style={{
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: dashboardSubTab === tab.key ? '#0d9488' : '#6b7280',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderBottom: dashboardSubTab === tab.key ? '2px solid #0d9488' : '2px solid transparent',
+              cursor: 'pointer',
+              marginBottom: '-2px',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {/* Overview Tab */}
+      {dashboardSubTab === 'overview' && (
+        <div>
+          {/* Welcome */}
+          <div style={styles.welcomeSection}>
+            <h1 style={styles.welcomeTitle}>Welcome back, {user.name || client?.name || 'User'}</h1>
+            <p style={styles.welcomeSubtitle}>{user.account_identifier || client?.account_identifier}</p>
+          </div>
 
       {/* Overview Cards */}
       <div style={styles.cardsGrid}>
@@ -632,19 +697,18 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
 
                   {/* Actions */}
                   <div style={styles.botActions}>
-                    {!keyStatus?.has_key ? (
-                      <button onClick={() => setShowSetup(true)} style={styles.startButton}>
-                        🔑 Connect Wallet to Activate
-                      </button>
-                    ) : botItem.status === 'running' ? (
-                      <button onClick={() => onStartStop(botItem.id, 'stop')} style={styles.stopButton}>
-                        ⏹ Stop Bot
-                      </button>
-                    ) : (
-                      <button onClick={() => onStartStop(botItem.id, 'start')} style={styles.startButton}>
-                        ▶ Start Bot
-                      </button>
-                    )}
+                    {/* Only show Connect Wallet button if banner is NOT showing (i.e., key is connected) */}
+                    {keyStatus?.has_key ? (
+                      botItem.status === 'running' ? (
+                        <button onClick={() => onStartStop(botItem.id, 'stop')} style={styles.stopButton}>
+                          ⏹ Stop Bot
+                        </button>
+                      ) : (
+                        <button onClick={() => onStartStop(botItem.id, 'start')} style={styles.startButton}>
+                          ▶ Start Bot
+                        </button>
+                      )
+                    ) : null}
                     <button onClick={() => setEditingBot(botItem)} style={styles.editButton}>
                       ✏️ Edit Settings
                     </button>
@@ -772,6 +836,152 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
             await onRefresh();
           }}
         />
+      )}
+        </div>
+      )}
+
+      {/* Balances Tab */}
+      {dashboardSubTab === 'balances' && (
+        <div>
+          <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: 600 }}>Balances</h2>
+          {loadingData ? (
+            <p style={{ color: '#6b7280' }}>Loading balances...</p>
+          ) : balances.length === 0 ? (
+            <div style={styles.emptyState}>
+              <p style={{ color: '#6b7280' }}>No balances found. Connect your exchange API keys in Settings to view balances.</p>
+            </div>
+          ) : (
+            <div style={styles.section}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Exchange</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Asset</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Free</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Used</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Total</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>USD Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {balances.map((bal, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '12px' }}>{bal.exchange || '—'}</td>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>{bal.asset || '—'}</td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>{bal.free?.toFixed(4) || '0.0000'}</td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>{bal.used?.toFixed(4) || '0.0000'}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>{bal.total?.toFixed(4) || '0.0000'}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', color: '#0d9488' }}>
+                        {bal.usd_value ? `$${bal.usd_value.toFixed(2)}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Trades Tab */}
+      {dashboardSubTab === 'trades' && (
+        <div>
+          <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: 600 }}>Trades</h2>
+          {loadingData ? (
+            <p style={{ color: '#6b7280' }}>Loading trades...</p>
+          ) : trades.length === 0 ? (
+            <div style={styles.emptyState}>
+              <p style={{ color: '#6b7280' }}>No trades found. Your bot trades will appear here once it starts trading.</p>
+            </div>
+          ) : (
+            <div style={styles.section}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Time</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Pair</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Exchange</th>
+                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Side</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Amount</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Price</th>
+                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trades.map((trade, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                      <td style={{ padding: '12px' }}>
+                        {trade.timestamp ? new Date(trade.timestamp).toLocaleString() : '—'}
+                      </td>
+                      <td style={{ padding: '12px', fontWeight: 600 }}>{trade.trading_pair || trade.pair || '—'}</td>
+                      <td style={{ padding: '12px' }}>{trade.exchange || '—'}</td>
+                      <td style={{ padding: '12px', color: trade.side === 'buy' ? '#10b981' : '#ef4444' }}>
+                        {trade.side?.toUpperCase() || '—'}
+                      </td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>{trade.amount?.toFixed(4) || '—'}</td>
+                      <td style={{ padding: '12px', textAlign: 'right' }}>{trade.price?.toFixed(4) || '—'}</td>
+                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>
+                        {trade.cost ? `$${trade.cost.toFixed(2)}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {dashboardSubTab === 'reports' && (
+        <div>
+          <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: 600 }}>Reports</h2>
+          <div style={styles.section}>
+            <p style={{ color: '#6b7280', marginBottom: '16px' }}>
+              Generate detailed reports of your trading activity, performance metrics, and P&L analysis.
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  const accountId = user.account_identifier || client?.account_identifier;
+                  if (!accountId) {
+                    alert('Account identifier not found');
+                    return;
+                  }
+                  const data = await tradingBridge.getDashboard(accountId);
+                  // Create a downloadable report
+                  const report = {
+                    account: accountId,
+                    generated: new Date().toISOString(),
+                    ...data
+                  };
+                  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `trading-report-${accountId}-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error('Failed to generate report:', err);
+                  alert('Failed to generate report. Please try again.');
+                }
+              }}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#0d9488',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              📊 Generate Report
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
