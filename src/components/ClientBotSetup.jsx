@@ -294,11 +294,15 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
             <div key={field.key} style={{ marginBottom: '16px' }}>
               <label style={{ fontWeight: 600, fontSize: '14px', display: 'block', marginBottom: '4px' }}>
                 {field.label}
+                {field.key === 'base_mint' && (
+                  <span style={{ fontSize: '12px', color: '#ef4444', marginLeft: '4px' }}>* Required</span>
+                )}
               </label>
               <input
                 type={field.type}
                 value={config[field.key] || ''}
                 onChange={e => handleConfigChange(field.key, e.target.value)}
+                placeholder={field.placeholder || ''}
                 min={field.min}
                 max={field.max}
                 step={field.step}
@@ -309,8 +313,14 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
                   borderRadius: '8px',
                   border: '1px solid #d1d5db',
                   fontSize: '14px',
+                  fontFamily: field.type === 'text' && (field.key === 'base_mint' || field.key === 'pair') ? 'monospace' : 'inherit',
                 }}
               />
+              {field.key === 'base_mint' && (
+                <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                  Enter the Solana token mint address you want to trade. Find it on Solscan or your token's website.
+                </p>
+              )}
             </div>
           ))}
 
