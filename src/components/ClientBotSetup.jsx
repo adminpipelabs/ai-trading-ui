@@ -8,6 +8,8 @@ const BOT_TYPES = {
     description: 'Generates trading volume with randomized buy/sell orders over time.',
     chains: ['solana'],
     fields: [
+      { key: 'base_mint', label: 'Base Token Mint Address (Solana)', type: 'text', default: '', placeholder: 'Enter token mint address (e.g., HZG1RVn4zcRM7zEFEVGYPGoPzPAWAj2AAdvQivfmLYNK)' },
+      { key: 'pair', label: 'Trading Pair (optional)', type: 'text', default: '', placeholder: 'e.g., TOKEN/SOL (leave empty to auto-detect)' },
       { key: 'daily_volume_usd', label: 'Daily Volume Target (USD)', type: 'number', default: 5000, min: 100 },
       { key: 'min_trade_usd', label: 'Min Trade Size (USD)', type: 'number', default: 10, min: 1 },
       { key: 'max_trade_usd', label: 'Max Trade Size (USD)', type: 'number', default: 25, min: 1 },
@@ -21,6 +23,7 @@ const BOT_TYPES = {
     description: 'Market making bot that places bid/ask orders around the current price.',
     chains: ['evm'],
     fields: [
+      { key: 'pair', label: 'Trading Pair', type: 'text', default: '', placeholder: 'e.g., SHARP/USDT' },
       { key: 'bid_spread', label: 'Bid Spread (%)', type: 'number', default: 0.3, step: 0.1 },
       { key: 'ask_spread', label: 'Ask Spread (%)', type: 'number', default: 0.3, step: 0.1 },
       { key: 'order_amount', label: 'Order Amount', type: 'number', default: 1600 },
@@ -94,7 +97,12 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
   };
 
   const handleConfigChange = (key, value) => {
-    setConfig(prev => ({ ...prev, [key]: parseFloat(value) || value }));
+    // For text fields, keep as string. For number fields, parse as float
+    if (BOT_TYPES[botType]?.fields.find(f => f.key === key)?.type === 'number') {
+      setConfig(prev => ({ ...prev, [key]: parseFloat(value) || value }));
+    } else {
+      setConfig(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   const handleSubmit = async () => {

@@ -526,38 +526,37 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
           <h2 style={styles.sectionTitle}>
             Your Bots ({bots.length})
           </h2>
-          {keyStatus?.has_key && (
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button 
-                onClick={() => {
-                  setSelectedBotType('volume');
-                  setShowSetup(true);
-                }} 
-                style={{
-                  ...styles.startButton,
-                  backgroundColor: '#0d9488',
-                  fontSize: '13px',
-                  padding: '8px 16px',
-                }}
-              >
-                + Add Volume Bot
-              </button>
-              <button 
-                onClick={() => {
-                  setSelectedBotType('spread');
-                  setShowSetup(true);
-                }} 
-                style={{
-                  ...styles.startButton,
-                  backgroundColor: '#6366f1',
-                  fontSize: '13px',
-                  padding: '8px 16px',
-                }}
-              >
-                + Add Spread Bot
-              </button>
-            </div>
-          )}
+          {/* Always show add bot buttons - wallet will be connected during setup if needed */}
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => {
+                setSelectedBotType('volume');
+                setShowSetup(true);
+              }} 
+              style={{
+                ...styles.startButton,
+                backgroundColor: '#0d9488',
+                fontSize: '13px',
+                padding: '8px 16px',
+              }}
+            >
+              + Add Volume Bot
+            </button>
+            <button 
+              onClick={() => {
+                setSelectedBotType('spread');
+                setShowSetup(true);
+              }} 
+              style={{
+                ...styles.startButton,
+                backgroundColor: '#6366f1',
+                fontSize: '13px',
+                padding: '8px 16px',
+              }}
+            >
+              + Add Spread Bot
+            </button>
+          </div>
         </div>
       )}
 
