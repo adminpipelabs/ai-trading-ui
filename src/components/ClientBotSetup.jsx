@@ -108,6 +108,14 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
   const handleSubmit = async () => {
     setLoading(true);
     setError(null);
+    
+    // Validate required fields
+    if (botType === 'volume' && chain === 'solana' && !config.base_mint) {
+      setError('Base token mint address is required for Solana Volume Bot');
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Get wallet address from private key (for Solana, derive address)
       // For now, we'll let the backend handle this
