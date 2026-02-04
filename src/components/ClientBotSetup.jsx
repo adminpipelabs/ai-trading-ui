@@ -66,6 +66,15 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
     ([_, bt]) => bt.chains.includes(chain)
   );
 
+  // Initialize config if botType is set (when initialBotType is provided)
+  useEffect(() => {
+    if (botType && Object.keys(config).length === 0) {
+      const defaults = {};
+      BOT_TYPES[botType].fields.forEach(f => { defaults[f.key] = f.default; });
+      setConfig(defaults);
+    }
+  }, [botType]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSelectType = (type) => {
     setBotType(type);
     // Set defaults
