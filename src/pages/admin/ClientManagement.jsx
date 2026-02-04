@@ -839,6 +839,31 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
           setSelectedClient(transformedClients.find(c => c.id === showBotsModal.id));
         }
       }} theme={theme} />}
+
+      {showEditModal && <EditClientModal client={showEditModal} onClose={() => setShowEditModal(null)} onUpdate={async () => {
+        const { adminAPI } = await import('../../services/api');
+        const data = await adminAPI.getClients();
+        const transformedClients = (data || []).map(c => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          wallet_address: c.wallet_address,
+          account_identifier: c.account_identifier,
+          status: c.status || 'active',
+          connectors: c.connectors || [],
+          wallets: c.wallets || [],
+          pairs: [],
+          bots: [],
+          balance: '$0',
+          pnl: '$0',
+          pnlPercent: '0%',
+          createdAt: c.created_at
+        }));
+        setClients(transformedClients);
+        if (selectedClient?.id === showEditModal.id) {
+          setSelectedClient(transformedClients.find(c => c.id === showEditModal.id));
+        }
+      }} theme={theme} />}
     </div>
   );
 }
