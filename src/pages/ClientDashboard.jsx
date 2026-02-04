@@ -21,6 +21,7 @@ export default function ClientDashboard() {
   const [client, setClient] = useState(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [tooltipStates, setTooltipStates] = useState({});
+  const [managementMode, setManagementMode] = useState('unset');
 
   useEffect(() => {
     if (!user) return;
@@ -53,14 +54,16 @@ export default function ClientDashboard() {
           });
           if (clientRes.ok) {
             clientData = await clientRes.json();
-            setClient({
-              id: clientData.client_id,
-              name: clientData.name,
-              account_identifier: clientData.account_identifier,
-              wallet_address: walletAddress,
-              wallets: clientData.wallets || [],
-              role: clientData.role || 'client',
-            });
+              setClient({
+                id: clientData.client_id,
+                name: clientData.name,
+                account_identifier: clientData.account_identifier,
+                wallet_address: walletAddress,
+                wallets: clientData.wallets || [],
+                role: clientData.role || 'client',
+                management_mode: clientData.management_mode || 'unset',
+              });
+              setManagementMode(clientData.management_mode || 'unset');
           } else {
             console.warn('Client fetch failed:', clientRes.status, clientRes.statusText);
             // Fallback: use user data
@@ -216,6 +219,8 @@ export default function ClientDashboard() {
             client={client}
             keyStatus={keyStatus}
             onRefresh={fetchData}
+            managementMode={managementMode}
+            setManagementMode={setManagementMode}
           />
         ) : (
           <HelpTab />
@@ -325,7 +330,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
                  bot?.health_status === 'stopped' ? '🔴 Stopped' :
                  bot?.health_status === 'error' ? '⚠️ Error' :
                  bot ? '⚪ Unknown' : 'No Bot'}
-          sublabel={bot?.health_message}
+          sublabel={bot?.bot_type ? `${bot.bot_type === 'volume' ? 'Volume Bot' : bot.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'} · ${bot?.health_message || ''}` : bot?.health_message}
         />
         <StatCard
           label={
@@ -368,8 +373,67 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
         />
       </div>
 
-      {/* Connect Wallet Banner */}
-      {!keyStatus?.has_key && (
+      {/* Contextual Banners Based on Key Status + Bot Status */}
+      {!keyStatus?.has_key && bots.length > 0 && (
+        <div style={styles.warningBanner}>
+          <div>
+            <strong style={{ color: '#92400e' }}>
+              ⚠️ Your bot is inactive — connect a wallet to activate it
+            </strong>
+            <p style={{ color: '#a16207', margin: '4px 0 0', fontSize: '14px' }}>
+              Your {bot?.bot_type === 'volume' ? 'Volume' : bot?.bot_type === 'spread' ? 'Spread' : 'Trading'} Bot needs a funded 
+              wallet to start trading. Connect your wallet's private key below — it's 
+              encrypted with AES-256 and never visible to anyone.
+            </p>
+            <p style={{ color: '#a16207', margin: '8px 0 0', fontSize: '13px' }}>
+              <strong>Steps:</strong> Connect wallet key → Fund wallet with SOL → Start bot
+            </p>
+          </div>
+          <button onClick={() => setShowSetup(true)} style={styles.connectButton}>
+            Connect Wallet Key
+          </button>
+        </div>
+      )}
+
+      {keyStatus?.has_key && bot?.health_status === 'stopped' && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          backgroundColor: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          marginBottom: '24px',
+        }}>
+          <div>
+            <strong style={{ color: '#1e40af' }}>✅ Wallet connected</strong>
+            <p style={{ color: '#1e3a8a', fontSize: '14px', marginTop: '4px' }}>
+              {bot?.health_message?.includes('NO FUNDS') || bot?.health_message?.includes('NO GAS')
+                ? 'Your wallet needs more funds. Top up your SOL balance and click Start Bot.'
+                : bot?.health_message || 'Click Start Bot to begin trading.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {keyStatus?.has_key && bot?.status === 'running' && bot?.health_status === 'healthy' && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 24px',
+          borderRadius: '12px',
+          backgroundColor: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          marginBottom: '24px',
+        }}>
+          <strong style={{ color: '#166534' }}>✅ Bot is active and trading</strong>
+        </div>
+      )}
+
+      {/* Show connect banner if no bot exists yet */}
+      {!keyStatus?.has_key && bots.length === 0 && (
         <div style={styles.warningBanner}>
           <div>
             <strong style={{ color: '#92400e' }}>⚠️ Connect your trading wallet</strong>
@@ -422,6 +486,9 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
               <div>
                 <h3 style={styles.botName}>{bot.name}</h3>
                 <span style={styles.botMeta}>
+                  {bot.bot_type === 'volume' ? 'Volume Bot' : 
+                   bot.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'}
+                  {' · '}
                   {bot.connector || 'Jupiter'} ({bot.chain || 'Solana'})
                   {bot.pair && ` · ${bot.pair}`}
                 </span>
@@ -468,7 +535,11 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
 
             {/* Actions — NO DELETE (admin only) */}
             <div style={styles.botActions}>
-              {bot.status === 'running' ? (
+              {!keyStatus?.has_key ? (
+                <button onClick={() => setShowSetup(true)} style={styles.startButton}>
+                  🔑 Connect Wallet to Activate
+                </button>
+              ) : bot.status === 'running' ? (
                 <button onClick={() => onStartStop(bot.id, 'stop')} style={styles.stopButton}>
                   ⏹ Stop Bot
                 </button>
@@ -517,13 +588,100 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
 }
 
 // ─── Settings Tab ────────────────────────────────────────
-function SettingsTab({ user, client, keyStatus, onRefresh }) {
+function SettingsTab({ user, client, keyStatus, onRefresh, managementMode, setManagementMode }) {
   const displayClient = client || user;
   const clientChain = client?.chain || (client?.wallets?.[0]?.chain) || 'solana';
+
+  const handleManagementModeChange = async (mode) => {
+    try {
+      const clientId = displayClient.id || user.id;
+      const response = await fetch(`${API_BASE}/clients/${clientId}/management-mode`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Wallet-Address': user.wallet_address || user.wallet,
+        },
+        body: JSON.stringify({ mode }),
+      });
+      
+      if (response.ok) {
+        setManagementMode(mode);
+        alert(`Management mode set to ${mode === 'self' ? 'Self-Service' : 'Pipe Labs Managed'}`);
+      } else {
+        alert('Failed to update management mode');
+      }
+    } catch (error) {
+      console.error('Error updating management mode:', error);
+      alert('Error updating management mode');
+    }
+  };
 
   return (
     <div>
       <h1 style={styles.welcomeTitle}>Settings</h1>
+
+      {/* Management Mode Choice */}
+      <div style={{ ...styles.section, marginTop: '24px' }}>
+        <h2 style={styles.sectionTitle}>Bot Management</h2>
+        <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '20px' }}>
+          Choose how you'd like to manage your trading bot.
+        </p>
+        
+        <div style={{ display: 'flex', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+          <div 
+            onClick={() => handleManagementModeChange('self')}
+            style={{
+              flex: '1',
+              minWidth: '280px',
+              padding: '24px',
+              borderRadius: '12px',
+              border: managementMode === 'self' ? '2px solid #0d9488' : '1px solid #e5e7eb',
+              cursor: 'pointer',
+              backgroundColor: managementMode === 'self' ? '#f0fdfa' : '#fff',
+            }}
+          >
+            <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>🛠 Self-Service</h4>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+              You manage everything — connect your wallet, configure your bot, 
+              start and stop as needed. Full control from your dashboard.
+            </p>
+            <ul style={{ fontSize: '13px', color: '#6b7280', marginTop: '12px', paddingLeft: '16px' }}>
+              <li>You connect your own wallet key</li>
+              <li>You configure bot settings</li>
+              <li>You start and stop your bot</li>
+              <li>Dashboard access 24/7</li>
+            </ul>
+          </div>
+
+          <div 
+            onClick={() => handleManagementModeChange('managed')}
+            style={{
+              flex: '1',
+              minWidth: '280px',
+              padding: '24px',
+              borderRadius: '12px',
+              border: managementMode === 'managed' ? '2px solid #0d9488' : '1px solid #e5e7eb',
+              cursor: 'pointer',
+              backgroundColor: managementMode === 'managed' ? '#f0fdfa' : '#fff',
+            }}
+          >
+            <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>🤝 Pipe Labs Managed</h4>
+            <p style={{ fontSize: '14px', color: '#6b7280', marginTop: '8px' }}>
+              Our team handles everything for you — setup, configuration, monitoring, 
+              and optimization. You just watch the results.
+            </p>
+            <ul style={{ fontSize: '13px', color: '#6b7280', marginTop: '12px', paddingLeft: '16px' }}>
+              <li>Pipe Labs configures your bot</li>
+              <li>We monitor and optimize performance</li>
+              <li>You provide wallet key securely through dashboard</li>
+              <li>Regular performance updates</li>
+            </ul>
+            <p style={{ fontSize: '12px', color: '#0d9488', marginTop: '8px', fontWeight: 600 }}>
+              Available on Professional and Enterprise plans
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div style={{ ...styles.section, marginTop: '24px' }}>
         <h2 style={styles.sectionTitle}>Account</h2>
