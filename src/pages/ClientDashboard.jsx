@@ -4,6 +4,7 @@ import BotHealthBadge from '../components/BotHealthBadge';
 import ClientBotSetup from '../components/ClientBotSetup';
 import KeyManagement from '../components/KeyManagement';
 import EditBotModal from '../components/EditBotModal';
+import WelcomeModal from '../components/WelcomeModal';
 import { tradingBridge } from '../services/api';
 
 const API_BASE = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
@@ -18,9 +19,18 @@ export default function ClientDashboard() {
   const [showSetup, setShowSetup] = useState(false);
   const [editingBot, setEditingBot] = useState(null);
   const [client, setClient] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [tooltipStates, setTooltipStates] = useState({});
 
   useEffect(() => {
     if (!user) return;
+    
+    // Check if user has seen welcome modal
+    const hasSeenWelcome = localStorage.getItem('pipelabs_has_seen_welcome');
+    if (!hasSeenWelcome) {
+      setShowWelcome(true);
+    }
+    
     fetchData();
   }, [user]);
 
@@ -109,9 +119,15 @@ export default function ClientDashboard() {
     }
   };
 
+  const handleWelcomeClose = () => {
+    setShowWelcome(false);
+    localStorage.setItem('pipelabs_has_seen_welcome', 'true');
+  };
+
   const tabs = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'settings', label: 'Settings' },
+    { key: 'help', label: 'Help' },
   ];
 
   if (loading) {
@@ -169,22 +185,87 @@ export default function ClientDashboard() {
             setEditingBot={setEditingBot}
             onStartStop={handleStartStop}
             onRefresh={fetchData}
+            tooltipStates={tooltipStates}
+            setTooltipStates={setTooltipStates}
           />
-        ) : (
+        ) : activeTab === 'settings' ? (
           <SettingsTab
             user={user}
             client={client}
             keyStatus={keyStatus}
             onRefresh={fetchData}
           />
+        ) : (
+          <HelpTab />
         )}
       </main>
+
+      {/* Welcome Modal */}
+      <WelcomeModal isOpen={showWelcome} onClose={handleWelcomeClose} />
     </div>
   );
 }
 
+// ─── Tooltip Component ────────────────────────────────────────
+function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
+  const isOpen = tooltipStates[id] || false;
+  
+  return (
+    <span style={{ position: 'relative', display: 'inline-block', marginLeft: '4px' }}>
+      <span
+        style={{
+          cursor: 'help',
+          color: '#6b7280',
+          fontSize: '14px',
+          fontWeight: 600,
+          width: '18px',
+          height: '18px',
+          borderRadius: '50%',
+          border: '1px solid #d1d5db',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#fff',
+        }}
+        onMouseEnter={() => setTooltipStates(prev => ({ ...prev, [id]: true }))}
+        onMouseLeave={() => setTooltipStates(prev => ({ ...prev, [id]: false }))}
+      >
+        ℹ️
+      </span>
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginBottom: '8px',
+          padding: '12px',
+          backgroundColor: '#1f2937',
+          color: '#fff',
+          borderRadius: '8px',
+          fontSize: '12px',
+          lineHeight: '1.5',
+          width: '280px',
+          zIndex: 1000,
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        }}>
+          {text}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            border: '6px solid transparent',
+            borderTopColor: '#1f2937',
+          }} />
+        </div>
+      )}
+    </span>
+  );
+}
+
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh }) {
+function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates }) {
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
@@ -206,7 +287,17 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
       {/* Overview Cards */}
       <div style={styles.cardsGrid}>
         <StatCard
-          label="Bot Status"
+          label={
+            <>
+              Bot Status
+              <InfoTooltip
+                id="bot-status"
+                text="🟢 Running: Your bot is actively trading. 🟡 Stale: No trades in the last 30 minutes (may be normal for low-frequency settings). 🔴 Stopped: Bot has stopped — usually due to insufficient wallet funds or manual stop. ⚠️ Error: Health check failed — our team is notified automatically. ⚪ Unknown: Status hasn't been checked yet (first check runs within 5 minutes)."
+                tooltipStates={tooltipStates}
+                setTooltipStates={setTooltipStates}
+              />
+            </>
+          }
           value={bot?.health_status === 'healthy' ? '🟢 Running' :
                  bot?.health_status === 'stale' ? '🟡 Stale' :
                  bot?.health_status === 'stopped' ? '🔴 Stopped' :
@@ -215,7 +306,17 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
           sublabel={bot?.health_message}
         />
         <StatCard
-          label="Wallet Balance"
+          label={
+            <>
+              Wallet Balance
+              <InfoTooltip
+                id="wallet-balance"
+                text="This is the balance of the wallet your bot trades from. Make sure it has enough SOL for gas fees and enough of your token (or SOL) to execute trades at your configured sizes. Low balance? Your bot will stop automatically and you'll see a 'Stopped — NO FUNDS' status."
+                tooltipStates={tooltipStates}
+                setTooltipStates={setTooltipStates}
+              />
+            </>
+          }
           value={walletBalance?.sol_balance != null
             ? `${walletBalance.sol_balance.toFixed(4)} SOL`
             : walletBalance?.balance_sol != null
@@ -224,7 +325,17 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
           sublabel={walletBalance?.usd_value ? `≈ $${walletBalance.usd_value.toFixed(2)}` : null}
         />
         <StatCard
-          label="Volume Today"
+          label={
+            <>
+              Volume Today
+              <InfoTooltip
+                id="volume-today"
+                text="Your daily volume target is the total USD value of trades your bot aims to complete each day. The progress bar shows how much has been completed so far today. This resets at midnight UTC."
+                tooltipStates={tooltipStates}
+                setTooltipStates={setTooltipStates}
+              />
+            </>
+          }
           value={`$${volumeToday.toLocaleString()}`}
           sublabel={`of $${volumeTarget.toLocaleString()} target`}
           progress={volumePercent}
@@ -241,7 +352,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
           <div>
             <strong style={{ color: '#92400e' }}>⚠️ Connect your trading wallet</strong>
             <p style={{ color: '#a16207', margin: '4px 0 0', fontSize: '14px' }}>
-              Your bot needs a trading wallet to operate. Input your private key to get started.
+              Connect a dedicated trading wallet for your bot to use. We recommend creating a new wallet specifically for this — don't use your main wallet. Your private key is encrypted with AES-256 before storage and is never visible to anyone, including our team. You can rotate or revoke your key at any time from Settings.
             </p>
           </div>
           <button onClick={() => setShowSetup(true)} style={styles.connectButton}>
@@ -296,10 +407,31 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
             </div>
 
             <div style={styles.botGrid}>
-              <BotStat label="Daily Target" value={`$${(bot.config?.daily_volume_usd || 5000).toLocaleString()}`} />
+              <BotStat 
+                label="Daily Target" 
+                value={`$${(bot.config?.daily_volume_usd || 5000).toLocaleString()}`}
+                tooltip="Your daily volume target is the total USD value of trades your bot aims to complete each day."
+                tooltipId="daily-target"
+                tooltipStates={tooltipStates}
+                setTooltipStates={setTooltipStates}
+              />
               <BotStat label="Progress" value={`${volumePercent.toFixed(0)}%`} />
-              <BotStat label="Trade Size" value={`$${bot.config?.min_trade_usd || 10} – $${bot.config?.max_trade_usd || 25}`} />
-              <BotStat label="Interval" value={`${Math.round((bot.config?.interval_min_seconds || 900) / 60)}–${Math.round((bot.config?.interval_max_seconds || 2700) / 60)} min`} />
+              <BotStat 
+                label="Trade Size" 
+                value={`$${bot.config?.min_trade_usd || 10} – $${bot.config?.max_trade_usd || 25}`}
+                tooltip="Each individual trade will be a random amount between your min and max trade size. Randomization makes the trading activity look natural."
+                tooltipId="trade-size"
+                tooltipStates={tooltipStates}
+                setTooltipStates={setTooltipStates}
+              />
+              <BotStat 
+                label="Interval" 
+                value={`${Math.round((bot.config?.interval_min_seconds || 900) / 60)}–${Math.round((bot.config?.interval_max_seconds || 2700) / 60)} min`}
+                tooltip="Time between trades. Your bot waits a random duration between the min and max interval before placing the next trade. Shorter intervals = more trades per day = reaching your volume target faster."
+                tooltipId="interval"
+                tooltipStates={tooltipStates}
+                setTooltipStates={setTooltipStates}
+              />
               <BotStat label="Last Trade" value={bot.last_trade_time ? new Date(bot.last_trade_time).toLocaleString() : 'None yet'} />
               <BotStat label="Trades Today" value={bot.stats?.trades_today || '0'} />
             </div>
@@ -409,6 +541,186 @@ function SettingsTab({ user, client, keyStatus, onRefresh }) {
           </div>
         )}
       </div>
+
+      <div style={{ ...styles.section, marginTop: '24px' }}>
+        <h2 style={styles.sectionTitle}>How It Works</h2>
+        <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
+          <p style={{ marginBottom: '16px' }}>
+            Your bot uses your connected wallet to place trades on Jupiter (Solana's largest DEX). Here's what happens behind the scenes:
+          </p>
+          <ul style={{ marginLeft: '20px', marginBottom: '16px' }}>
+            <li style={{ marginBottom: '8px' }}>Your bot places alternating buy and sell orders throughout the day</li>
+            <li style={{ marginBottom: '8px' }}>Each trade is a random size within your configured range</li>
+            <li style={{ marginBottom: '8px' }}>Trades are spaced out at random intervals to appear natural</li>
+            <li style={{ marginBottom: '8px' }}>The bot automatically stops if your wallet runs low on funds</li>
+          </ul>
+
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', marginTop: '24px', marginBottom: '12px' }}>
+            Your Wallet Key
+          </h3>
+          <p style={{ marginBottom: '12px' }}>
+            Your private key is encrypted the moment you submit it and stored securely. It is only decrypted briefly in memory when executing a trade, then immediately cleared. No one at Pipe Labs can view your key.
+          </p>
+          <p style={{ marginBottom: '12px' }}>
+            You can:
+          </p>
+          <ul style={{ marginLeft: '20px', marginBottom: '16px' }}>
+            <li style={{ marginBottom: '8px' }}><strong>Rotate your key</strong> — swap to a new wallet at any time</li>
+            <li style={{ marginBottom: '8px' }}><strong>Revoke your key</strong> — immediately stops all bots and deletes the stored key</li>
+          </ul>
+
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', marginTop: '24px', marginBottom: '12px' }}>
+            Funding Your Wallet
+          </h3>
+          <p style={{ marginBottom: '12px' }}>
+            Your trading wallet needs:
+          </p>
+          <ul style={{ marginLeft: '20px', marginBottom: '16px' }}>
+            <li style={{ marginBottom: '8px' }}><strong>SOL for gas fees</strong> (at least 0.05 SOL recommended)</li>
+            <li style={{ marginBottom: '8px' }}><strong>SOL or your token</strong> for actual trades (depends on your daily volume target)</li>
+          </ul>
+          <p style={{ marginBottom: '12px', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
+            Example: For a $5,000/day volume target with $10-$25 trades, your wallet should have at least $200-$500 in tradeable assets to run comfortably through the day.
+          </p>
+
+          <div style={{
+            marginTop: '24px',
+            padding: '16px',
+            backgroundColor: '#f0fdfa',
+            borderRadius: '8px',
+            border: '1px solid #ccfbf1',
+          }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#0d9488' }}>
+              💡 <strong>Need Help?</strong> Contact{' '}
+              <a href="mailto:support@pipelabs.xyz" style={{ color: '#0d9488', textDecoration: 'underline' }}>
+                support@pipelabs.xyz
+              </a>
+              {' '}or reach out to your account manager.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Help Tab ────────────────────────────────────────
+function HelpTab() {
+  const [openFaq, setOpenFaq] = useState(null);
+
+  const faqs = [
+    {
+      q: "Is my private key safe?",
+      a: "Yes. Your key is encrypted with AES-256 (bank-grade encryption) the instant you submit it. It's never stored in plain text and never visible to our team. You can revoke it at any time."
+    },
+    {
+      q: "What happens if my wallet runs out of funds?",
+      a: "Your bot automatically stops and the status changes to \"Stopped — NO FUNDS.\" Top up your wallet and restart the bot from the dashboard."
+    },
+    {
+      q: "Can I change my volume target?",
+      a: "Yes. Click \"Edit Settings\" on your bot to adjust the daily volume target, trade sizes, intervals, and slippage tolerance. Changes take effect on the next trade cycle."
+    },
+    {
+      q: "Can I stop my bot anytime?",
+      a: "Yes. Click \"Stop Bot\" and it stops immediately. You can restart it whenever you're ready."
+    },
+    {
+      q: "What does \"Stale\" status mean?",
+      a: "It means no trades have been placed in 30+ minutes. This can be normal if your interval settings are long, or it might indicate an issue. If it persists, check your wallet balance."
+    },
+    {
+      q: "How much SOL do I need for gas?",
+      a: "Each trade costs roughly 0.005 SOL in gas fees. We recommend keeping at least 0.05 SOL for gas. The bot will stop if gas runs too low."
+    },
+    {
+      q: "Can Pipe Labs access my funds?",
+      a: "The bot can only execute trades on the DEX you've configured. It cannot transfer funds out of your wallet to another address. You maintain full ownership and can revoke access at any time."
+    },
+    {
+      q: "How do I switch to a different wallet?",
+      a: "Go to Settings → Trading Wallet → Rotate Key. Enter your new wallet's private key. The old key is overwritten immediately."
+    }
+  ];
+
+  return (
+    <div>
+      <h1 style={styles.welcomeTitle}>Help & FAQ</h1>
+
+      <div style={{ ...styles.section, marginTop: '24px' }}>
+        <h2 style={styles.sectionTitle}>Frequently Asked Questions</h2>
+        <div style={{ marginTop: '16px' }}>
+          {faqs.map((faq, index) => (
+            <div
+              key={index}
+              style={{
+                borderBottom: '1px solid #e5e7eb',
+                padding: '16px 0',
+              }}
+            >
+              <button
+                onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  color: '#111827',
+                }}>
+                  {faq.q}
+                </span>
+                <span style={{
+                  fontSize: '20px',
+                  color: '#6b7280',
+                  marginLeft: '16px',
+                }}>
+                  {openFaq === index ? '−' : '+'}
+                </span>
+              </button>
+              {openFaq === index && (
+                <p style={{
+                  marginTop: '12px',
+                  fontSize: '14px',
+                  color: '#6b7280',
+                  lineHeight: '1.7',
+                }}>
+                  {faq.a}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{
+        ...styles.section,
+        marginTop: '24px',
+        backgroundColor: '#f0fdfa',
+        border: '1px solid #ccfbf1',
+      }}>
+        <h2 style={styles.sectionTitle}>Still Need Help?</h2>
+        <p style={{ fontSize: '14px', color: '#374151', marginBottom: '16px' }}>
+          Our support team is here to help. Reach out anytime:
+        </p>
+        <div style={{ fontSize: '14px', color: '#374151' }}>
+          <p style={{ marginBottom: '8px' }}>
+            📧 Email: <a href="mailto:support@pipelabs.xyz" style={{ color: '#0d9488', textDecoration: 'underline' }}>support@pipelabs.xyz</a>
+          </p>
+          <p>
+            💬 Contact your account manager for priority support
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -417,7 +729,7 @@ function SettingsTab({ user, client, keyStatus, onRefresh }) {
 function StatCard({ label, value, sublabel, progress }) {
   return (
     <div style={styles.statCard}>
-      <span style={styles.statLabel}>{label}</span>
+      <div style={{ ...styles.statLabel, display: 'flex', alignItems: 'center' }}>{label}</div>
       <span style={styles.statValue}>{value}</span>
       {sublabel && <span style={styles.statSublabel}>{sublabel}</span>}
       {progress != null && (
@@ -433,10 +745,20 @@ function StatCard({ label, value, sublabel, progress }) {
   );
 }
 
-function BotStat({ label, value }) {
+function BotStat({ label, value, tooltip, tooltipId, tooltipStates, setTooltipStates }) {
   return (
     <div style={styles.botStatItem}>
-      <span style={{ fontSize: '12px', color: '#6b7280' }}>{label}</span>
+      <span style={{ fontSize: '12px', color: '#6b7280', display: 'flex', alignItems: 'center' }}>
+        {label}
+        {tooltip && (
+          <InfoTooltip
+            id={tooltipId}
+            text={tooltip}
+            tooltipStates={tooltipStates}
+            setTooltipStates={setTooltipStates}
+          />
+        )}
+      </span>
       <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{value}</span>
     </div>
   );
