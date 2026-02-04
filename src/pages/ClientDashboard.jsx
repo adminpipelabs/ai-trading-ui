@@ -213,6 +213,8 @@ export default function ClientDashboard() {
             onRefresh={fetchData}
             tooltipStates={tooltipStates}
             setTooltipStates={setTooltipStates}
+            selectedBotType={selectedBotType}
+            setSelectedBotType={setSelectedBotType}
           />
         ) : activeTab === 'settings' ? (
           <SettingsTab
@@ -293,7 +295,7 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 }
 
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates }) {
+function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType }) {
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
