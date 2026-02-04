@@ -381,19 +381,28 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
         <div style={styles.warningBanner}>
           <div>
             <strong style={{ color: '#92400e' }}>
-              ⚠️ Your bot is inactive — connect a wallet to activate it
+              ⚠️ Connect your wallet to activate your bots
             </strong>
             <p style={{ color: '#a16207', margin: '4px 0 0', fontSize: '14px' }}>
-              Your {bot?.bot_type === 'volume' ? 'Volume' : bot?.bot_type === 'spread' ? 'Spread' : 'Trading'} Bot needs a funded 
-              wallet to start trading. Connect your wallet's private key below — it's 
-              encrypted with AES-256 and never visible to anyone.
+              Your bots are ready but need a connected wallet to start trading. Click below to connect your wallet's 
+              private key — it's encrypted with AES-256 and never visible to anyone. Once connected, all your bots 
+              can start trading.
             </p>
             <p style={{ color: '#a16207', margin: '8px 0 0', fontSize: '13px' }}>
-              <strong>Steps:</strong> Connect wallet key → Fund wallet with SOL → Start bot
+              <strong>Next steps:</strong> Connect wallet → Fund with SOL → Start your bots
             </p>
           </div>
-          <button onClick={() => setShowSetup(true)} style={styles.connectButton}>
-            Connect Wallet Key
+          <button 
+            onClick={() => {
+              // If they have bots but no key, they need to connect a key
+              // The setup wizard will create a new bot AND connect the key
+              // So we let them choose bot type (or they can just connect key to existing bots)
+              setShowSetup(true);
+              setSelectedBotType(null); // Let them choose bot type or just connect key
+            }} 
+            style={styles.connectButton}
+          >
+            Connect Wallet to Activate Bots
           </button>
         </div>
       )}
@@ -439,14 +448,43 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
       {!keyStatus?.has_key && bots.length === 0 && (
         <div style={styles.warningBanner}>
           <div>
-            <strong style={{ color: '#92400e' }}>⚠️ Connect your trading wallet</strong>
+            <strong style={{ color: '#92400e' }}>⚠️ Create your first trading bot</strong>
             <p style={{ color: '#a16207', margin: '4px 0 0', fontSize: '14px' }}>
-              Connect a dedicated trading wallet for your bot to use. We recommend creating a new wallet specifically for this — don't use your main wallet. Your private key is encrypted with AES-256 before storage and is never visible to anyone, including our team. You can rotate or revoke your key at any time from Settings.
+              Choose a bot type below to get started. You'll connect your wallet's private key during setup — 
+              it's encrypted with AES-256 and never visible to anyone. We recommend using a dedicated trading wallet, 
+              not your main wallet.
             </p>
           </div>
-          <button onClick={() => setShowSetup(true)} style={styles.connectButton}>
-            Connect Wallet Key
-          </button>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => {
+                setSelectedBotType('volume');
+                setShowSetup(true);
+              }} 
+              style={{
+                ...styles.connectButton,
+                backgroundColor: '#0d9488',
+                fontSize: '14px',
+                padding: '12px 24px',
+              }}
+            >
+              📊 Create Volume Bot
+            </button>
+            <button 
+              onClick={() => {
+                setSelectedBotType('spread');
+                setShowSetup(true);
+              }} 
+              style={{
+                ...styles.connectButton,
+                backgroundColor: '#6366f1',
+                fontSize: '14px',
+                padding: '12px 24px',
+              }}
+            >
+              📈 Create Spread Bot
+            </button>
+          </div>
         </div>
       )}
 
