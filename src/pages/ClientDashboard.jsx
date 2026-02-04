@@ -23,6 +23,7 @@ export default function ClientDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [tooltipStates, setTooltipStates] = useState({});
   const [managementMode, setManagementMode] = useState('unset');
+  const [selectedBotType, setSelectedBotType] = useState(null);
 
   useEffect(() => {
     if (!user) return;
