@@ -38,108 +38,93 @@ export default function ClientDashboard() {
     if (!user) return;
     
     setLoading(true);
+    let clientData = null;
+    
     try {
       // Get client info - use wallet-based endpoint instead of fetching all clients
-      try {
-        const walletAddress = user.wallet_address || user.wallet;
-        if (walletAddress) {
-          try {
-            const clientRes = await fetch(`${API_BASE}/clients/by-wallet/${walletAddress}`, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token')}`,
-                'X-Wallet-Address': walletAddress,
-              },
+      const walletAddress = user.wallet_address || user.wallet;
+      if (walletAddress) {
+        try {
+          const clientRes = await fetch(`${API_BASE}/clients/by-wallet/${walletAddress}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token')}`,
+              'X-Wallet-Address': walletAddress,
+            },
+          });
+          if (clientRes.ok) {
+            clientData = await clientRes.json();
+            setClient({
+              id: clientData.client_id,
+              name: clientData.name,
+              account_identifier: clientData.account_identifier,
+              wallet_address: walletAddress,
+              wallets: clientData.wallets || [],
+              role: clientData.role || 'client',
             });
-            if (clientRes.ok) {
-              const clientData = await clientRes.json();
-              setClient({
-                id: clientData.client_id,
-                name: clientData.name,
-                account_identifier: clientData.account_identifier,
-                wallet_address: walletAddress,
-                wallets: clientData.wallets || [],
-                role: clientData.role || 'client',
-              });
-            } else {
-              // Fallback: try adminAPI if wallet endpoint fails
-              const { adminAPI } = await import('../services/api');
-              const clients = await adminAPI.getClients();
-              const foundClient = clients.find(c => 
-                c.wallet_address?.toLowerCase() === walletAddress.toLowerCase() ||
-                c.account_identifier === user.account_identifier ||
-                c.wallets?.some(w => w.address?.toLowerCase() === walletAddress.toLowerCase())
-              );
-              setClient(foundClient || user);
-            }
-          } catch (walletError) {
-            console.warn('Wallet-based client fetch failed, trying adminAPI:', walletError);
-            // Fallback to adminAPI
-            const { adminAPI } = await import('../services/api');
-            const clients = await adminAPI.getClients();
-            const foundClient = clients.find(c => 
-              c.wallet_address?.toLowerCase() === walletAddress.toLowerCase() ||
-              c.account_identifier === user.account_identifier ||
-              c.wallets?.some(w => w.address?.toLowerCase() === walletAddress.toLowerCase())
-            );
-            setClient(foundClient || user);
+          } else {
+            console.warn('Client fetch failed:', clientRes.status, clientRes.statusText);
+            // Fallback: use user data
+            setClient(user);
+            clientData = { account_identifier: user.account_identifier };
           }
-        } else {
+        } catch (walletError) {
+          console.error('Wallet-based client fetch error:', walletError);
           setClient(user);
+          clientData = { account_identifier: user.account_identifier };
         }
-      } catch (e) {
-        console.error('Failed to fetch client:', e);
+      } else {
         setClient(user);
+        clientData = { account_identifier: user.account_identifier };
       }
 
-      // Fetch client's bots
-      const accountId = user.account_identifier || client?.account_identifier;
+      // Fetch client's bots - independent error handling
+      const accountId = clientData?.account_identifier || user.account_identifier || client?.account_identifier;
       if (accountId) {
-        const botsData = await tradingBridge.getBots(accountId);
-        const botsList = Array.isArray(botsData) ? botsData : (botsData.bots || []);
-        // Filter to only this client's bots
-        const clientId = client?.id || user.id;
-        setBots(botsList.filter(bot => 
-          bot.client_id === clientId || 
-          bot.account === accountId
-        ));
+        try {
+          const botsData = await tradingBridge.getBots(accountId);
+          const botsList = Array.isArray(botsData) ? botsData : (botsData.bots || []);
+          // Filter to only this client's bots
+          const clientId = clientData?.client_id || client?.id || user.id;
+          setBots(botsList.filter(bot => 
+            bot.client_id === clientId || 
+            bot.account === accountId
+          ));
+        } catch (botsError) {
+          console.error('Failed to fetch bots:', botsError);
+          setBots([]); // Don't hang - show empty state
+        }
+      } else {
+        setBots([]);
       }
 
-      // Fetch key status
-      const clientId = client?.id || user.id;
+      // Fetch key status - independent error handling (optional, don't block)
+      const clientId = clientData?.client_id || client?.id || user.id;
       if (clientId) {
         try {
           const status = await tradingBridge.getClientKeyStatus(clientId);
           setKeyStatus(status);
         } catch (e) {
           console.error('Failed to fetch key status:', e);
-          setKeyStatus({ has_key: false });
+          setKeyStatus({ has_key: false }); // Safe default
         }
+      } else {
+        setKeyStatus({ has_key: false });
       }
 
-      // Fetch wallet balance if bot exists
-      if (bots.length > 0 && bots[0].id) {
-        try {
-          // Try to get balance from health endpoint or bot endpoint
-          const botId = bots[0].id;
-          const balanceRes = await fetch(`${API_BASE}/bots/${botId}/balance/solana`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token')}`,
-              'X-Wallet-Address': user.wallet_address || user.wallet,
-            },
-          });
-          if (balanceRes.ok) {
-            const balanceData = await balanceRes.json();
-            setWalletBalance(balanceData);
-          }
-        } catch (e) {
-          console.error('Failed to fetch balance:', e);
-          setWalletBalance(null);
-        }
-      }
+      // Fetch wallet balance if bot exists - independent error handling (optional)
+      // We'll fetch balance after bots are loaded (handled separately or via useEffect)
+      // For now, set to null - balance can be fetched later when needed
+      setWalletBalance(null);
     } catch (err) {
       console.error('Failed to fetch data:', err);
+      // Ensure we have safe defaults
+      if (!client) setClient(user);
+      if (bots.length === 0) setBots([]);
+      if (!keyStatus) setKeyStatus({ has_key: false });
+    } finally {
+      // CRITICAL: Always clear loading state, even if API calls fail
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleStartStop = async (botId, action) => {
