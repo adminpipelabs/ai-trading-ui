@@ -389,7 +389,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
               can start trading.
             </p>
             <p style={{ color: '#a16207', margin: '8px 0 0', fontSize: '13px' }}>
-              <strong>Next steps:</strong> Connect wallet → Fund with SOL → Start your bots
+              <strong>Next steps:</strong> Connect wallet → Fund wallet → Start your bots
             </p>
           </div>
           <button 
@@ -422,7 +422,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
             <strong style={{ color: '#1e40af' }}>✅ Wallet connected</strong>
             <p style={{ color: '#1e3a8a', fontSize: '14px', marginTop: '4px' }}>
               {bot?.health_message?.includes('NO FUNDS') || bot?.health_message?.includes('NO GAS')
-                ? 'Your wallet needs more funds. Top up your SOL balance and click Start Bot.'
+                ? 'Your wallet needs more funds. Fund your wallet and click Start Bot.'
                 : bot?.health_message || 'Click Start Bot to begin trading.'}
             </p>
           </div>
