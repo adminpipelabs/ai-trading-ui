@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BotList } from '../../components/BotList';
+import { EditClientModal } from './EditClientModal';
 import { 
   Send, Bot, Users, Plus, ArrowLeft, Search, UserPlus, Key, Mail, Building, 
   Clock, Wallet, Edit2, Trash2, AlertCircle, CheckCircle2, X, Eye, EyeOff, 
@@ -468,21 +469,45 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               {/* Contact Info */}
               <div>
-                <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                  Contact Info
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
+                    Contact Info
+                  </div>
                 </div>
                 <div className="space-y-2 text-sm">
+                  {/* Primary Wallet (Login Wallet) */}
                   <div className="flex items-center gap-3">
                     <Wallet size={14} style={{ color: theme.textMuted }} />
-                    <span className="font-mono text-xs" style={{ color: theme.textPrimary }}>
-                      {selectedClient.wallet_address || selectedClient.email || 'No wallet'}
+                    <span className="font-mono text-xs flex-1" style={{ color: theme.textPrimary }}>
+                      {selectedClient.wallet_address || selectedClient.wallets?.[0]?.address || 'No wallet'}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: theme.accentLight, color: theme.accent }}>
+                      Primary
                     </span>
                   </div>
-                  {selectedClient.email && selectedClient.wallet_address && (
-                  <div className="flex items-center gap-3">
-                    <Mail size={14} style={{ color: theme.textMuted }} />
+                  
+                  {/* Additional Wallets */}
+                  {selectedClient.wallets && selectedClient.wallets.length > 1 && (
+                    <div className="space-y-1.5 mt-2">
+                      {selectedClient.wallets.slice(1).map((wallet, idx) => (
+                        <div key={wallet.id || idx} className="flex items-center gap-3 pl-5">
+                          <Wallet size={12} style={{ color: theme.textMuted }} />
+                          <span className="font-mono text-xs flex-1" style={{ color: theme.textSecondary }}>
+                            {wallet.address}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                            {wallet.chain || 'unknown'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {selectedClient.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail size={14} style={{ color: theme.textMuted }} />
                       <span style={{ color: theme.textMuted }}>{selectedClient.email}</span>
-                  </div>
+                    </div>
                   )}
                   {selectedClient.phone && (
                     <div className="flex items-center gap-3">

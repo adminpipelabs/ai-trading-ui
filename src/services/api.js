@@ -109,10 +109,39 @@ export const adminAPI = {
   },
 
   async updateClient(clientId, data) {
-    // Use trading-bridge for updates
+    // Use trading-bridge for updates (PUT endpoint)
     return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  async addClientWallet(clientId, walletAddress, chain) {
+    // Add a wallet to a client
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/wallet`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        chain: chain || (walletAddress.startsWith('0x') ? 'evm' : 'solana'),
+        address: walletAddress
+      }),
+    });
+  },
+
+  async updateClientWallet(clientId, walletId, walletAddress, chain) {
+    // Update an existing wallet
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/wallet/${walletId}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        chain: chain || (walletAddress.startsWith('0x') ? 'evm' : 'solana'),
+        address: walletAddress
+      }),
+    });
+  },
+
+  async deleteClientWallet(clientId, walletId) {
+    // Delete a wallet from a client
+    return apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}/wallet/${walletId}`, {
+      method: 'DELETE',
     });
   },
 
