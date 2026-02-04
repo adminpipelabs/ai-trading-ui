@@ -341,7 +341,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
               Wallet Balance
               <InfoTooltip
                 id="wallet-balance"
-                text="This is the balance of the wallet your bot trades from. Make sure it has enough SOL for gas fees and enough of your token (or SOL) to execute trades at your configured sizes. Low balance? Your bot will stop automatically and you'll see a 'Stopped — NO FUNDS' status."
+                text="This is the balance of the wallet your bot trades from. Make sure it has enough native token (SOL for Solana, ETH for Ethereum, etc.) for gas fees and enough trading capital to execute trades at your configured sizes. Low balance? Your bot will stop automatically and you'll see a 'Stopped — NO FUNDS' status."
                 tooltipStates={tooltipStates}
                 setTooltipStates={setTooltipStates}
               />
@@ -946,10 +946,10 @@ function SettingsTab({ user, client, keyStatus, onRefresh, managementMode, setMa
           <p style={{ marginBottom: '12px' }}>
             Your trading wallet needs:
           </p>
-          <ul style={{ marginLeft: '20px', marginBottom: '16px' }}>
-            <li style={{ marginBottom: '8px' }}><strong>SOL for gas fees</strong> (at least 0.05 SOL recommended)</li>
-            <li style={{ marginBottom: '8px' }}><strong>SOL or your token</strong> for actual trades (depends on your daily volume target)</li>
-          </ul>
+            <ul style={{ marginLeft: '20px', marginBottom: '16px' }}>
+              <li style={{ marginBottom: '8px' }}><strong>Native token for gas fees</strong> (SOL for Solana, ETH for Ethereum, etc.)</li>
+              <li style={{ marginBottom: '8px' }}><strong>Trading capital</strong> — native token or your trading token for actual trades (depends on your daily volume target)</li>
+            </ul>
           <p style={{ marginBottom: '12px', fontSize: '13px', color: '#6b7280', fontStyle: 'italic' }}>
             Example: For a $5,000/day volume target with $10-$25 trades, your wallet should have at least $200-$500 in tradeable assets to run comfortably through the day.
           </p>
@@ -1001,8 +1001,8 @@ function HelpTab() {
       a: "It means no trades have been placed in 30+ minutes. This can be normal if your interval settings are long, or it might indicate an issue. If it persists, check your wallet balance."
     },
     {
-      q: "How much SOL do I need for gas?",
-      a: "Each trade costs roughly 0.005 SOL in gas fees. We recommend keeping at least 0.05 SOL for gas. The bot will stop if gas runs too low."
+      q: "How much do I need for gas fees?",
+      a: "Gas fees vary by chain (SOL for Solana, ETH/Gwei for Ethereum, etc.). We recommend keeping enough native token for several days of trading. The bot will stop automatically if gas runs too low."
     },
     {
       q: "Can Pipe Labs access my funds?",
