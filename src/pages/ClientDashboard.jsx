@@ -17,6 +17,7 @@ export default function ClientDashboard() {
   const [walletBalance, setWalletBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
+  const [selectedBotType, setSelectedBotType] = useState(null);
   const [editingBot, setEditingBot] = useState(null);
   const [client, setClient] = useState(null);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -450,18 +451,31 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
       {/* Bot Setup Wizard */}
       {showSetup && (
         <div style={styles.section}>
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
-              onClick={() => setShowSetup(false)}
+              onClick={() => {
+                setShowSetup(false);
+                setSelectedBotType(null);
+              }}
               style={styles.backButton}
             >
               ← Back
             </button>
+            {selectedBotType && (
+              <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600 }}>
+                Setting up: {selectedBotType === 'volume' ? 'Volume Bot' : 'Spread Bot'}
+              </span>
+            )}
           </div>
           <ClientBotSetup
             clientId={clientId}
             chain={clientChain}
-            onBotCreated={() => { setShowSetup(false); onRefresh(); }}
+            initialBotType={selectedBotType}
+            onBotCreated={() => { 
+              setShowSetup(false); 
+              setSelectedBotType(null);
+              onRefresh(); 
+            }}
           />
         </div>
       )}
@@ -473,9 +487,36 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
             Your Bots ({bots.length})
           </h2>
           {keyStatus?.has_key && (
-            <button onClick={() => setShowSetup(true)} style={styles.startButton}>
-              + Add Bot
-            </button>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => {
+                  setSelectedBotType('volume');
+                  setShowSetup(true);
+                }} 
+                style={{
+                  ...styles.startButton,
+                  backgroundColor: '#0d9488',
+                  fontSize: '13px',
+                  padding: '8px 16px',
+                }}
+              >
+                + Add Volume Bot
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedBotType('spread');
+                  setShowSetup(true);
+                }} 
+                style={{
+                  ...styles.startButton,
+                  backgroundColor: '#6366f1',
+                  fontSize: '13px',
+                  padding: '8px 16px',
+                }}
+              >
+                + Add Spread Bot
+              </button>
+            </div>
           )}
         </div>
       )}

@@ -51,9 +51,10 @@ const secondaryBtn = {
   cursor: 'pointer',
 };
 
-export default function ClientBotSetup({ clientId, chain, onBotCreated }) {
-  const [step, setStep] = useState(1); // 1: select type, 2: enter key, 3: configure, 4: confirm
-  const [botType, setBotType] = useState(null);
+export default function ClientBotSetup({ clientId, chain, onBotCreated, initialBotType = null }) {
+  // If initialBotType is provided, skip step 1 (type selection) and start at step 2 (enter key)
+  const [step, setStep] = useState(initialBotType ? 2 : 1); // 1: select type, 2: enter key, 3: configure, 4: confirm
+  const [botType, setBotType] = useState(initialBotType);
   const [privateKey, setPrivateKey] = useState('');
   const [config, setConfig] = useState({});
   const [loading, setLoading] = useState(false);
