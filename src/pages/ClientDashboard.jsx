@@ -466,8 +466,118 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
         </div>
       )}
 
-      {/* Bot Detail */}
-      {bot && !showSetup && (
+      {/* Bot List Header - Show when bots exist */}
+      {bots.length > 0 && !showSetup && (
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>
+            Your Bots ({bots.length})
+          </h2>
+          {keyStatus?.has_key && (
+            <button onClick={() => setShowSetup(true)} style={styles.startButton}>
+              + Add Bot
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Bot List - Show all bots */}
+      {bots.length > 0 && !showSetup && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {bots.map((botItem) => {
+            const volumeToday = botItem?.stats?.volume_today || 0;
+            const volumeTarget = botItem?.config?.daily_volume_usd || 5000;
+            const volumePercent = volumeTarget > 0 ? Math.min((volumeToday / volumeTarget) * 100, 100) : 0;
+            
+            return (
+              <div key={botItem.id} style={styles.section}>
+                <div style={styles.sectionHeader}>
+                  <div>
+                    <h3 style={styles.botName}>{botItem.name}</h3>
+                    <span style={styles.botMeta}>
+                      {botItem.bot_type === 'volume' ? 'Volume Bot' : 
+                       botItem.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'}
+                      {' · '}
+                      {botItem.connector || 'Jupiter'} ({botItem.chain || 'Solana'})
+                      {botItem.pair && ` · ${botItem.pair}`}
+                    </span>
+                  </div>
+                  <BotHealthBadge
+                    status={botItem.status}
+                    healthStatus={botItem.health_status}
+                    healthMessage={botItem.health_message}
+                    lastTradeTime={botItem.last_trade_time}
+                    botId={botItem.id}
+                    onRefresh={onRefresh}
+                  />
+                </div>
+
+                <div style={styles.botCard}>
+                  <div style={styles.botGrid}>
+                    <BotStat 
+                      label="Daily Target" 
+                      value={`$${(botItem.config?.daily_volume_usd || 5000).toLocaleString()}`}
+                      tooltip="Your daily volume target is the total USD value of trades your bot aims to complete each day."
+                      tooltipId={`daily-target-${botItem.id}`}
+                      tooltipStates={tooltipStates}
+                      setTooltipStates={setTooltipStates}
+                    />
+                    <BotStat label="Progress" value={`${volumePercent.toFixed(0)}%`} />
+                    <BotStat 
+                      label="Trade Size" 
+                      value={`$${botItem.config?.min_trade_usd || 10} – $${botItem.config?.max_trade_usd || 25}`}
+                      tooltip="Each individual trade will be a random amount between your min and max trade size."
+                      tooltipId={`trade-size-${botItem.id}`}
+                      tooltipStates={tooltipStates}
+                      setTooltipStates={setTooltipStates}
+                    />
+                    <BotStat 
+                      label="Interval" 
+                      value={`${Math.round((botItem.config?.interval_min_seconds || 900) / 60)}–${Math.round((botItem.config?.interval_max_seconds || 2700) / 60)} min`}
+                      tooltip="Time between trades."
+                      tooltipId={`interval-${botItem.id}`}
+                      tooltipStates={tooltipStates}
+                      setTooltipStates={setTooltipStates}
+                    />
+                    <BotStat label="Last Trade" value={botItem.last_trade_time ? new Date(botItem.last_trade_time).toLocaleString() : 'None yet'} />
+                    <BotStat label="Trades Today" value={botItem.stats?.trades_today || '0'} />
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div style={styles.progressContainer}>
+                    <div style={styles.progressBar}>
+                      <div style={{ ...styles.progressFill, width: `${volumePercent}%` }} />
+                    </div>
+                    <span style={styles.progressLabel}>${volumeToday.toLocaleString()} / ${volumeTarget.toLocaleString()}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={styles.botActions}>
+                    {!keyStatus?.has_key ? (
+                      <button onClick={() => setShowSetup(true)} style={styles.startButton}>
+                        🔑 Connect Wallet to Activate
+                      </button>
+                    ) : botItem.status === 'running' ? (
+                      <button onClick={() => onStartStop(botItem.id, 'stop')} style={styles.stopButton}>
+                        ⏹ Stop Bot
+                      </button>
+                    ) : (
+                      <button onClick={() => onStartStop(botItem.id, 'start')} style={styles.startButton}>
+                        ▶ Start Bot
+                      </button>
+                    )}
+                    <button onClick={() => setEditingBot(botItem)} style={styles.editButton}>
+                      ✏️ Edit Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Legacy: Single Bot Detail (kept for backward compatibility) */}
+      {bot && bots.length === 1 && !showSetup && false && (
         <div style={styles.section}>
           <div style={styles.sectionHeader}>
             <h2 style={styles.sectionTitle}>Your Bot</h2>
