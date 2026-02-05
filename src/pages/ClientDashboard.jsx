@@ -806,17 +806,17 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
                 <button 
                   onClick={() => onStartStop(bot.id, 'stop')} 
                   style={styles.stopButton}
-                  disabled={loading}
+                  disabled={botActionLoading}
                 >
-                  {loading ? '⏳ Stopping...' : '⏹ Stop Bot'}
+                  {botActionLoading ? '⏳ Stopping...' : '⏹ Stop Bot'}
                 </button>
               ) : (
                 <button 
                   onClick={() => onStartStop(bot.id, 'start')} 
                   style={styles.startButton}
-                  disabled={loading}
+                  disabled={botActionLoading}
                 >
-                  {loading ? '⏳ Starting...' : '▶ Start Bot'}
+                  {botActionLoading ? '⏳ Starting...' : '▶ Start Bot'}
                 </button>
               )}
               <button onClick={() => setEditingBot(bot)} style={styles.editButton}>
