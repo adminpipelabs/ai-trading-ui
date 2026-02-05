@@ -278,6 +278,13 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
             type="password"
             value={privateKey}
             onChange={e => setPrivateKey(e.target.value)}
+            onBlur={e => {
+              // Auto-trim whitespace when user leaves the field
+              const trimmed = e.target.value.trim();
+              if (trimmed !== e.target.value) {
+                setPrivateKey(trimmed);
+              }
+            }}
             placeholder={chain === 'solana' ? 'Enter Solana private key...' : '0x...'}
             style={{
               width: '100%',
@@ -289,6 +296,9 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
               fontFamily: 'monospace',
             }}
           />
+          <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            💡 Tip: Extra spaces will be automatically removed when you continue.
+          </p>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
             <button onClick={() => setStep(1)} style={secondaryBtn}>Back</button>
