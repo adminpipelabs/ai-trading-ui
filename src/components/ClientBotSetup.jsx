@@ -88,10 +88,14 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
   };
 
   const handleKeySubmit = () => {
-    if (!privateKey.trim()) {
+    // Auto-trim the private key to remove any leading/trailing whitespace
+    const trimmedKey = privateKey.trim();
+    if (!trimmedKey) {
       setError('Private key is required');
       return;
     }
+    // Update state with trimmed key
+    setPrivateKey(trimmedKey);
     setError(null);
     setStep(3);
   };
