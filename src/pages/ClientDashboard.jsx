@@ -697,18 +697,24 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
 
                   {/* Actions */}
                   <div style={styles.botActions}>
-                    {/* Only show Connect Wallet button if banner is NOT showing (i.e., key is connected) */}
-                    {keyStatus?.has_key ? (
-                      botItem.status === 'running' ? (
-                        <button onClick={() => onStartStop(botItem.id, 'stop')} style={styles.stopButton}>
-                          ⏹ Stop Bot
-                        </button>
-                      ) : (
-                        <button onClick={() => onStartStop(botItem.id, 'start')} style={styles.startButton}>
-                          ▶ Start Bot
-                        </button>
-                      )
-                    ) : null}
+                    {/* Always show Start/Stop button based on bot status */}
+                    {botItem.status === 'running' ? (
+                      <button 
+                        onClick={() => onStartStop(botItem.id, 'stop')} 
+                        style={styles.stopButton}
+                        disabled={loading}
+                      >
+                        {loading ? '⏳ Stopping...' : '⏹ Stop Bot'}
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => onStartStop(botItem.id, 'start')} 
+                        style={styles.startButton}
+                        disabled={loading}
+                      >
+                        {loading ? '⏳ Starting...' : '▶ Start Bot'}
+                      </button>
+                    )}
                     <button onClick={() => setEditingBot(botItem)} style={styles.editButton}>
                       ✏️ Edit Settings
                     </button>
@@ -789,17 +795,22 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
 
             {/* Actions — NO DELETE (admin only) */}
             <div style={styles.botActions}>
-              {!keyStatus?.has_key ? (
-                <button onClick={() => setShowSetup(true)} style={styles.startButton}>
-                  🔑 Connect Wallet to Activate
-                </button>
-              ) : bot.status === 'running' ? (
-                <button onClick={() => onStartStop(bot.id, 'stop')} style={styles.stopButton}>
-                  ⏹ Stop Bot
+              {/* Always show Start/Stop button based on bot status */}
+              {bot.status === 'running' ? (
+                <button 
+                  onClick={() => onStartStop(bot.id, 'stop')} 
+                  style={styles.stopButton}
+                  disabled={loading}
+                >
+                  {loading ? '⏳ Stopping...' : '⏹ Stop Bot'}
                 </button>
               ) : (
-                <button onClick={() => onStartStop(bot.id, 'start')} style={styles.startButton}>
-                  ▶ Start Bot
+                <button 
+                  onClick={() => onStartStop(bot.id, 'start')} 
+                  style={styles.startButton}
+                  disabled={loading}
+                >
+                  {loading ? '⏳ Starting...' : '▶ Start Bot'}
                 </button>
               )}
               <button onClick={() => setEditingBot(bot)} style={styles.editButton}>
@@ -1606,12 +1617,14 @@ const styles = {
   // Actions
   botActions: {
     display: 'flex',
+    flexDirection: 'row',
     gap: '12px',
     paddingTop: '16px',
     borderTop: '1px solid #e5e7eb',
   },
   startButton: {
-    padding: '10px 24px',
+    padding: '12px 24px', // Increased for mobile touch targets
+    minHeight: '44px', // iOS/Android minimum touch target
     borderRadius: '8px',
     border: 'none',
     backgroundColor: '#0d9488',
@@ -1619,9 +1632,15 @@ const styles = {
     fontWeight: 600,
     fontSize: '14px',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'opacity 0.2s',
+    WebkitTapHighlightColor: 'transparent', // Remove mobile tap highlight
   },
   stopButton: {
-    padding: '10px 24px',
+    padding: '12px 24px', // Increased for mobile touch targets
+    minHeight: '44px', // iOS/Android minimum touch target
     borderRadius: '8px',
     border: 'none',
     backgroundColor: '#ef4444',
@@ -1629,9 +1648,15 @@ const styles = {
     fontWeight: 600,
     fontSize: '14px',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'opacity 0.2s',
+    WebkitTapHighlightColor: 'transparent', // Remove mobile tap highlight
   },
   editButton: {
-    padding: '10px 24px',
+    padding: '12px 24px', // Increased for mobile touch targets
+    minHeight: '44px', // iOS/Android minimum touch target
     borderRadius: '8px',
     border: '1px solid #d1d5db',
     backgroundColor: '#fff',
@@ -1639,6 +1664,11 @@ const styles = {
     fontWeight: 600,
     fontSize: '14px',
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'opacity 0.2s',
+    WebkitTapHighlightColor: 'transparent', // Remove mobile tap highlight
   },
   backButton: {
     padding: '8px 16px',
