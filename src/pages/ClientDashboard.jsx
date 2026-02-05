@@ -23,6 +23,7 @@ export default function ClientDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [tooltipStates, setTooltipStates] = useState({});
   const [managementMode, setManagementMode] = useState('unset');
+  const [botActionLoading, setBotActionLoading] = useState(false); // Loading state for bot start/stop actions
 
   useEffect(() => {
     if (!user) return;
@@ -132,16 +133,20 @@ export default function ClientDashboard() {
   };
 
   const handleStartStop = async (botId, action) => {
+    if (botActionLoading) return; // Prevent multiple clicks
     try {
+      setBotActionLoading(true);
       if (action === 'start') {
         await tradingBridge.startBot(botId);
       } else {
         await tradingBridge.stopBot(botId);
       }
-      fetchData();
+      await fetchData(); // Refresh bot status
     } catch (err) {
       console.error(`Failed to ${action} bot:`, err);
       alert(`Failed to ${action} bot: ${err.message || 'Unknown error'}`);
+    } finally {
+      setBotActionLoading(false);
     }
   };
 
@@ -215,6 +220,7 @@ export default function ClientDashboard() {
             setTooltipStates={setTooltipStates}
             selectedBotType={selectedBotType}
             setSelectedBotType={setSelectedBotType}
+            botActionLoading={botActionLoading}
           />
         ) : activeTab === 'settings' ? (
           <SettingsTab
@@ -295,7 +301,7 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 }
 
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType }) {
+function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading }) {
   const [dashboardSubTab, setDashboardSubTab] = useState('overview');
   const [balances, setBalances] = useState([]);
   const [trades, setTrades] = useState([]);
@@ -702,17 +708,17 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
                       <button 
                         onClick={() => onStartStop(botItem.id, 'stop')} 
                         style={styles.stopButton}
-                        disabled={loading}
+                        disabled={botActionLoading}
                       >
-                        {loading ? '⏳ Stopping...' : '⏹ Stop Bot'}
+                        {botActionLoading ? '⏳ Stopping...' : '⏹ Stop Bot'}
                       </button>
                     ) : (
                       <button 
                         onClick={() => onStartStop(botItem.id, 'start')} 
                         style={styles.startButton}
-                        disabled={loading}
+                        disabled={botActionLoading}
                       >
-                        {loading ? '⏳ Starting...' : '▶ Start Bot'}
+                        {botActionLoading ? '⏳ Starting...' : '▶ Start Bot'}
                       </button>
                     )}
                     <button onClick={() => setEditingBot(botItem)} style={styles.editButton}>
