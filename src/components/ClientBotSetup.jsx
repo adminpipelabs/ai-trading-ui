@@ -120,6 +120,14 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
       return;
     }
     
+    // Auto-trim the private key to remove any leading/trailing whitespace
+    const trimmedPrivateKey = privateKey.trim();
+    if (!trimmedPrivateKey) {
+      setError('Private key is required');
+      setLoading(false);
+      return;
+    }
+    
     try {
       // Get wallet address from private key (for Solana, derive address)
       // For now, we'll let the backend handle this
@@ -131,7 +139,7 @@ export default function ClientBotSetup({ clientId, chain, onBotCreated, initialB
         },
         body: JSON.stringify({
           bot_type: botType,
-          private_key: privateKey,
+          private_key: trimmedPrivateKey, // Use trimmed key to prevent whitespace errors
           config: config,
         }),
       });
