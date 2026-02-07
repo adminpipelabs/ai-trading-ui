@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import BotHealthBadge from '../components/BotHealthBadge';
 import ClientBotSetup from '../components/ClientBotSetup';
+import BotSetupWizard from '../components/BotSetupWizard';
 import KeyManagement from '../components/KeyManagement';
 import EditBotModal from '../components/EditBotModal';
 import WelcomeModal from '../components/WelcomeModal';
@@ -62,6 +63,7 @@ export default function ClientDashboard() {
                 account_identifier: clientData.account_identifier,
                 wallet_address: walletAddress,
                 wallets: clientData.wallets || [],
+                connectors: clientData.connectors || [],
                 role: clientData.role || 'client',
                 management_mode: clientData.management_mode || 'unset',
               });
@@ -559,33 +561,36 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
         </div>
       )}
 
-      {/* Bot Setup Wizard */}
+      {/* Managed Client Message - Show if managed AND has credentials */}
+      {client?.management_mode === 'managed' && (client?.connectors?.length > 0 || keyStatus?.has_key) && bots.length === 0 && (
+        <div style={{
+          padding: '20px',
+          borderRadius: '12px',
+          backgroundColor: '#f0fdfa',
+          border: '1px solid #0d9488',
+          marginBottom: '24px',
+        }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: '#0d9488' }}>
+            🤝 Your bots are managed by Pipe Labs
+          </h3>
+          <p style={{ fontSize: '14px', color: '#6b7280', margin: 0 }}>
+            Your trading credentials have been configured by our team. Your bots will appear here once they're set up.
+          </p>
+        </div>
+      )}
+
+      {/* Bot Setup Wizard - Only for self-service clients OR managed clients without credentials */}
       {showSetup && (
         <div style={styles.section}>
-          <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <button
-              onClick={() => {
-                setShowSetup(false);
-                setSelectedBotType(null);
-              }}
-              style={styles.backButton}
-            >
-              ← Back
-            </button>
-            {selectedBotType && (
-              <span style={{ fontSize: '14px', color: '#6b7280', fontWeight: 600 }}>
-                Setting up: {selectedBotType === 'volume' ? 'Volume Bot' : 'Spread Bot'}
-              </span>
-            )}
-          </div>
-          <ClientBotSetup
-            clientId={clientId}
-            chain={clientChain}
-            initialBotType={selectedBotType}
-            onBotCreated={() => { 
+          <BotSetupWizard
+            onComplete={(bot) => { 
               setShowSetup(false); 
               setSelectedBotType(null);
               onRefresh(); 
+            }}
+            onCancel={() => {
+              setShowSetup(false);
+              setSelectedBotType(null);
             }}
           />
         </div>
