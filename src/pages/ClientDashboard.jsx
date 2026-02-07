@@ -241,6 +241,7 @@ export default function ClientDashboard() {
             client={client}
             bots={bots}
             keyStatus={keyStatus}
+            exchangeCredentials={exchangeCredentials}
             walletBalance={walletBalance}
             showSetup={showSetup}
             setShowSetup={setShowSetup}
