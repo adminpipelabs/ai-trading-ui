@@ -320,9 +320,23 @@ export const tradingBridge = {
   },
 
   async startBot(botId) {
-    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
-      method: 'POST',
-    });
+    try {
+      console.log('🚀 Starting bot:', botId);
+      console.log('📡 API URL:', `${TRADING_BRIDGE_URL}/bots/${botId}/start`);
+      const result = await apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
+        method: 'POST',
+      });
+      console.log('✅ Start bot response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Start bot error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data
+      });
+      throw error;
+    }
   },
 
   async stopBot(botId) {

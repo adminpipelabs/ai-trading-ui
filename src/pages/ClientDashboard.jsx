@@ -176,7 +176,8 @@ export default function ClientDashboard() {
       await fetchData(); // Refresh bot status
     } catch (err) {
       console.error(`Failed to ${action} bot:`, err);
-      alert(`Failed to ${action} bot: ${err.message || 'Unknown error'}`);
+      const errorMsg = err.message || err.detail || err.data?.detail || 'Unknown error';
+      alert(`Failed to ${action} bot: ${errorMsg}`);
     } finally {
       setBotActionLoading(false);
     }
