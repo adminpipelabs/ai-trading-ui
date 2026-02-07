@@ -15,6 +15,7 @@ export default function ClientDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [bots, setBots] = useState([]);
   const [keyStatus, setKeyStatus] = useState(null);
+  const [exchangeCredentials, setExchangeCredentials] = useState(null); // For CEX bots
   const [walletBalance, setWalletBalance] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSetup, setShowSetup] = useState(false);
@@ -114,8 +115,37 @@ export default function ClientDashboard() {
           console.error('Failed to fetch key status:', e);
           setKeyStatus({ has_key: false }); // Safe default
         }
+        
+        // Fetch exchange credentials for CEX bots (independent, don't block)
+        try {
+          const walletAddress = user?.wallet_address || user?.wallet;
+          const headers = {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token') ? {
+              'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token')}`
+            } : {}),
+            ...(walletAddress ? { 'X-Wallet-Address': walletAddress } : {}),
+            'X-Client-ID': clientId, // Send client_id as fallback
+          };
+          
+          const credsRes = await fetch(`${API_BASE}/exchanges/credentials`, {
+            method: 'GET',
+            headers,
+          });
+          
+          if (credsRes.ok) {
+            const credsData = await credsRes.json();
+            setExchangeCredentials(credsData.exchanges || []);
+          } else {
+            setExchangeCredentials([]); // Safe default
+          }
+        } catch (e) {
+          console.error('Failed to fetch exchange credentials:', e);
+          setExchangeCredentials([]); // Safe default
+        }
       } else {
         setKeyStatus({ has_key: false });
+        setExchangeCredentials([]);
       }
 
       // Fetch wallet balance if bot exists - independent error handling (optional)
@@ -303,7 +333,7 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 }
 
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading }) {
+function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading }) {
   const [dashboardSubTab, setDashboardSubTab] = useState('overview');
   const [balances, setBalances] = useState([]);
   const [trades, setTrades] = useState([]);
@@ -450,35 +480,88 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
       </div>
 
       {/* Contextual Banners Based on Key Status + Bot Status */}
-      {!keyStatus?.has_key && bots.length > 0 && (
-        <div style={styles.warningBanner}>
-          <div>
-            <strong style={{ color: '#92400e' }}>
-              ⚠️ Connect your wallet to activate your bots
-            </strong>
-            <p style={{ color: '#a16207', margin: '4px 0 0', fontSize: '14px' }}>
-              Your bots are ready but need a connected wallet to start trading. Click below to connect your wallet's 
-              private key — it's encrypted with AES-256 and never visible to anyone. Once connected, all your bots 
-              can start trading.
-            </p>
-            <p style={{ color: '#a16207', margin: '8px 0 0', fontSize: '13px' }}>
-              <strong>Next steps:</strong> Connect wallet → Fund wallet → Start your bots
-            </p>
+      {(() => {
+        // Check if we have DEX bots that need trading keys
+        const cexExchanges = ['bitmart', 'coinstore', 'kucoin', 'binance', 'gate', 'gateio', 'mexc', 'bybit', 
+                             'okx', 'kraken', 'coinbase', 'dydx', 'hyperliquid', 'htx', 'huobi', 
+                             'bitget', 'bitstamp', 'bitrue', 'bingx', 'btcmarkets', 'ndax', 'vertex', 'ascendex'];
+        const hasDEXBots = bots.some(bot => {
+          const exchange = (bot.exchange || bot.connector || '').toLowerCase();
+          return !exchange || !cexExchanges.includes(exchange);
+        });
+        const hasCEXBots = bots.some(bot => {
+          const exchange = (bot.exchange || bot.connector || '').toLowerCase();
+          return exchange && cexExchanges.includes(exchange);
+        });
+        
+        // Check if CEX bots have exchange credentials
+        const cexBotsNeedCreds = hasCEXBots && bots.some(bot => {
+          const exchange = (bot.exchange || bot.connector || '').toLowerCase();
+          if (!exchange || !cexExchanges.includes(exchange)) return false;
+          const hasCreds = exchangeCredentials?.some(cred => cred.exchange === exchange);
+          return !hasCreds;
+        });
+        
+        // Show banner only if:
+        // 1. DEX bots exist AND no trading key, OR
+        // 2. CEX bots exist AND missing exchange credentials
+        const shouldShowBanner = bots.length > 0 && (
+          (hasDEXBots && !keyStatus?.has_key) || 
+          cexBotsNeedCreds
+        );
+        
+        if (!shouldShowBanner) return null;
+        
+        // Determine message based on bot types
+        const isCEXOnly = hasCEXBots && !hasDEXBots;
+        const isDEXOnly = hasDEXBots && !hasCEXBots;
+        const isMixed = hasCEXBots && hasDEXBots;
+        
+        let bannerTitle = '⚠️ Connect credentials to activate your bots';
+        let bannerMessage = 'Your bots are ready but need credentials to start trading.';
+        let buttonText = 'Connect Credentials';
+        
+        if (isDEXOnly) {
+          bannerTitle = '⚠️ Connect your wallet to activate your bots';
+          bannerMessage = 'Your bots are ready but need a connected wallet to start trading. Click below to connect your wallet\'s private key — it\'s encrypted with AES-256 and never visible to anyone. Once connected, all your bots can start trading.';
+          buttonText = 'Connect Wallet to Activate Bots';
+        } else if (isCEXOnly) {
+          bannerTitle = '⚠️ Connect exchange API keys to activate your bots';
+          bannerMessage = 'Your bots are ready but need exchange API credentials to start trading. Click below to add your API keys — they\'re encrypted and never visible to anyone.';
+          buttonText = 'Connect API Keys';
+        } else if (isMixed) {
+          bannerTitle = '⚠️ Connect credentials to activate your bots';
+          bannerMessage = 'Your bots are ready but need credentials to start trading. DEX bots need wallet private keys, and CEX bots need exchange API keys.';
+          buttonText = 'Connect Credentials';
+        }
+        
+        return (
+          <div style={styles.warningBanner}>
+            <div>
+              <strong style={{ color: '#92400e' }}>
+                {bannerTitle}
+              </strong>
+              <p style={{ color: '#a16207', margin: '4px 0 0', fontSize: '14px' }}>
+                {bannerMessage}
+              </p>
+              {isDEXOnly && (
+                <p style={{ color: '#a16207', margin: '8px 0 0', fontSize: '13px' }}>
+                  <strong>Next steps:</strong> Connect wallet → Fund wallet → Start your bots
+                </p>
+              )}
+            </div>
+            <button 
+              onClick={() => {
+                setShowSetup(true);
+                setSelectedBotType(null); // Let them choose bot type or just connect credentials
+              }} 
+              style={styles.connectButton}
+            >
+              {buttonText}
+            </button>
           </div>
-          <button 
-            onClick={() => {
-              // If they have bots but no key, they need to connect a key
-              // The setup wizard will create a new bot AND connect the key
-              // So we let them choose bot type (or they can just connect key to existing bots)
-              setShowSetup(true);
-              setSelectedBotType(null); // Let them choose bot type or just connect key
-            }} 
-            style={styles.connectButton}
-          >
-            Connect Wallet to Activate Bots
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {keyStatus?.has_key && bot?.health_status === 'stopped' && (
         <div style={{
@@ -518,7 +601,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
       )}
 
       {/* Show connect banner if no bot exists yet */}
-      {!keyStatus?.has_key && bots.length === 0 && (
+      {bots.length === 0 && (
         <div style={styles.warningBanner}>
           <div>
             <strong style={{ color: '#92400e' }}>⚠️ Create your first trading bot</strong>
