@@ -666,13 +666,22 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
       }
 
       const bot = await botRes.json();
+      
+      console.log('✅ Bot created successfully:', bot);
 
-      // Done!
-      onComplete?.(bot);
+      // Show success message before closing
+      if (bot.success && bot.bot_id) {
+        // Small delay to show success state
+        setTimeout(() => {
+          onComplete?.(bot);
+        }, 500);
+      } else {
+        // If response doesn't have expected format, still call onComplete
+        onComplete?.(bot);
+      }
     } catch (err) {
-      console.error('Bot setup error:', err);
+      console.error('❌ Bot setup error:', err);
       setError(err.message || 'Failed to create bot. Please try again.');
-    } finally {
       setLoading(false);
     }
   };
