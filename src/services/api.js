@@ -46,7 +46,7 @@ async function apiCall(url, options = {}) {
     const fetchOptions = {
       ...options,
       headers,
-      credentials: 'include', // Include cookies for CORS
+      // Don't use credentials: 'include' - it can cause CORS issues if backend doesn't allow it
     };
     
     console.log('📤 Fetch request:', {
