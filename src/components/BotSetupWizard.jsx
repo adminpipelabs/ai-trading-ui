@@ -669,12 +669,14 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
       
       console.log('✅ Bot created successfully:', bot);
 
-      // Show success message before closing
+      // Show success message
       if (bot.success && bot.bot_id) {
-        // Small delay to show success state
+        // Clear any previous errors
+        setError(null);
+        // Show success state briefly before closing
         setTimeout(() => {
           onComplete?.(bot);
-        }, 500);
+        }, 1000); // 1 second delay to show success
       } else {
         // If response doesn't have expected format, still call onComplete
         onComplete?.(bot);
@@ -779,7 +781,7 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
             cursor: canProceed() && !loading ? 'pointer' : 'not-allowed',
           }}
         >
-          {loading ? 'Creating...' : step === 5 ? 'Create & Start Bot' : 'Next →'}
+          {loading ? (step === 5 ? 'Creating Bot...' : 'Processing...') : step === 5 ? 'Create & Start Bot' : 'Next →'}
         </button>
       </div>
     </div>
