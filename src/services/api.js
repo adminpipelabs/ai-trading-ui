@@ -333,10 +333,13 @@ export const tradingBridge = {
   },
 
   async startBot(botId) {
+    const url = `${TRADING_BRIDGE_URL}/bots/${botId}/start`;
+    console.log('🚀 Starting bot:', botId);
+    console.log('📡 API URL:', url);
+    console.log('🔗 TRADING_BRIDGE_URL:', TRADING_BRIDGE_URL);
+    
     try {
-      console.log('🚀 Starting bot:', botId);
-      console.log('📡 API URL:', `${TRADING_BRIDGE_URL}/bots/${botId}/start`);
-      const result = await apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
+      const result = await apiCall(url, {
         method: 'POST',
       });
       console.log('✅ Start bot response:', result);
@@ -346,7 +349,9 @@ export const tradingBridge = {
       console.error('Error details:', {
         message: error.message,
         status: error.status,
-        data: error.data
+        data: error.data,
+        isNetworkError: error.isNetworkError,
+        url: url
       });
       throw error;
     }

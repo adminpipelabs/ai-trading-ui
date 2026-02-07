@@ -25,7 +25,7 @@ export default function ClientDashboard() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [tooltipStates, setTooltipStates] = useState({});
   const [managementMode, setManagementMode] = useState('unset');
-  const [botActionLoading, setBotActionLoading] = useState(false); // Loading state for bot start/stop actions
+  const [botActionLoading, setBotActionLoading] = useState({}); // Loading state per bot ID: { [botId]: true/false }
 
   useEffect(() => {
     if (!user) return;
@@ -165,9 +165,19 @@ export default function ClientDashboard() {
   };
 
   const handleStartStop = async (botId, action) => {
-    if (botActionLoading) return; // Prevent multiple clicks
+    // Prevent double-click on THIS bot only
+    if (botActionLoading[botId]) return;
+    
+    // Set loading state for THIS bot only
+    setBotActionLoading(prev => ({ ...prev, [botId]: true }));
+    
     try {
-      setBotActionLoading(true);
+      // Log URL being called for debugging
+      const url = `${API_BASE}/bots/${botId}/${action}`;
+      console.log(`🚀 ${action === 'start' ? 'Starting' : 'Stopping'} bot:`, botId);
+      console.log('📡 API URL:', url);
+      console.log('🔗 API_BASE:', API_BASE);
+      
       if (action === 'start') {
         await tradingBridge.startBot(botId);
       } else {
@@ -175,11 +185,18 @@ export default function ClientDashboard() {
       }
       await fetchData(); // Refresh bot status
     } catch (err) {
-      console.error(`Failed to ${action} bot:`, err);
+      console.error(`❌ Failed to ${action} bot:`, err);
+      console.error('Error details:', {
+        message: err.message,
+        status: err.status,
+        data: err.data,
+        isNetworkError: err.isNetworkError
+      });
       const errorMsg = err.message || err.detail || err.data?.detail || 'Unknown error';
       alert(`Failed to ${action} bot: ${errorMsg}`);
     } finally {
-      setBotActionLoading(false);
+      // Clear loading state for THIS bot only
+      setBotActionLoading(prev => ({ ...prev, [botId]: false }));
     }
   };
 
@@ -697,17 +714,17 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       <button 
                         onClick={() => onStartStop(botItem.id, 'stop')} 
                         style={styles.stopButton}
-                        disabled={botActionLoading}
+                        disabled={botActionLoading[botItem.id]}
                       >
-                        {botActionLoading ? '⏳ Stopping...' : '⏹ Stop Bot'}
+                        {botActionLoading[botItem.id] ? '⏳ Stopping...' : '⏹ Stop Bot'}
                       </button>
                     ) : (
                       <button 
                         onClick={() => onStartStop(botItem.id, 'start')} 
                         style={styles.startButton}
-                        disabled={botActionLoading}
+                        disabled={botActionLoading[botItem.id]}
                       >
-                        {botActionLoading ? '⏳ Starting...' : '▶ Start Bot'}
+                        {botActionLoading[botItem.id] ? '⏳ Starting...' : '▶ Start Bot'}
                       </button>
                     )}
                     <button onClick={() => setEditingBot(botItem)} style={styles.editButton}>
@@ -795,17 +812,17 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                 <button 
                   onClick={() => onStartStop(bot.id, 'stop')} 
                   style={styles.stopButton}
-                  disabled={botActionLoading}
+                  disabled={botActionLoading[bot.id]}
                 >
-                  {botActionLoading ? '⏳ Stopping...' : '⏹ Stop Bot'}
+                  {botActionLoading[bot.id] ? '⏳ Stopping...' : '⏹ Stop Bot'}
                 </button>
               ) : (
                 <button 
                   onClick={() => onStartStop(bot.id, 'start')} 
                   style={styles.startButton}
-                  disabled={botActionLoading}
+                  disabled={botActionLoading[bot.id]}
                 >
-                  {botActionLoading ? '⏳ Starting...' : '▶ Start Bot'}
+                  {botActionLoading[bot.id] ? '⏳ Starting...' : '▶ Start Bot'}
                 </button>
               )}
               <button onClick={() => setEditingBot(bot)} style={styles.editButton}>
