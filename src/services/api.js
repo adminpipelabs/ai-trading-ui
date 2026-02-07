@@ -50,10 +50,21 @@ async function apiCall(url, options = {}) {
     console.error('❌ Fetch failed (network/CORS error):', {
       url,
       error: fetchError.message,
-      name: fetchError.name
+      name: fetchError.name,
+      stack: fetchError.stack
     });
-    const networkError = new Error(`Network error: ${fetchError.message || 'Failed to connect to server'}`);
+    
+    // Provide more helpful error message
+    let errorMessage = 'Failed to connect to server';
+    if (fetchError.message.includes('Failed to fetch') || fetchError.name === 'TypeError') {
+      errorMessage = `Network error: Cannot reach ${url}. This may be:\n- CORS blocking the request\n- Backend server not responding\n- Network connectivity issue\n\nCheck browser Network tab (F12) for details.`;
+    } else {
+      errorMessage = `Network error: ${fetchError.message}`;
+    }
+    
+    const networkError = new Error(errorMessage);
     networkError.isNetworkError = true;
+    networkError.originalError = fetchError;
     throw networkError;
   }
   
