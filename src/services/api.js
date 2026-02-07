@@ -207,10 +207,12 @@ export const adminAPI = {
       id: bot.id,
       client_id: clientId,
       trading_pair: bot.pair,
-      bot_type: bot.strategy,
+      bot_type: bot.bot_type || bot.strategy, // Use bot_type field first, fallback to strategy
       status: bot.status === 'running' ? 'active' : 'paused',
       connector: bot.connector,
-      config: bot.config
+      config: bot.config,
+      name: bot.name,
+      strategy: bot.strategy
     }));
   },
 
