@@ -570,17 +570,22 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
 
       // 1. Save credentials
       if (isCEX) {
+        const clientIdToUse = clientId || user?.id || user?.client_id;
         const credPayload = {
           exchange: exchange,
           api_key: credentials.apiKey.trim(),
           api_secret: credentials.apiSecret.trim(),
+          client_id: clientIdToUse, // Include client_id for CEX bots (wallet not required)
           ...(credentials.memo && { memo: credentials.memo.trim() }),
           ...(credentials.passphrase && { passphrase: credentials.passphrase.trim() }),
         };
 
         const credRes = await fetch(`${API_BASE}/exchanges/credentials`, {
           method: 'POST',
-          headers,
+          headers: {
+            ...headers,
+            'X-Client-ID': clientIdToUse, // Also send as header as fallback
+          },
           body: JSON.stringify(credPayload),
         });
 
