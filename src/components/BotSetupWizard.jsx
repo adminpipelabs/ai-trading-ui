@@ -14,6 +14,7 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
 
   // Default configs for each bot type (defined before state)
   const VOLUME_BOT_DEFAULTS = {
@@ -760,6 +761,28 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
         {step === 4 && renderStep4()}
         {step === 5 && renderStep5()}
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div style={{
+          ...styles.errorBox,
+          backgroundColor: '#f0fdf4',
+          borderColor: '#22c55e',
+          color: '#166534',
+          marginTop: '16px',
+        }}>
+          <span style={styles.errorIcon}>✅</span>
+          <span><strong>Bot created successfully!</strong> Your bot is being set up and will appear in your dashboard shortly.</span>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div style={styles.errorBox}>
+          <span style={styles.errorIcon}>⚠️</span>
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* Navigation */}
       <div style={styles.nav}>
