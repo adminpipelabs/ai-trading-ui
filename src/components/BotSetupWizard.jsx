@@ -18,6 +18,19 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
   // Form state
   const [botType, setBotType] = useState(null);
   const [exchange, setExchange] = useState(null);
+  
+  // Update config defaults when bot type changes
+  const handleBotTypeSelect = (type) => {
+    setBotType(type);
+    // Preserve trading pair info (baseToken/quoteToken/tokenMint) when switching bot types
+    const currentPair = {
+      baseToken: config.baseToken,
+      quoteToken: config.quoteToken,
+      tokenMint: config.tokenMint,
+    };
+    const defaults = type === 'volume' ? { ...VOLUME_BOT_DEFAULTS } : { ...SPREAD_BOT_DEFAULTS };
+    setConfig({ ...defaults, ...currentPair });
+  };
   const [credentials, setCredentials] = useState({
     privateKey: '',
     apiKey: '',
@@ -25,7 +38,8 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
     memo: '',
     passphrase: '',
   });
-  const [config, setConfig] = useState({
+  // Default configs for each bot type
+  const VOLUME_BOT_DEFAULTS = {
     baseToken: '',
     quoteToken: 'USDT',
     tokenMint: '',
@@ -35,7 +49,20 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
     intervalMinMinutes: 15,
     intervalMaxMinutes: 45,
     slippageBps: 50,
-  });
+  };
+
+  const SPREAD_BOT_DEFAULTS = {
+    baseToken: '',
+    quoteToken: 'USDT',
+    tokenMint: '',
+    spreadBps: 50,              // 0.5% spread
+    orderSizeUsd: 100,          // $100 per order
+    levels: 3,                  // 3 orders each side
+    refreshSeconds: 30,         // Update every 30 seconds
+    maxPositionUsd: 1000,       // Max $1000 inventory imbalance
+  };
+
+  const [config, setConfig] = useState({ ...VOLUME_BOT_DEFAULTS });
 
   const selectedExchange = exchange ? EXCHANGES[exchange] : null;
   const isCEX = selectedExchange?.type === 'cex';
@@ -53,7 +80,7 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         {Object.values(BOT_TYPES).map(type => (
           <div
             key={type.id}
-            onClick={() => setBotType(type.id)}
+            onClick={() => handleBotTypeSelect(type.id)}
             style={{
               ...styles.optionCard,
               ...(botType === type.id ? styles.optionCardSelected : {}),
@@ -250,6 +277,7 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
       <h2 style={styles.stepTitle}>Configure Your Bot</h2>
       <p style={styles.stepDesc}>Set your trading parameters.</p>
 
+      {/* Trading Pair - same for both bot types */}
       {isCEX ? (
         <div style={styles.fieldRow}>
           <div style={styles.field}>
@@ -293,69 +321,137 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         </div>
       )}
 
-      <div style={styles.field}>
-        <label style={styles.label}>Daily Volume Target (USD)</label>
-        <input
-          type="number"
-          value={config.dailyVolumeUsd}
-          onChange={e => setConfig({ ...config, dailyVolumeUsd: parseInt(e.target.value) || 0 })}
-          style={styles.input}
-        />
-      </div>
+      {/* VOLUME BOT CONFIG */}
+      {botType === 'volume' && (
+        <>
+          <div style={styles.field}>
+            <label style={styles.label}>Daily Volume Target (USD)</label>
+            <input
+              type="number"
+              value={config.dailyVolumeUsd || 0}
+              onChange={e => setConfig({ ...config, dailyVolumeUsd: parseInt(e.target.value) || 0 })}
+              style={styles.input}
+            />
+            <p style={styles.fieldHint}>Total volume to generate per day</p>
+          </div>
 
-      <div style={styles.fieldRow}>
-        <div style={styles.field}>
-          <label style={styles.label}>Min Trade Size (USD)</label>
-          <input
-            type="number"
-            value={config.minTradeUsd}
-            onChange={e => setConfig({ ...config, minTradeUsd: parseInt(e.target.value) || 0 })}
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.field}>
-          <label style={styles.label}>Max Trade Size (USD)</label>
-          <input
-            type="number"
-            value={config.maxTradeUsd}
-            onChange={e => setConfig({ ...config, maxTradeUsd: parseInt(e.target.value) || 0 })}
-            style={styles.input}
-          />
-        </div>
-      </div>
+          <div style={styles.fieldRow}>
+            <div style={styles.field}>
+              <label style={styles.label}>Min Trade Size (USD)</label>
+              <input
+                type="number"
+                value={config.minTradeUsd || 0}
+                onChange={e => setConfig({ ...config, minTradeUsd: parseInt(e.target.value) || 0 })}
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Max Trade Size (USD)</label>
+              <input
+                type="number"
+                value={config.maxTradeUsd || 0}
+                onChange={e => setConfig({ ...config, maxTradeUsd: parseInt(e.target.value) || 0 })}
+                style={styles.input}
+              />
+            </div>
+          </div>
 
-      <div style={styles.fieldRow}>
-        <div style={styles.field}>
-          <label style={styles.label}>Min Interval (minutes)</label>
-          <input
-            type="number"
-            value={config.intervalMinMinutes}
-            onChange={e => setConfig({ ...config, intervalMinMinutes: parseInt(e.target.value) || 0 })}
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.field}>
-          <label style={styles.label}>Max Interval (minutes)</label>
-          <input
-            type="number"
-            value={config.intervalMaxMinutes}
-            onChange={e => setConfig({ ...config, intervalMaxMinutes: parseInt(e.target.value) || 0 })}
-            style={styles.input}
-          />
-        </div>
-      </div>
+          <div style={styles.fieldRow}>
+            <div style={styles.field}>
+              <label style={styles.label}>Min Interval (minutes)</label>
+              <input
+                type="number"
+                value={config.intervalMinMinutes || 0}
+                onChange={e => setConfig({ ...config, intervalMinMinutes: parseInt(e.target.value) || 0 })}
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.field}>
+              <label style={styles.label}>Max Interval (minutes)</label>
+              <input
+                type="number"
+                value={config.intervalMaxMinutes || 0}
+                onChange={e => setConfig({ ...config, intervalMaxMinutes: parseInt(e.target.value) || 0 })}
+                style={styles.input}
+              />
+            </div>
+          </div>
 
-      {isDEX && (
-        <div style={styles.field}>
-          <label style={styles.label}>Slippage Tolerance (basis points)</label>
-          <input
-            type="number"
-            value={config.slippageBps}
-            onChange={e => setConfig({ ...config, slippageBps: parseInt(e.target.value) || 0 })}
-            style={styles.input}
-          />
-          <p style={styles.fieldHint}>50 bps = 0.5%. Recommended: 30-100 bps</p>
-        </div>
+          {isDEX && (
+            <div style={styles.field}>
+              <label style={styles.label}>Slippage Tolerance (basis points)</label>
+              <input
+                type="number"
+                value={config.slippageBps || 0}
+                onChange={e => setConfig({ ...config, slippageBps: parseInt(e.target.value) || 0 })}
+                style={styles.input}
+              />
+              <p style={styles.fieldHint}>50 bps = 0.5%. Recommended: 30-100 bps</p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* SPREAD BOT CONFIG */}
+      {botType === 'spread' && (
+        <>
+          <div style={styles.field}>
+            <label style={styles.label}>Spread Width (basis points)</label>
+            <input
+              type="number"
+              value={config.spreadBps || 0}
+              onChange={e => setConfig({ ...config, spreadBps: parseInt(e.target.value) || 0 })}
+              style={styles.input}
+            />
+            <p style={styles.fieldHint}>Distance from mid price. 50 bps = 0.5% spread</p>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Order Size (USD)</label>
+            <input
+              type="number"
+              value={config.orderSizeUsd || 0}
+              onChange={e => setConfig({ ...config, orderSizeUsd: parseInt(e.target.value) || 0 })}
+              style={styles.input}
+            />
+            <p style={styles.fieldHint}>Size of each limit order</p>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Number of Levels</label>
+            <input
+              type="number"
+              value={config.levels || 0}
+              onChange={e => setConfig({ ...config, levels: parseInt(e.target.value) || 0 })}
+              style={styles.input}
+              min="1"
+              max="5"
+            />
+            <p style={styles.fieldHint}>How many orders on each side of the book (1-5)</p>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Refresh Interval (seconds)</label>
+            <input
+              type="number"
+              value={config.refreshSeconds || 0}
+              onChange={e => setConfig({ ...config, refreshSeconds: parseInt(e.target.value) || 0 })}
+              style={styles.input}
+            />
+            <p style={styles.fieldHint}>How often to cancel and replace orders</p>
+          </div>
+
+          <div style={styles.field}>
+            <label style={styles.label}>Max Position (USD)</label>
+            <input
+              type="number"
+              value={config.maxPositionUsd || 0}
+              onChange={e => setConfig({ ...config, maxPositionUsd: parseInt(e.target.value) || 0 })}
+              style={styles.input}
+            />
+            <p style={styles.fieldHint}>Maximum inventory imbalance allowed</p>
+          </div>
+        </>
       )}
     </div>
   );
@@ -386,18 +482,56 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
             <span style={styles.reviewLabel}>Trading Pair</span>
             <span style={styles.reviewValue}>{pair}</span>
           </div>
-          <div style={styles.reviewRow}>
-            <span style={styles.reviewLabel}>Daily Target</span>
-            <span style={styles.reviewValue}>${config.dailyVolumeUsd.toLocaleString()}</span>
-          </div>
-          <div style={styles.reviewRow}>
-            <span style={styles.reviewLabel}>Trade Size</span>
-            <span style={styles.reviewValue}>${config.minTradeUsd} - ${config.maxTradeUsd}</span>
-          </div>
-          <div style={styles.reviewRow}>
-            <span style={styles.reviewLabel}>Interval</span>
-            <span style={styles.reviewValue}>{config.intervalMinMinutes} - {config.intervalMaxMinutes} min</span>
-          </div>
+          
+          {/* Volume Bot Review Fields */}
+          {botType === 'volume' && (
+            <>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Daily Target</span>
+                <span style={styles.reviewValue}>${(config.dailyVolumeUsd || 0).toLocaleString()}</span>
+              </div>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Trade Size</span>
+                <span style={styles.reviewValue}>${config.minTradeUsd || 0} - ${config.maxTradeUsd || 0}</span>
+              </div>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Interval</span>
+                <span style={styles.reviewValue}>{config.intervalMinMinutes || 0} - {config.intervalMaxMinutes || 0} min</span>
+              </div>
+              {isDEX && config.slippageBps && (
+                <div style={styles.reviewRow}>
+                  <span style={styles.reviewLabel}>Slippage</span>
+                  <span style={styles.reviewValue}>{config.slippageBps} bps</span>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Spread Bot Review Fields */}
+          {botType === 'spread' && (
+            <>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Spread Width</span>
+                <span style={styles.reviewValue}>{config.spreadBps || 0} bps ({(config.spreadBps || 0) / 100}%)</span>
+              </div>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Order Size</span>
+                <span style={styles.reviewValue}>${(config.orderSizeUsd || 0).toLocaleString()}</span>
+              </div>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Levels</span>
+                <span style={styles.reviewValue}>{config.levels || 0} per side</span>
+              </div>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Refresh</span>
+                <span style={styles.reviewValue}>Every {config.refreshSeconds || 0}s</span>
+              </div>
+              <div style={styles.reviewRow}>
+                <span style={styles.reviewLabel}>Max Position</span>
+                <span style={styles.reviewValue}>${(config.maxPositionUsd || 0).toLocaleString()}</span>
+              </div>
+            </>
+          )}
           <div style={styles.reviewRow}>
             <span style={styles.reviewLabel}>Credentials</span>
             <span style={styles.reviewValue}>✓ {isCEX ? 'API Keys' : 'Private Key'} will be encrypted</span>
@@ -471,7 +605,28 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         }
       }
 
-      // 2. Create bot
+      // 2. Create bot with bot-type-specific config
+      let botConfig = {};
+      
+      if (botType === 'volume') {
+        botConfig = {
+          daily_volume_usd: config.dailyVolumeUsd || 5000,
+          min_trade_usd: config.minTradeUsd || 10,
+          max_trade_usd: config.maxTradeUsd || 25,
+          interval_min_seconds: (config.intervalMinMinutes || 15) * 60,
+          interval_max_seconds: (config.intervalMaxMinutes || 45) * 60,
+          ...(config.slippageBps && { slippage_bps: config.slippageBps }),
+        };
+      } else if (botType === 'spread') {
+        botConfig = {
+          spread_bps: config.spreadBps || 50,
+          order_size_usd: config.orderSizeUsd || 100,
+          levels: config.levels || 3,
+          refresh_seconds: config.refreshSeconds || 30,
+          max_position_usd: config.maxPositionUsd || 1000,
+        };
+      }
+
       const botPayload = {
         name: `${config.baseToken || 'My'} ${BOT_TYPES[botType].name}`,
         bot_type: botType,
@@ -483,14 +638,7 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         quote_asset: config.quoteToken || null,
         base_mint: config.tokenMint || null,
         private_key: isCEX ? null : credentials.privateKey.trim(), // Only for DEX
-        config: {
-          daily_volume_usd: config.dailyVolumeUsd,
-          min_trade_usd: config.minTradeUsd,
-          max_trade_usd: config.maxTradeUsd,
-          interval_min_seconds: config.intervalMinMinutes * 60,
-          interval_max_seconds: config.intervalMaxMinutes * 60,
-          slippage_bps: config.slippageBps,
-        },
+        config: botConfig,
       };
 
       const botRes = await fetch(`${API_BASE}/clients/${user.id}/setup-bot`, {
@@ -533,8 +681,17 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         }
         return false;
       case 4:
-        if (isCEX) return config.baseToken && config.quoteToken;
-        if (isDEX) return config.tokenMint;
+        if (isCEX) {
+          if (!config.baseToken || !config.quoteToken) return false;
+        } else {
+          if (!config.tokenMint) return false;
+        }
+        // Validate bot-type-specific required fields
+        if (botType === 'volume') {
+          return config.dailyVolumeUsd > 0 && config.minTradeUsd > 0 && config.maxTradeUsd > 0;
+        } else if (botType === 'spread') {
+          return config.spreadBps > 0 && config.orderSizeUsd > 0 && config.levels > 0;
+        }
         return false;
       case 5: return true;
       default: return false;
