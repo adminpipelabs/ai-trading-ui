@@ -158,6 +158,11 @@ export const adminAPI = {
     return client.connectors || [];
   },
 
+  async getClientBalances(clientId) {
+    // Get balances for a client using account_identifier (for BitMart API keys)
+    return apiCall(`${TRADING_BRIDGE_URL}/api/admin/clients/${clientId}/balances`);
+  },
+
   async addClientApiKey(clientId, data) {
     // Add connector to trading-bridge
     // Note: Only CEX connectors are supported here (api_key/api_secret)

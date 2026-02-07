@@ -123,17 +123,27 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   };
 
   // Fetch balances when a client is selected
+  // Use account_identifier (for BitMart API keys) instead of wallet_address
   useEffect(() => {
     const fetchClientBalances = async () => {
-      if (!selectedClient?.wallet_address) return;
+      if (!selectedClient?.id) return;
       
       setLoadingBalances(true);
       try {
-        const { tradingBridge } = await import('../../services/api');
-        const balances = await tradingBridge.getBalances(selectedClient.wallet_address);
+        const { adminAPI } = await import('../../services/api');
+        // Use admin endpoint that fetches by client_id (uses account_identifier + connectors)
+        const balanceData = await adminAPI.getClientBalances(selectedClient.id);
+        const balances = Array.isArray(balanceData?.balances) ? balanceData.balances : [];
+        
+        // Calculate USD values for USDT/USDC
+        const balancesWithUsd = balances.map(b => ({
+          ...b,
+          usd_value: (b.asset === 'USDT' || b.asset === 'USDC') ? (b.total || 0) : 0
+        }));
+        
         setClientBalances(prev => ({
           ...prev,
-          [selectedClient.id]: Array.isArray(balances) ? balances : []
+          [selectedClient.id]: balancesWithUsd
         }));
       } catch (error) {
         console.error('Failed to fetch balances:', error);
@@ -149,7 +159,7 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
     if (selectedClient) {
       fetchClientBalances();
     }
-  }, [selectedClient?.id, selectedClient?.wallet_address]);
+  }, [selectedClient?.id]);
 
   // Fetch key status for all clients
   useEffect(() => {
