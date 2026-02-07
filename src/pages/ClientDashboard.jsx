@@ -583,6 +583,7 @@ function DashboardTab({ user, client, bots, keyStatus, walletBalance, showSetup,
       {showSetup && (
         <div style={styles.section}>
           <BotSetupWizard
+            clientId={clientId}
             onComplete={(bot) => { 
               setShowSetup(false); 
               setSelectedBotType(null);

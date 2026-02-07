@@ -9,7 +9,7 @@ const BOT_TYPES = {
   spread: { id: 'spread', name: 'Spread Bot', description: 'Market making with bid/ask orders around current price', icon: '📊' },
 };
 
-export default function BotSetupWizard({ onComplete, onCancel }) {
+export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -590,7 +590,8 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         }
       } else {
         // DEX - save private key
-        const keyRes = await fetch(`${API_BASE}/clients/${user.id}/trading-key`, {
+        const clientIdToUse = clientId || user?.id || user?.client_id;
+        const keyRes = await fetch(`${API_BASE}/clients/${clientIdToUse}/trading-key`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -641,7 +642,14 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
         config: botConfig,
       };
 
-      const botRes = await fetch(`${API_BASE}/clients/${user.id}/setup-bot`, {
+      // Use clientId prop if provided, otherwise fallback to user.id
+      const clientIdToUse = clientId || user?.id || user?.client_id;
+      
+      if (!clientIdToUse) {
+        throw new Error('Client ID not found. Please refresh and try again.');
+      }
+
+      const botRes = await fetch(`${API_BASE}/clients/${clientIdToUse}/setup-bot`, {
         method: 'POST',
         headers,
         body: JSON.stringify(botPayload),
