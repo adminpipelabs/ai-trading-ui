@@ -43,43 +43,15 @@ async function apiCall(url, options = {}) {
   
   let response;
   try {
-    // Build fetch options - ensure method and body are set correctly
+    // Build fetch options - keep it simple, let browser handle CORS
     const fetchOptions = {
       method: options.method || 'GET',
       headers: headers,
       ...(options.body && { body: options.body }),
-      // Explicitly set mode to handle CORS
-      mode: 'cors',
-      // Don't include credentials - backend has allow_credentials=True but we're not using cookies
-      credentials: 'omit',
     };
     
-    console.log('📤 Fetch request:', {
-      url,
-      method: fetchOptions.method,
-      headers: Object.keys(fetchOptions.headers),
-      hasBody: !!fetchOptions.body,
-      mode: fetchOptions.mode,
-      credentials: fetchOptions.credentials
-    });
-    
-    // Add timeout to detect if request hangs
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    try {
-      response = await fetch(url, {
-        ...fetchOptions,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-    } catch (timeoutError) {
-      clearTimeout(timeoutId);
-      if (timeoutError.name === 'AbortError') {
-        throw new Error(`Request timeout: Server did not respond within 10 seconds`);
-      }
-      throw timeoutError;
-    }
+    // Simple fetch call - browser will handle CORS automatically
+    response = await fetch(url, fetchOptions);
     
     console.log('📥 Fetch response:', {
       url,
