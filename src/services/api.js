@@ -33,17 +33,35 @@ async function apiCall(url, options = {}) {
   if (url.includes('/bots')) {
     console.log('🔍 API Call to /bots:', {
       url,
+      method: options.method || 'GET',
       hasWalletAddress: !!walletAddress,
       walletAddress: walletAddress ? `${walletAddress.substring(0, 8)}...` : 'MISSING',
-      hasToken: !!token
+      hasToken: !!token,
+      headers: Object.keys(headers)
     });
   }
   
   let response;
   try {
-    response = await fetch(url, {
+    const fetchOptions = {
       ...options,
       headers,
+      credentials: 'include', // Include cookies for CORS
+    };
+    
+    console.log('📤 Fetch request:', {
+      url,
+      method: fetchOptions.method,
+      headers: Object.keys(fetchOptions.headers)
+    });
+    
+    response = await fetch(url, fetchOptions);
+    
+    console.log('📥 Fetch response:', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
   } catch (fetchError) {
     // Network error - fetch failed before getting a response
@@ -51,13 +69,14 @@ async function apiCall(url, options = {}) {
       url,
       error: fetchError.message,
       name: fetchError.name,
+      type: fetchError.type,
       stack: fetchError.stack
     });
     
     // Provide more helpful error message
     let errorMessage = 'Failed to connect to server';
     if (fetchError.message.includes('Failed to fetch') || fetchError.name === 'TypeError') {
-      errorMessage = `Network error: Cannot reach ${url}. This may be:\n- CORS blocking the request\n- Backend server not responding\n- Network connectivity issue\n\nCheck browser Network tab (F12) for details.`;
+      errorMessage = `Network error: Cannot reach ${url}\n\nPossible causes:\n- CORS blocking (check Network tab)\n- Server not responding\n- Network issue\n\nStatus: ${fetchError.type || 'unknown'}`;
     } else {
       errorMessage = `Network error: ${fetchError.message}`;
     }
@@ -65,6 +84,7 @@ async function apiCall(url, options = {}) {
     const networkError = new Error(errorMessage);
     networkError.isNetworkError = true;
     networkError.originalError = fetchError;
+    networkError.url = url;
     throw networkError;
   }
   
