@@ -15,30 +15,7 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Form state
-  const [botType, setBotType] = useState(null);
-  const [exchange, setExchange] = useState(null);
-  
-  // Update config defaults when bot type changes
-  const handleBotTypeSelect = (type) => {
-    setBotType(type);
-    // Preserve trading pair info (baseToken/quoteToken/tokenMint) when switching bot types
-    const currentPair = {
-      baseToken: config.baseToken,
-      quoteToken: config.quoteToken,
-      tokenMint: config.tokenMint,
-    };
-    const defaults = type === 'volume' ? { ...VOLUME_BOT_DEFAULTS } : { ...SPREAD_BOT_DEFAULTS };
-    setConfig({ ...defaults, ...currentPair });
-  };
-  const [credentials, setCredentials] = useState({
-    privateKey: '',
-    apiKey: '',
-    apiSecret: '',
-    memo: '',
-    passphrase: '',
-  });
-  // Default configs for each bot type
+  // Default configs for each bot type (defined before state)
   const VOLUME_BOT_DEFAULTS = {
     baseToken: '',
     quoteToken: 'USDT',
@@ -62,7 +39,30 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
     maxPositionUsd: 1000,       // Max $1000 inventory imbalance
   };
 
+  // Form state
+  const [botType, setBotType] = useState(null);
+  const [exchange, setExchange] = useState(null);
+  const [credentials, setCredentials] = useState({
+    privateKey: '',
+    apiKey: '',
+    apiSecret: '',
+    memo: '',
+    passphrase: '',
+  });
   const [config, setConfig] = useState({ ...VOLUME_BOT_DEFAULTS });
+
+  // Update config defaults when bot type changes
+  const handleBotTypeSelect = (type) => {
+    setBotType(type);
+    // Preserve trading pair info (baseToken/quoteToken/tokenMint) when switching bot types
+    const currentPair = {
+      baseToken: config.baseToken,
+      quoteToken: config.quoteToken,
+      tokenMint: config.tokenMint,
+    };
+    const defaults = type === 'volume' ? { ...VOLUME_BOT_DEFAULTS } : { ...SPREAD_BOT_DEFAULTS };
+    setConfig({ ...defaults, ...currentPair });
+  };
 
   const selectedExchange = exchange ? EXCHANGES[exchange] : null;
   const isCEX = selectedExchange?.type === 'cex';
