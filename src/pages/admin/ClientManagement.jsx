@@ -8,35 +8,22 @@ import {
 } from 'lucide-react';
 // Theme is passed as props, no need to import useTheme
 
-// EXCHANGES constant - list of supported exchanges
+// Import shared exchange configuration
+import { getAllCEXExchanges, getAllDEXExchanges, getExchangeById } from '../../constants/exchanges';
+
+// Convert to array format for backward compatibility with existing code
 const EXCHANGES = [
-  // CLOB CEX (Centralized Exchanges)
-  { id: 'binance', name: 'Binance', requiresMemo: false },
-  { id: 'bitget', name: 'Bitget', requiresMemo: false },
-  { id: 'bitmart', name: 'BitMart', requiresMemo: true },
-  { id: 'derive', name: 'Derive', requiresMemo: false },
-  { id: 'dydx', name: 'dYdX', requiresMemo: false },
-  { id: 'gateio', name: 'Gate.io', requiresMemo: false },
-  { id: 'htx', name: 'HTX (Huobi)', requiresMemo: false },
-  { id: 'hyperliquid', name: 'Hyperliquid', requiresMemo: false },
-  { id: 'kucoin', name: 'KuCoin', requiresMemo: true },
-  { id: 'okx', name: 'OKX', requiresMemo: true },
-  { id: 'xrpl', name: 'XRP Ledger', requiresMemo: false },
-  { id: 'ascendex', name: 'AscendEx', requiresMemo: false },
-  { id: 'bitstamp', name: 'Bitstamp', requiresMemo: false },
-  { id: 'bitrue', name: 'Bitrue', requiresMemo: false },
-  { id: 'bingx', name: 'BingX', requiresMemo: false },
-  { id: 'bybit', name: 'Bybit', requiresMemo: false },
-  { id: 'btc_markets', name: 'BTC Markets', requiresMemo: false },
-  { id: 'coinbase', name: 'Coinbase', requiresMemo: false },
-  { id: 'kraken', name: 'Kraken', requiresMemo: false },
-  { id: 'mexc', name: 'MEXC', requiresMemo: false },
-  { id: 'ndax', name: 'NDAX', requiresMemo: false },
-  
-  // CLOB DEX (Decentralized Exchanges)
-  { id: 'vertex', name: 'Vertex', requiresMemo: false },
-  
-  // Gateway DEX (AMM/DEX via Gateway)
+  ...getAllCEXExchanges().map(ex => ({
+    id: ex.id,
+    name: ex.name,
+    requiresMemo: ex.requiresMemo || false,
+  })),
+  ...getAllDEXExchanges().map(ex => ({
+    id: ex.id,
+    name: ex.name,
+    requiresMemo: false,
+  })),
+  // Additional DEX exchanges from Gateway (not in shared config yet)
   { id: 'balancer', name: 'Balancer', requiresMemo: false },
   { id: 'cube', name: 'Cube', requiresMemo: false },
   { id: 'curve', name: 'Curve', requiresMemo: false },
@@ -44,7 +31,6 @@ const EXCHANGES = [
   { id: 'etcswap', name: 'ETCSwap', requiresMemo: false },
   { id: 'foxbit', name: 'Foxbit', requiresMemo: false },
   { id: 'injective', name: 'Injective Helix', requiresMemo: false },
-  { id: 'jupiter', name: 'Jupiter', requiresMemo: false },
   { id: 'meteora', name: 'Meteora', requiresMemo: false },
   { id: 'pancakeswap', name: 'Pancakeswap', requiresMemo: false },
   { id: 'orca', name: 'Orca', requiresMemo: false },
@@ -1180,7 +1166,7 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
                       Instead, provide wallet address and private key when creating a bot in Bot Management.
                     </div>
                   )}
-                  {EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo && (
+                  {(getExchangeById(formData.exchange)?.requiresMemo || EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo) && (
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Memo/Passphrase</label>
                       <input

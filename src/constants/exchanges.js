@@ -1,0 +1,258 @@
+/**
+ * Shared Exchange Configuration
+ * Single source of truth for all supported exchanges across Admin and Client dashboards
+ */
+
+// DEX Exchanges (Decentralized)
+export const DEX_EXCHANGES = {
+  jupiter: {
+    id: 'jupiter',
+    name: 'Jupiter',
+    type: 'dex',
+    chain: 'solana',
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '◎',
+  },
+  uniswap: {
+    id: 'uniswap',
+    name: 'Uniswap',
+    type: 'dex',
+    chain: 'evm',
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🦄',
+  },
+  raydium: {
+    id: 'raydium',
+    name: 'Raydium',
+    type: 'dex',
+    chain: 'solana',
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '☀️',
+  },
+};
+
+// CEX Exchanges (Centralized) - matches Admin Dashboard list
+export const CEX_EXCHANGES = {
+  binance: {
+    id: 'binance',
+    name: 'Binance',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🟡',
+  },
+  bitget: {
+    id: 'bitget',
+    name: 'Bitget',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🟠',
+  },
+  bitmart: {
+    id: 'bitmart',
+    name: 'BitMart',
+    type: 'cex',
+    chain: null,
+    requiresMemo: true,
+    requiresPassphrase: false,
+    icon: '🅱',
+  },
+  bybit: {
+    id: 'bybit',
+    name: 'Bybit',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🔵',
+  },
+  coinstore: {
+    id: 'coinstore',
+    name: 'Coinstore',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '📦',
+  },
+  gateio: {
+    id: 'gateio',
+    name: 'Gate.io',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🚪',
+  },
+  htx: {
+    id: 'htx',
+    name: 'HTX (Huobi)',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🟣',
+  },
+  kucoin: {
+    id: 'kucoin',
+    name: 'KuCoin',
+    type: 'cex',
+    chain: null,
+    requiresMemo: true, // Admin dashboard says true
+    requiresPassphrase: true, // Backend says true
+    icon: '🟢',
+  },
+  okx: {
+    id: 'okx',
+    name: 'OKX',
+    type: 'cex',
+    chain: null,
+    requiresMemo: true,
+    requiresPassphrase: false,
+    icon: '⚪',
+  },
+  kraken: {
+    id: 'kraken',
+    name: 'Kraken',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🐙',
+  },
+  mexc: {
+    id: 'mexc',
+    name: 'MEXC',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🟤',
+  },
+  coinbase: {
+    id: 'coinbase',
+    name: 'Coinbase',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🔷',
+  },
+  derive: {
+    id: 'derive',
+    name: 'Derive',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '📊',
+  },
+  dydx: {
+    id: 'dydx',
+    name: 'dYdX',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '💎',
+  },
+  hyperliquid: {
+    id: 'hyperliquid',
+    name: 'Hyperliquid',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '💧',
+  },
+  xrpl: {
+    id: 'xrpl',
+    name: 'XRP Ledger',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '💱',
+  },
+  ascendex: {
+    id: 'ascendex',
+    name: 'AscendEx',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '⬆️',
+  },
+  bitstamp: {
+    id: 'bitstamp',
+    name: 'Bitstamp',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🪙',
+  },
+  bitrue: {
+    id: 'bitrue',
+    name: 'Bitrue',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '✅',
+  },
+  bingx: {
+    id: 'bingx',
+    name: 'BingX',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🔷',
+  },
+  btc_markets: {
+    id: 'btc_markets',
+    name: 'BTC Markets',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '₿',
+  },
+  ndax: {
+    id: 'ndax',
+    name: 'NDAX',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🔷',
+  },
+  vertex: {
+    id: 'vertex',
+    name: 'Vertex',
+    type: 'cex',
+    chain: null,
+    requiresMemo: false,
+    requiresPassphrase: false,
+    icon: '🔺',
+  },
+};
+
+// Combined exchanges object for easy access
+export const EXCHANGES = {
+  ...DEX_EXCHANGES,
+  ...CEX_EXCHANGES,
+};
+
+// Helper functions
+export const getExchangeById = (id) => EXCHANGES[id];
+export const getAllDEXExchanges = () => Object.values(DEX_EXCHANGES);
+export const getAllCEXExchanges = () => Object.values(CEX_EXCHANGES);
+export const getAllExchanges = () => Object.values(EXCHANGES);

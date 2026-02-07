@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { EXCHANGES, getAllDEXExchanges, getAllCEXExchanges } from '../constants/exchanges';
 
 const API_BASE = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-
-// Exchange definitions
-const EXCHANGES = {
-  jupiter: { id: 'jupiter', name: 'Jupiter', type: 'dex', chain: 'solana', requiresMemo: false, requiresPassphrase: false, icon: '◎' },
-  uniswap: { id: 'uniswap', name: 'Uniswap', type: 'dex', chain: 'evm', requiresMemo: false, requiresPassphrase: false, icon: '🦄' },
-  bitmart: { id: 'bitmart', name: 'BitMart', type: 'cex', chain: null, requiresMemo: true, requiresPassphrase: false, icon: '🅱' },
-  coinstore: { id: 'coinstore', name: 'Coinstore', type: 'cex', chain: null, requiresMemo: false, requiresPassphrase: false, icon: '📦' },
-  kucoin: { id: 'kucoin', name: 'KuCoin', type: 'cex', chain: null, requiresMemo: false, requiresPassphrase: true, icon: '🟢' },
-};
 
 const BOT_TYPES = {
   volume: { id: 'volume', name: 'Volume Bot', description: 'Generates trading volume with alternating buy/sell orders', icon: '📈' },
@@ -80,8 +72,8 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
   // Step 2: Exchange Selection
   // ─────────────────────────────────────────────────────────
   const renderStep2 = () => {
-    const dexExchanges = Object.values(EXCHANGES).filter(e => e.type === 'dex');
-    const cexExchanges = Object.values(EXCHANGES).filter(e => e.type === 'cex');
+    const dexExchanges = getAllDEXExchanges();
+    const cexExchanges = getAllCEXExchanges();
 
     return (
       <div>
@@ -109,7 +101,13 @@ export default function BotSetupWizard({ onComplete, onCancel }) {
 
         <h4 style={{ ...styles.sectionLabel, marginTop: '24px' }}>Centralized Exchanges (CEX)</h4>
         <p style={styles.sectionHint}>Requires your exchange API keys</p>
-        <div style={styles.optionGrid}>
+        <div style={{
+          ...styles.optionGrid,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+          maxHeight: '400px',
+          overflowY: 'auto',
+          padding: '8px',
+        }}>
           {cexExchanges.map(ex => (
             <div
               key={ex.id}
