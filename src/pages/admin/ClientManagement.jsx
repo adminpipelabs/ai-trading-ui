@@ -100,10 +100,69 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleDelete = (clientId) => {
-    setClients(clients.filter(c => c.id !== clientId));
-    setShowDeleteConfirm(null);
-    setSelectedClient(null);
+  const handleDelete = async (clientId) => {
+    console.log(`🗑️ Attempting to delete client: ${clientId}`);
+    try {
+      const { adminAPI } = await import('../../services/api');
+      
+      // Actually delete from backend database first
+      console.log(`📡 Calling DELETE /clients/${clientId}`);
+      const result = await adminAPI.deleteClient(clientId);
+      console.log(`📥 Delete response:`, result);
+      
+      // Verify deletion was successful
+      if (!result || (result.status !== 'deleted' && !result.client_id)) {
+        console.error('❌ Invalid delete response:', result);
+        throw new Error('Delete request did not return success confirmation');
+      }
+      
+      // Only update UI after successful backend deletion
+      setShowDeleteConfirm(null);
+      
+      // If deleted client was selected, clear selection
+      if (selectedClient?.id === clientId) {
+        setSelectedClient(null);
+      }
+      
+      // Reload clients from backend to ensure consistency
+      console.log(`🔄 Reloading clients list...`);
+      const data = await adminAPI.getClients();
+      console.log(`📋 Reloaded ${data?.length || 0} clients`);
+      
+      const transformedClients = (data || []).map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        wallet_address: c.wallet_address,
+        wallet_type: c.wallet_type || 'EVM',
+        company: c.settings?.contactPerson || '',
+        phone: c.settings?.telegramId || '',
+        status: c.status || 'active',
+        createdAt: c.created_at,
+        connectors: c.connectors || c.exchanges || [],
+        tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
+        pairs: c.pairs || [],
+        balance: '$0',
+        pnl: '$0',
+        pnlPercent: '0%'
+      }));
+      setClients(transformedClients);
+      
+      console.log(`✅ Successfully deleted and reloaded clients. Client ${clientId} should be gone.`);
+    } catch (error) {
+      console.error('❌ Failed to delete client:', error);
+      console.error('Error details:', {
+        message: error.message,
+        status: error.status,
+        data: error.data,
+        stack: error.stack
+      });
+      // Show detailed error message
+      const errorMsg = error.message || error.detail || error.data?.detail || 'Unknown error occurred';
+      alert(`Failed to delete client: ${errorMsg}\n\nPlease check the browser console (F12) for details.`);
+      // Don't update UI if deletion failed
+      setShowDeleteConfirm(null);
+    }
   };
 
   const handleResendInvite = (client) => {

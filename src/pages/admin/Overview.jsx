@@ -84,7 +84,7 @@ export default function Overview({ user, metrics, messages, input, setInput, isL
         {/* Metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <MetricCard theme={finalTheme} icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
-          <MetricCard theme={finalTheme} icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
+          <MetricCard theme={finalTheme} icon={<Activity size={16} />} label="Total Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
         </div>
 
         {/* Chat Interface */}

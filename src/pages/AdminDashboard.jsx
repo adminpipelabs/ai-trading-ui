@@ -670,17 +670,14 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
     return () => clearInterval(interval);
   }, [bots]);
 
-  // Calculate active bots count - bots with status='running' (regardless of health_status)
-  // health_status can be 'healthy', 'stale', 'error', etc., but status='running' means bot is active
-  const activeBotsCount = bots?.filter(b => {
-    const status = b.status?.toLowerCase();
-    return status === 'running';
-  }).length || 0;
+  // Calculate total bots count - all configured bots regardless of status
+  // This shows all bots that exist, not just running ones
+  const totalBotsCount = bots?.length || 0;
   
   const metrics = { 
     clients: clients.length, 
-    bots: activeBotsCount,
-    totalBots: healthSummary?.total_bots || bots?.length || 0,
+    bots: totalBotsCount,  // Show total bots instead of just running
+    totalBots: totalBotsCount,
     stoppedBots: healthSummary?.stopped || 0
   };
   const quickPrompts = ["Show all client balances", "Global P&L this week", "List active bots", "SHARP/USDT price"];
@@ -822,7 +819,7 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
       <div className="mb-8">
         <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
         <MetricCard theme={theme} icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
-        <MetricCard theme={theme} icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
+        <MetricCard theme={theme} icon={<Activity size={16} />} label="Total Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
       </div>
 
       <div className="flex-1">
