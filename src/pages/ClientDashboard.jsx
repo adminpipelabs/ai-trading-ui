@@ -856,9 +856,15 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
           bot={editingBot}
           isOpen={!!editingBot}
           onClose={() => setEditingBot(null)}
-          onSave={async () => {
-            setEditingBot(null);
-            await onRefresh();
+          onSave={async (botId, payload) => {
+            try {
+              await tradingBridge.updateBot(botId, payload);
+              setEditingBot(null);
+              await onRefresh();
+            } catch (error) {
+              console.error('Failed to update bot:', error);
+              throw error; // Let EditBotModal handle the error display
+            }
           }}
         />
       )}
