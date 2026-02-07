@@ -426,15 +426,15 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
               Bot Status
               <InfoTooltip
                 id="bot-status"
-                text="🟢 Running: Your bot is actively trading. 🟡 Stale: No trades in the last 30 minutes (may be normal for low-frequency settings). 🔴 Stopped: Bot has stopped — usually due to insufficient wallet funds or manual stop. ⚠️ Error: Health check failed — our team is notified automatically. ⚪ Unknown: Status hasn't been checked yet (first check runs within 5 minutes)."
+                text="🟢 ON (Running): Your bot is actively trading. 🔴 OFF (Stopped): Bot is stopped — click Start Bot to resume. 🟡 Stale: No trades in the last 30 minutes (may be normal for low-frequency settings). ⚠️ Error: Health check failed — our team is notified automatically."
                 tooltipStates={tooltipStates}
                 setTooltipStates={setTooltipStates}
               />
             </>
           }
-          value={bot?.health_status === 'healthy' ? '🟢 Running' :
+          value={bot?.status === 'running' ? '🟢 ON' :
+                 bot?.status === 'stopped' ? '🔴 OFF' :
                  bot?.health_status === 'stale' ? '🟡 Stale' :
-                 bot?.health_status === 'stopped' ? '🔴 Stopped' :
                  bot?.health_status === 'error' ? '⚠️ Error' :
                  bot ? '⚪ Unknown' : 'No Bot'}
           sublabel={bot?.bot_type ? `${bot.bot_type === 'volume' ? 'Volume Bot' : bot.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'} · ${bot?.health_message || ''}` : bot?.health_message}
@@ -457,26 +457,6 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
             ? `${walletBalance.balance_sol.toFixed(4)} SOL`
             : '—'}
           sublabel={walletBalance?.usd_value ? `≈ $${walletBalance.usd_value.toFixed(2)}` : null}
-        />
-        <StatCard
-          label={
-            <>
-              Volume Today
-              <InfoTooltip
-                id="volume-today"
-                text="Your daily volume target is the total USD value of trades your bot aims to complete each day. The progress bar shows how much has been completed so far today. This resets at midnight UTC."
-                tooltipStates={tooltipStates}
-                setTooltipStates={setTooltipStates}
-              />
-            </>
-          }
-          value={`$${volumeToday.toLocaleString()}`}
-          sublabel={`of $${volumeTarget.toLocaleString()} target`}
-          progress={volumePercent}
-        />
-        <StatCard
-          label="Volume (7d)"
-          value={`$${volume7d.toLocaleString()}`}
         />
       </div>
 
