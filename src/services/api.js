@@ -43,16 +43,20 @@ async function apiCall(url, options = {}) {
   
   let response;
   try {
+    // Build fetch options - ensure method and body are set correctly
     const fetchOptions = {
-      ...options,
-      headers,
-      // Don't use credentials: 'include' - it can cause CORS issues if backend doesn't allow it
+      method: options.method || 'GET',
+      headers: headers,
+      ...(options.body && { body: options.body }),
+      // Explicitly set mode to handle CORS
+      mode: 'cors',
     };
     
     console.log('📤 Fetch request:', {
       url,
       method: fetchOptions.method,
-      headers: Object.keys(fetchOptions.headers)
+      headers: Object.keys(fetchOptions.headers),
+      hasBody: !!fetchOptions.body
     });
     
     response = await fetch(url, fetchOptions);
