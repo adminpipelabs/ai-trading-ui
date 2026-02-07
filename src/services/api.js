@@ -39,10 +39,23 @@ async function apiCall(url, options = {}) {
     });
   }
   
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (fetchError) {
+    // Network error - fetch failed before getting a response
+    console.error('❌ Fetch failed (network/CORS error):', {
+      url,
+      error: fetchError.message,
+      name: fetchError.name
+    });
+    const networkError = new Error(`Network error: ${fetchError.message || 'Failed to connect to server'}`);
+    networkError.isNetworkError = true;
+    throw networkError;
+  }
   
   if (!response.ok) {
     let errorData;
