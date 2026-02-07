@@ -198,7 +198,7 @@ export const adminAPI = {
     const client = await apiCall(`${TRADING_BRIDGE_URL}/clients/${clientId}`);
     const account = client.account_identifier;
     
-    // Get bots for this account
+    // Get bots for this account - NO bot_type filter, get ALL bots
     const botsResponse = await apiCall(`${TRADING_BRIDGE_URL}/bots?account=${encodeURIComponent(account)}`);
     const bots = botsResponse.bots || [];
     
@@ -207,18 +207,20 @@ export const adminAPI = {
     console.log(`  Found ${bots.length} bots from API:`, bots.map(b => ({ 
       id: b.id, 
       name: b.name, 
-      bot_type: b.bot_type, 
+      bot_type: b.bot_type || 'NULL', 
       strategy: b.strategy, 
       status: b.status,
       account: b.account,
       client_id: b.client_id
     })));
     
+    // Transform bots to pairs format for frontend compatibility
+    // IMPORTANT: Include ALL bots regardless of bot_type value (even if NULL)
     const transformed = bots.map(bot => ({
       id: bot.id,
       client_id: clientId,
       trading_pair: bot.pair,
-      bot_type: bot.bot_type || bot.strategy,
+      bot_type: bot.bot_type || bot.strategy || 'unknown', // Use bot_type field first, fallback to strategy, then 'unknown'
       status: bot.status === 'running' ? 'active' : 'paused',
       connector: bot.connector,
       config: bot.config,
@@ -233,18 +235,7 @@ export const adminAPI = {
       status: b.status 
     })));
     
-    // Transform bots to pairs format for frontend compatibility
-    return bots.map(bot => ({
-      id: bot.id,
-      client_id: clientId,
-      trading_pair: bot.pair,
-      bot_type: bot.bot_type || bot.strategy, // Use bot_type field first, fallback to strategy
-      status: bot.status === 'running' ? 'active' : 'paused',
-      connector: bot.connector,
-      config: bot.config,
-      name: bot.name,
-      strategy: bot.strategy
-    }));
+    return transformed;
   },
 
   async createPair(clientId, data) {
