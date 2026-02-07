@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Bot, User, Users, BarChart3, TrendingUp, Activity, ChevronRight, ArrowUpRight } from 'lucide-react';
+import { Bot, User, Users, Activity, ChevronRight, ArrowUpRight } from 'lucide-react';
 // Removed useTheme import - using theme prop instead
 
 // ========== METRIC CARD ==========
@@ -82,10 +82,8 @@ export default function Overview({ user, metrics, messages, input, setInput, isL
         </div>
 
         {/* Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <MetricCard theme={finalTheme} icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
-          <MetricCard theme={finalTheme} icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
-          <MetricCard theme={finalTheme} icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
           <MetricCard theme={finalTheme} icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
         </div>
 

@@ -9,7 +9,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import { useAuth } from "../contexts/AuthContext";
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { 
-  Bot, User, Activity, Users, Plus, BarChart3, TrendingUp, LogOut, ChevronRight, Moon, Sun, MessageSquare
+  Bot, User, Activity, Users, Plus, BarChart3, LogOut, ChevronRight, Moon, Sun, MessageSquare
 } from 'lucide-react';
 // All API calls use trading-bridge directly
 const TRADING_BRIDGE_URL = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
@@ -670,19 +670,15 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
     return () => clearInterval(interval);
   }, [bots]);
 
-  // Calculate active bots count - use health summary if available, otherwise fallback
-  const activeBotsCount = healthSummary 
-    ? healthSummary.healthy + healthSummary.stale  // Actually running (healthy + stale)
-    : bots?.filter(b => {
-        const status = b.status?.toLowerCase();
-        return status === 'running' || status === 'active';
-      }).length || 0;
+  // Calculate active bots count - bots with status='running' (regardless of health_status)
+  // health_status can be 'healthy', 'stale', 'error', etc., but status='running' means bot is active
+  const activeBotsCount = bots?.filter(b => {
+    const status = b.status?.toLowerCase();
+    return status === 'running';
+  }).length || 0;
   
   const metrics = { 
     clients: clients.length, 
-    volume: '$2.4M', 
-    pnl: '+$45,230', 
-    pnlPct: '+12.5%', 
     bots: activeBotsCount,
     totalBots: healthSummary?.total_bots || bots?.length || 0,
     stoppedBots: healthSummary?.stopped || 0
@@ -826,8 +822,6 @@ function AdminDashboard({ user, onLogout, theme: themeProp, isDark: isDarkProp, 
       <div className="mb-8">
         <h3 className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.1em' }}>Overview</h3>
         <MetricCard theme={theme} icon={<Users size={16} />} label="Clients" value={metrics.clients} onClick={() => navigate('/admin/clients')} />
-        <MetricCard theme={theme} icon={<BarChart3 size={16} />} label="Volume (7d)" value={metrics.volume} />
-        <MetricCard theme={theme} icon={<TrendingUp size={16} />} label="P&L (7d)" value={metrics.pnl} subvalue={metrics.pnlPct} positive />
         <MetricCard theme={theme} icon={<Activity size={16} />} label="Active Bots" value={metrics.bots} onClick={() => navigate('/admin/bots')} />
       </div>
 
