@@ -202,6 +202,11 @@ export const adminAPI = {
     const botsResponse = await apiCall(`${TRADING_BRIDGE_URL}/bots?account=${encodeURIComponent(account)}`);
     const bots = botsResponse.bots || [];
     
+    // Debug logging
+    console.log(`[getClientPairs] Client ${clientId}, Account: ${account}, Found ${bots.length} bots:`, 
+      bots.map(b => ({ id: b.id, name: b.name, bot_type: b.bot_type, strategy: b.strategy, status: b.status }))
+    );
+    
     // Transform bots to pairs format for frontend compatibility
     return bots.map(bot => ({
       id: bot.id,
