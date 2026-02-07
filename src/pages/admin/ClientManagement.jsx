@@ -68,6 +68,8 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const [showPairsModal, setShowPairsModal] = useState(null);
   const [showBotsModal, setShowBotsModal] = useState(null);
   const [clientKeyStatuses, setClientKeyStatuses] = useState({});
+  const [clientBalances, setClientBalances] = useState({}); // Store balances for each client
+  const [loadingBalances, setLoadingBalances] = useState(false);
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -119,6 +121,35 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const handleManageBots = (client) => {
     setShowBotsModal(client);
   };
+
+  // Fetch balances when a client is selected
+  useEffect(() => {
+    const fetchClientBalances = async () => {
+      if (!selectedClient?.wallet_address) return;
+      
+      setLoadingBalances(true);
+      try {
+        const { tradingBridge } = await import('../../services/api');
+        const balances = await tradingBridge.getBalances(selectedClient.wallet_address);
+        setClientBalances(prev => ({
+          ...prev,
+          [selectedClient.id]: Array.isArray(balances) ? balances : []
+        }));
+      } catch (error) {
+        console.error('Failed to fetch balances:', error);
+        setClientBalances(prev => ({
+          ...prev,
+          [selectedClient.id]: []
+        }));
+      } finally {
+        setLoadingBalances(false);
+      }
+    };
+
+    if (selectedClient) {
+      fetchClientBalances();
+    }
+  }, [selectedClient?.id, selectedClient?.wallet_address]);
 
   // Fetch key status for all clients
   useEffect(() => {
@@ -575,10 +606,20 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                 <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
                   Performance
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 mb-3">
                   <div className="p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
-                    <div className="text-xs" style={{ color: theme.textMuted }}>Balance</div>
-                    <div className="text-lg font-semibold" style={{ color: theme.textPrimary }}>{selectedClient.balance}</div>
+                    <div className="text-xs" style={{ color: theme.textMuted }}>Total Balance</div>
+                    {loadingBalances ? (
+                      <div className="text-sm" style={{ color: theme.textMuted }}>Loading...</div>
+                    ) : (() => {
+                      const balances = clientBalances[selectedClient.id] || [];
+                      const totalUsd = balances.reduce((sum, b) => sum + (b.usd_value || 0), 0);
+                      return (
+                        <div className="text-lg font-semibold" style={{ color: theme.textPrimary }}>
+                          ${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div className="p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
                     <div className="text-xs" style={{ color: theme.textMuted }}>P&L</div>
@@ -588,6 +629,59 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                     </div>
                   </div>
                 </div>
+                
+                {/* Individual Token Balances */}
+                {(() => {
+                  const balances = clientBalances[selectedClient.id] || [];
+                  const nonZeroBalances = balances.filter(b => b.total > 0);
+                  
+                  if (loadingBalances) {
+                    return (
+                      <div className="p-3 rounded-xl text-sm" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                        Loading balances...
+                      </div>
+                    );
+                  }
+                  
+                  if (nonZeroBalances.length === 0) {
+                    return (
+                      <div className="p-3 rounded-xl text-sm" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
+                        No balances found. Connect exchange API keys to view balances.
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
+                      <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
+                        Tokens
+                      </div>
+                      <div className="space-y-2">
+                        {nonZeroBalances.map((balance, idx) => {
+                          const decimals = balance.asset === 'USDT' || balance.asset === 'USDC' ? 2 : 8;
+                          return (
+                            <div key={`${balance.exchange}-${balance.asset}-${idx}`} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium" style={{ color: theme.textPrimary }}>
+                                  {balance.total.toLocaleString('en-US', {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: decimals
+                                  })}
+                                </span>
+                                <span style={{ color: theme.textMuted }}>{balance.asset}</span>
+                              </div>
+                              {balance.usd_value > 0 && (
+                                <span className="text-xs" style={{ color: theme.textMuted }}>
+                                  ${balance.usd_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Exchanges */}
