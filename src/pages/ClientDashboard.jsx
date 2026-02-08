@@ -661,7 +661,20 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
               <div key={botItem.id} style={styles.section}>
                 <div style={styles.sectionHeader}>
                   <div>
-                    <h3 style={styles.botName}>{botItem.name}</h3>
+                    <h3 style={styles.botName}>
+                      {botItem.name}
+                      <span style={{
+                        marginLeft: '12px',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: botItem.status === 'running' ? '#10b981' : '#6b7280',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        {botItem.status === 'running' ? '🟢 Running' : '⚪ Stopped'}
+                      </span>
+                    </h3>
                     <span style={styles.botMeta}>
                       {botItem.bot_type === 'volume' ? 'Volume Bot' : 
                        botItem.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'}
@@ -724,7 +737,10 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                     {/* Always show Start/Stop button based on bot status */}
                     {botItem.status === 'running' ? (
                       <button 
-                        onClick={() => onStartStop(botItem.id, 'stop')} 
+                        onClick={() => {
+                          console.log('DEBUG: Clicking Stop Bot:', { botId: botItem.id, botName: botItem.name, botType: botItem.bot_type });
+                          onStartStop(botItem.id, 'stop');
+                        }} 
                         style={styles.stopButton}
                         disabled={botActionLoading[botItem.id]}
                       >
@@ -732,7 +748,10 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       </button>
                     ) : (
                       <button 
-                        onClick={() => onStartStop(botItem.id, 'start')} 
+                        onClick={() => {
+                          console.log('DEBUG: Clicking Start Bot:', { botId: botItem.id, botName: botItem.name, botType: botItem.bot_type });
+                          onStartStop(botItem.id, 'start');
+                        }} 
                         style={styles.startButton}
                         disabled={botActionLoading[botItem.id]}
                       >
