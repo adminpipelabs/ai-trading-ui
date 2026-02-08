@@ -360,12 +360,73 @@ export const tradingBridge = {
   },
 
   async startBot(botId) {
-    // Use the standard apiCall wrapper - it handles auth correctly
-    // POST requests need an empty body or Content-Length: 0
-    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
-      method: 'POST',
-      body: '{}', // Empty JSON body for POST
-    });
+    // DEBUG: Check if botId is valid
+    if (!botId) {
+      console.error('DEBUG: botId is missing!', botId);
+      throw new Error('Bot ID is required');
+    }
+    
+    // DEBUG: Check if TRADING_BRIDGE_URL is set
+    if (!TRADING_BRIDGE_URL) {
+      console.error('DEBUG: TRADING_BRIDGE_URL is undefined!');
+      throw new Error('API URL not configured');
+    }
+    
+    const url = `${TRADING_BRIDGE_URL}/bots/${botId}/start`;
+    console.log('DEBUG: Starting bot, URL:', url);
+    console.log('DEBUG: botId:', botId);
+    console.log('DEBUG: TRADING_BRIDGE_URL:', TRADING_BRIDGE_URL);
+    
+    // Get auth headers
+    const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
+    let walletAddress = null;
+    try {
+      const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        walletAddress = user.wallet_address;
+      }
+    } catch (e) {
+      console.warn('DEBUG: Failed to parse user:', e);
+    }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
+    };
+    
+    console.log('DEBUG: Headers:', Object.keys(headers));
+    console.log('DEBUG: Has token:', !!token);
+    console.log('DEBUG: Has wallet:', !!walletAddress);
+    
+    try {
+      console.log('DEBUG: About to call fetch...');
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: '{}',
+      });
+      
+      console.log('DEBUG: Response status:', response.status);
+      console.log('DEBUG: Response ok:', response.ok);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+        console.error('DEBUG: Response error:', errorData);
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('DEBUG: Response data:', data);
+      return data;
+    } catch (error) {
+      console.error('DEBUG: Fetch error:', error);
+      console.error('DEBUG: Error message:', error.message);
+      console.error('DEBUG: Error name:', error.name);
+      console.error('DEBUG: Error stack:', error.stack);
+      throw error;
+    }
   },
 
   async stopBot(botId) {
