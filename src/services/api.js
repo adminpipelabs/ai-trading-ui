@@ -424,7 +424,16 @@ export const tradingBridge = {
       console.error('DEBUG: Fetch error:', error);
       console.error('DEBUG: Error message:', error.message);
       console.error('DEBUG: Error name:', error.name);
+      console.error('DEBUG: Error type:', error.type);
       console.error('DEBUG: Error stack:', error.stack);
+      
+      // If it's a network error, provide more helpful message
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        const networkError = new Error(`Network error: ${error.message}. Check browser console (F12) for details. URL: ${url}`);
+        networkError.originalError = error;
+        throw networkError;
+      }
+      
       throw error;
     }
   },
