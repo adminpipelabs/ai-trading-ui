@@ -21,9 +21,9 @@ async function apiCall(url, options = {}) {
     console.warn('Failed to parse user from localStorage:', e);
   }
   
-  // Build headers - ensure Content-Type is set for POST/PUT requests
+  // Build headers - match what works in curl
   const headers = {
-    ...(options.method && ['POST', 'PUT', 'PATCH'].includes(options.method) && { 'Content-Type': 'application/json' }),
+    'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` }),
     ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
     ...options.headers,
