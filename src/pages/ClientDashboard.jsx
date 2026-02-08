@@ -239,6 +239,8 @@ export default function ClientDashboard() {
     localStorage.setItem('pipelabs_has_seen_welcome', 'true');
   };
 
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+
   const tabs = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'settings', label: 'Settings' },
@@ -255,14 +257,122 @@ export default function ClientDashboard() {
   }
 
   return (
-    <div style={styles.container}>
-      {/* Header */}
-      <header style={styles.header}>
+    <>
+      {/* Responsive CSS for mobile */}
+      <style>{`
+        @media (max-width: 768px) {
+          .header-nav {
+            width: 100%;
+            order: 3;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+          }
+          .header-logo-text {
+            display: none;
+          }
+          .ai-panel {
+            width: calc(100vw - 20px) !important;
+            bottom: 10px !important;
+            right: 10px !important;
+            left: 10px !important;
+            max-width: none !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .header-right-group {
+            gap: 6px;
+          }
+          .nav-button {
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+          }
+          .wallet-chip {
+            font-size: 11px !important;
+            padding: 4px 8px !important;
+          }
+        }
+        .nav-button {
+          transition: all 0.2s ease;
+        }
+        .nav-button:hover {
+          background-color: #f9fafb;
+        }
+        .nav-button-active {
+          transition: all 0.2s ease;
+        }
+        .nav-button-active:hover {
+          background-color: #e0f7f4;
+        }
+        .ai-button {
+          transition: all 0.2s ease;
+        }
+        .ai-button:hover {
+          background-color: #f9fafb;
+          border-color: #d1d5db;
+        }
+        .ai-button-active {
+          transition: all 0.2s ease;
+        }
+        .ai-button-active:hover {
+          background-color: #e0f7f4;
+          border-color: #0d9488;
+        }
+        .ai-panel {
+          animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .ai-input:focus {
+          border-color: #0d9488;
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+        }
+        .ai-send-button {
+          transition: all 0.2s ease;
+        }
+        .ai-send-button:hover {
+          background-color: #0b8377;
+          transform: translateY(-1px);
+        }
+        .ai-send-button:active {
+          transform: translateY(0);
+        }
+      `}</style>
+      <div style={styles.container}>
+        {/* Header */}
+        <header style={styles.header}>
         <div style={styles.headerLeft}>
           <div style={styles.logo}>P</div>
-          <span style={styles.logoText}>Pipe Labs</span>
+          <span style={styles.logoText} className="header-logo-text">Pipe Labs</span>
         </div>
-        <nav style={styles.nav}>
+        <div style={styles.headerRight} className="header-right-group">
+          <button 
+            onClick={() => setShowAIAssistant(!showAIAssistant)}
+            style={{
+              ...styles.aiButton,
+              ...(showAIAssistant ? styles.aiButtonActive : {}),
+            }}
+            className={showAIAssistant ? 'ai-button-active' : 'ai-button'}
+            title="AI Assistant"
+          >
+            🤖 AI
+          </button>
+          <div style={styles.walletChip} className="wallet-chip">
+            <span style={styles.chainDot} />
+            {(user.wallet_address || user.wallet || '').slice(0, 4)}...{(user.wallet_address || user.wallet || '').slice(-4)}
+          </div>
+          <button onClick={logout} style={styles.logoutButton}>Log out</button>
+        </div>
+        <nav style={styles.nav} className="header-nav">
           {tabs.map(tab => (
             <button
               key={tab.key}
@@ -271,19 +381,73 @@ export default function ClientDashboard() {
                 ...styles.navButton,
                 ...(activeTab === tab.key ? styles.navButtonActive : {}),
               }}
+              className={`nav-button ${activeTab === tab.key ? 'nav-button-active' : ''}`}
             >
               {tab.label}
             </button>
           ))}
         </nav>
-        <div style={styles.headerRight}>
-          <div style={styles.walletChip}>
-            <span style={styles.chainDot} />
-            {(user.wallet_address || user.wallet || '').slice(0, 4)}...{(user.wallet_address || user.wallet || '').slice(-4)}
-          </div>
-          <button onClick={logout} style={styles.logoutButton}>Log out</button>
-        </div>
       </header>
+
+      {/* AI Assistant Panel */}
+      {showAIAssistant && (
+        <div style={styles.aiPanel} className="ai-panel">
+          <div style={styles.aiPanelHeader}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>AI Assistant</h3>
+            <button 
+              onClick={() => setShowAIAssistant(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '20px',
+                cursor: 'pointer',
+                color: '#6b7280',
+                padding: 0,
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ×
+            </button>
+          </div>
+          <div style={styles.aiPanelContent}>
+            <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '16px', lineHeight: '1.5' }}>
+              Ask me anything about your trading bots, account settings, or how to use Pipe Labs.
+            </p>
+            <div style={styles.aiChat}>
+              <div style={styles.aiMessage}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ fontSize: '18px', flexShrink: 0 }}>🤖</span>
+                  <div>
+                    <strong style={{ color: '#0d9488', fontSize: '13px' }}>AI Assistant:</strong>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#374151', lineHeight: '1.6' }}>
+                      Hello! I'm here to help you with your trading bots. What would you like to know?
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={styles.aiInputContainer}>
+              <input
+                type="text"
+                placeholder="Type your question..."
+                style={styles.aiInput}
+                className="ai-input"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && e.target.value.trim()) {
+                    // TODO: Implement AI chat functionality
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <button style={styles.aiSendButton} className="ai-send-button">Send</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main style={styles.main}>
@@ -323,7 +487,8 @@ export default function ClientDashboard() {
 
       {/* Welcome Modal */}
       <WelcomeModal isOpen={showWelcome} onClose={handleWelcomeClose} />
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -387,11 +552,6 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 
 // ─── Dashboard Tab ────────────────────────────────────────
 function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading }) {
-  const [dashboardSubTab, setDashboardSubTab] = useState('overview');
-  const [balances, setBalances] = useState([]);
-  const [trades, setTrades] = useState([]);
-  const [loadingData, setLoadingData] = useState(false);
-  
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
@@ -403,67 +563,8 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
   const clientId = client?.id || user.id;
   const walletAddress = user?.wallet_address || user?.wallet || client?.wallets?.[0]?.address;
 
-  // Fetch balances and trades when switching to those tabs
-  useEffect(() => {
-    if (dashboardSubTab === 'balances' && walletAddress) {
-      setLoadingData(true);
-      tradingBridge.getBalances(walletAddress)
-        .then(data => setBalances(Array.isArray(data) ? data : []))
-        .catch(err => {
-          console.error('Failed to fetch balances:', err);
-          setBalances([]);
-        })
-        .finally(() => setLoadingData(false));
-    } else if (dashboardSubTab === 'trades' && walletAddress) {
-      setLoadingData(true);
-      tradingBridge.getTrades(null, 100, 30, walletAddress)
-        .then(data => setTrades(Array.isArray(data?.trades) ? data.trades : Array.isArray(data) ? data : []))
-        .catch(err => {
-          console.error('Failed to fetch trades:', err);
-          setTrades([]);
-        })
-        .finally(() => setLoadingData(false));
-    }
-  }, [dashboardSubTab, walletAddress]);
-
   return (
     <div>
-      {/* Dashboard Sub-Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '24px',
-        borderBottom: '2px solid #e5e7eb',
-      }}>
-        {[
-          { key: 'overview', label: 'Overview' },
-          { key: 'balances', label: 'Balances' },
-          { key: 'trades', label: 'Trades' },
-          { key: 'reports', label: 'Reports' },
-        ].map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setDashboardSubTab(tab.key)}
-            style={{
-              padding: '12px 24px',
-              fontSize: '14px',
-              fontWeight: 600,
-              color: dashboardSubTab === tab.key ? '#0d9488' : '#6b7280',
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: dashboardSubTab === tab.key ? '2px solid #0d9488' : '2px solid transparent',
-              cursor: 'pointer',
-              marginBottom: '-2px',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Overview Tab */}
-      {dashboardSubTab === 'overview' && (
-        <div>
           {/* Welcome */}
           <div style={styles.welcomeSection}>
             <h1 style={styles.welcomeTitle}>Welcome back, {user.name || client?.name || 'User'}</h1>
@@ -922,152 +1023,6 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
           }}
         />
       )}
-        </div>
-      )}
-
-      {/* Balances Tab */}
-      {dashboardSubTab === 'balances' && (
-        <div>
-          <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: 600 }}>Balances</h2>
-          {loadingData ? (
-            <p style={{ color: '#6b7280' }}>Loading balances...</p>
-          ) : balances.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p style={{ color: '#6b7280' }}>No balances found. Connect your exchange API keys in Settings to view balances.</p>
-            </div>
-          ) : (
-            <div style={styles.section}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Exchange</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Asset</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Free</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Used</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Total</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>USD Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {balances.map((bal, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px' }}>{bal.exchange || '—'}</td>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>{bal.asset || '—'}</td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>{bal.free?.toFixed(4) || '0.0000'}</td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>{bal.used?.toFixed(4) || '0.0000'}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>{bal.total?.toFixed(4) || '0.0000'}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', color: '#0d9488' }}>
-                        {bal.usd_value ? `$${bal.usd_value.toFixed(2)}` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Trades Tab */}
-      {dashboardSubTab === 'trades' && (
-        <div>
-          <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: 600 }}>Trades</h2>
-          {loadingData ? (
-            <p style={{ color: '#6b7280' }}>Loading trades...</p>
-          ) : trades.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p style={{ color: '#6b7280' }}>No trades found. Your bot trades will appear here once it starts trading.</p>
-            </div>
-          ) : (
-            <div style={styles.section}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Time</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Pair</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Exchange</th>
-                    <th style={{ textAlign: 'left', padding: '12px', fontWeight: 600 }}>Side</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Amount</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Price</th>
-                    <th style={{ textAlign: 'right', padding: '12px', fontWeight: 600 }}>Cost</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {trades.map((trade, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                      <td style={{ padding: '12px' }}>
-                        {trade.timestamp ? new Date(trade.timestamp).toLocaleString() : '—'}
-                      </td>
-                      <td style={{ padding: '12px', fontWeight: 600 }}>{trade.trading_pair || trade.pair || '—'}</td>
-                      <td style={{ padding: '12px' }}>{trade.exchange || '—'}</td>
-                      <td style={{ padding: '12px', color: trade.side === 'buy' ? '#10b981' : '#ef4444' }}>
-                        {trade.side?.toUpperCase() || '—'}
-                      </td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>{trade.amount?.toFixed(4) || '—'}</td>
-                      <td style={{ padding: '12px', textAlign: 'right' }}>{trade.price?.toFixed(4) || '—'}</td>
-                      <td style={{ padding: '12px', textAlign: 'right', fontWeight: 600 }}>
-                        {trade.cost ? `$${trade.cost.toFixed(2)}` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Reports Tab */}
-      {dashboardSubTab === 'reports' && (
-        <div>
-          <h2 style={{ marginBottom: '20px', fontSize: '24px', fontWeight: 600 }}>Reports</h2>
-          <div style={styles.section}>
-            <p style={{ color: '#6b7280', marginBottom: '16px' }}>
-              Generate detailed reports of your trading activity, performance metrics, and P&L analysis.
-            </p>
-            <button
-              onClick={async () => {
-                try {
-                  const accountId = user.account_identifier || client?.account_identifier;
-                  if (!accountId) {
-                    alert('Account identifier not found');
-                    return;
-                  }
-                  const data = await tradingBridge.getDashboard(accountId);
-                  // Create a downloadable report
-                  const report = {
-                    account: accountId,
-                    generated: new Date().toISOString(),
-                    ...data
-                  };
-                  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `trading-report-${accountId}-${new Date().toISOString().split('T')[0]}.json`;
-                  a.click();
-                  URL.revokeObjectURL(url);
-                } catch (err) {
-                  console.error('Failed to generate report:', err);
-                  alert('Failed to generate report. Please try again.');
-                }
-              }}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#0d9488',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              📊 Generate Report
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1457,45 +1412,55 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '16px 32px',
+    padding: '10px 16px',
     backgroundColor: '#fff',
     borderBottom: '1px solid #e5e7eb',
+    flexWrap: 'wrap',
+    gap: '8px',
   },
   headerLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '8px',
+    flexShrink: 0,
   },
   logo: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '8px',
+    width: '28px',
+    height: '28px',
+    borderRadius: '6px',
     backgroundColor: '#0d9488',
     color: '#fff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 700,
-    fontSize: '16px',
+    fontSize: '14px',
+    flexShrink: 0,
   },
   logoText: {
     fontWeight: 700,
-    fontSize: '18px',
+    fontSize: '15px',
     color: '#111827',
+    whiteSpace: 'nowrap',
   },
   nav: {
     display: 'flex',
-    gap: '4px',
+    gap: '2px',
+    width: '100%',
+    justifyContent: 'flex-start',
+    order: 3,
+    minWidth: 0,
   },
   navButton: {
-    padding: '8px 20px',
-    borderRadius: '8px',
+    padding: '6px 14px',
+    borderRadius: '6px',
     border: 'none',
     backgroundColor: 'transparent',
     color: '#6b7280',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: 500,
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
   navButtonActive: {
     backgroundColor: '#f0fdfa',
@@ -1505,40 +1470,131 @@ const styles = {
   headerRight: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: '8px',
+    flexShrink: 0,
+  },
+  aiButton: {
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid #e5e7eb',
+    backgroundColor: '#fff',
+    color: '#6b7280',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  aiButtonActive: {
+    backgroundColor: '#f0fdfa',
+    borderColor: '#0d9488',
+    color: '#0d9488',
   },
   walletChip: {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    padding: '6px 12px',
-    borderRadius: '20px',
+    padding: '5px 10px',
+    borderRadius: '16px',
     backgroundColor: '#f3f4f6',
-    fontSize: '13px',
+    fontSize: '12px',
     fontFamily: 'monospace',
     color: '#374151',
+    whiteSpace: 'nowrap',
   },
   chainDot: {
-    width: '8px',
-    height: '8px',
+    width: '6px',
+    height: '6px',
     borderRadius: '50%',
     backgroundColor: '#22c55e',
+    flexShrink: 0,
   },
   logoutButton: {
-    padding: '8px 16px',
-    borderRadius: '8px',
+    padding: '6px 12px',
+    borderRadius: '6px',
     border: '1px solid #e5e7eb',
     backgroundColor: '#fff',
     color: '#6b7280',
-    fontSize: '13px',
+    fontSize: '12px',
     cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  // AI Assistant Panel
+  aiPanel: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '380px',
+    maxWidth: 'calc(100vw - 40px)',
+    maxHeight: '500px',
+    backgroundColor: '#fff',
+    borderRadius: '12px',
+    border: '1px solid #e5e7eb',
+    boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)',
+    zIndex: 1000,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  aiPanelHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 16px',
+    borderBottom: '1px solid #e5e7eb',
+  },
+  aiPanelContent: {
+    padding: '16px',
+    flex: '1',
+    overflowY: 'auto',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  aiChat: {
+    flex: '1',
+    marginBottom: '16px',
+    minHeight: '200px',
+    maxHeight: '300px',
+    overflowY: 'auto',
+    paddingRight: '4px',
+  },
+  aiMessage: {
+    padding: '12px',
+    backgroundColor: '#f0fdfa',
+    borderRadius: '8px',
+    fontSize: '13px',
+    color: '#374151',
+    lineHeight: '1.6',
+    marginBottom: '8px',
+    border: '1px solid #ccfbf1',
+  },
+  aiInputContainer: {
+    display: 'flex',
+    gap: '8px',
+  },
+  aiInput: {
+    flex: '1',
+    padding: '10px 12px',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb',
+    fontSize: '13px',
+    outline: 'none',
+  },
+  aiSendButton: {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: '#0d9488',
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
   },
 
   // Main
   main: {
     maxWidth: '960px',
     margin: '0 auto',
-    padding: '32px 24px',
+    padding: '24px 16px',
   },
 
   // Welcome
