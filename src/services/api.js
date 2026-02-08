@@ -362,25 +362,40 @@ export const tradingBridge = {
 
   async startBot(botId) {
     const url = `${TRADING_BRIDGE_URL}/bots/${botId}/start`;
-    console.log('🚀 Starting bot:', botId);
-    console.log('📡 API URL:', url);
-    console.log('🔗 TRADING_BRIDGE_URL:', TRADING_BRIDGE_URL);
+    
+    // Get auth headers directly
+    const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
+    let walletAddress = null;
+    try {
+      const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        walletAddress = user.wallet_address;
+      }
+    } catch (e) {}
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
+    };
     
     try {
-      const result = await apiCall(url, {
+      const response = await fetch(url, {
         method: 'POST',
+        headers: headers,
+        mode: 'cors',
+        cache: 'no-cache',
       });
-      console.log('✅ Start bot response:', result);
-      return result;
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+      
+      return await response.json();
     } catch (error) {
-      console.error('❌ Start bot error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        isNetworkError: error.isNetworkError,
-        url: url
-      });
+      console.error('Start bot failed:', error);
       throw error;
     }
   },
