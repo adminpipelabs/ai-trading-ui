@@ -361,43 +361,10 @@ export const tradingBridge = {
   },
 
   async startBot(botId) {
-    const url = `${TRADING_BRIDGE_URL}/bots/${botId}/start`;
-    
-    // Get auth headers directly
-    const token = localStorage.getItem('access_token') || localStorage.getItem('pipelabs_token');
-    let walletAddress = null;
-    try {
-      const userStr = localStorage.getItem('user') || localStorage.getItem('pipelabs_user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        walletAddress = user.wallet_address;
-      }
-    } catch (e) {}
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
-      ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
-    };
-    
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        mode: 'cors',
-        cache: 'no-cache',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
-        throw new Error(errorData.detail || `HTTP ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Start bot failed:', error);
-      throw error;
-    }
+    // Use the standard apiCall wrapper - it handles auth correctly
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
+      method: 'POST',
+    });
   },
 
   async stopBot(botId) {
