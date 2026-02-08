@@ -516,6 +516,11 @@ export default function ClientDashboard() {
             selectedBotType={selectedBotType}
             setSelectedBotType={setSelectedBotType}
             botActionLoading={botActionLoading}
+            expandedBots={expandedBots}
+            setExpandedBots={setExpandedBots}
+            botTrades={botTrades}
+            loadingTrades={loadingTrades}
+            toggleBotActivity={toggleBotActivity}
           />
         ) : activeTab === 'settings' ? (
           <SettingsTab
@@ -597,7 +602,7 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 }
 
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading }) {
+function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading, expandedBots, setExpandedBots, botTrades, loadingTrades, toggleBotActivity }) {
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
