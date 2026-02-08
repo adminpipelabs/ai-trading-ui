@@ -89,14 +89,33 @@ export default function ClientDashboard() {
       const accountId = clientData?.account_identifier || user.account_identifier || client?.account_identifier;
       if (accountId) {
         try {
+          console.log('DEBUG: Fetching bots for account:', accountId);
           const botsData = await tradingBridge.getBots(accountId);
           const botsList = Array.isArray(botsData) ? botsData : (botsData.bots || []);
+          console.log('DEBUG: Received bots from API:', botsList.length, 'bots');
+          console.log('DEBUG: Bot details:', botsList.map(b => ({ 
+            id: b.id, 
+            name: b.name, 
+            bot_type: b.bot_type, 
+            status: b.status,
+            account: b.account,
+            client_id: b.client_id
+          })));
+          
           // Filter to only this client's bots
           const clientId = clientData?.client_id || client?.id || user.id;
-          setBots(botsList.filter(bot => 
+          const filteredBots = botsList.filter(bot => 
             bot.client_id === clientId || 
             bot.account === accountId
-          ));
+          );
+          console.log('DEBUG: Filtered bots:', filteredBots.length, 'bots');
+          console.log('DEBUG: Filtered bot details:', filteredBots.map(b => ({ 
+            id: b.id, 
+            name: b.name, 
+            bot_type: b.bot_type, 
+            status: b.status 
+          })));
+          setBots(filteredBots);
         } catch (botsError) {
           console.error('Failed to fetch bots:', botsError);
           setBots([]); // Don't hang - show empty state
@@ -196,7 +215,10 @@ export default function ClientDashboard() {
       }
       
       console.log('DEBUG: Bot action succeeded, refreshing data...');
+      // Force refresh - wait a moment for backend to update, then fetch
+      await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms for backend
       await fetchData(); // Refresh bot status
+      console.log('DEBUG: Data refresh complete');
     } catch (err) {
       console.error(`DEBUG: Failed to ${action} bot:`, err);
       console.error('DEBUG: Error details:', {
@@ -614,6 +636,9 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
         <div style={styles.sectionHeader}>
           <h2 style={styles.sectionTitle}>
             Your Bots ({bots.length})
+            <span style={{ fontSize: '14px', fontWeight: 400, color: '#6b7280', marginLeft: '8px' }}>
+              {bots.map(b => b.bot_type).join(', ')}
+            </span>
           </h2>
           {/* Always show add bot buttons - wallet will be connected during setup if needed */}
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
