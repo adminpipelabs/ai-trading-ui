@@ -768,16 +768,6 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       <h3 style={styles.compactBotName}>
                         {botItem.name}
                       </h3>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        backgroundColor: botItem.status === 'running' ? '#d1fae5' : '#f3f4f6',
-                        color: botItem.status === 'running' ? '#065f46' : '#6b7280',
-                      }}>
-                        {botItem.status === 'running' ? '🟢 Running' : '⚪ Stopped'}
-                      </span>
                       <BotHealthBadge
                         status={botItem.status}
                         healthStatus={botItem.health_status}
@@ -826,47 +816,43 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                   </div>
                 </div>
 
-                {/* Compact Stats Row */}
-                <div style={styles.compactBotStats}>
-                  <div style={styles.compactStatItem}>
-                    <span style={styles.compactStatLabel}>Target</span>
-                    <span style={styles.compactStatValue}>${(botItem.config?.daily_volume_usd || 5000).toLocaleString()}</span>
+                {/* Simplified Stats - Only show volume if available */}
+                {(volumeToday > 0 || botItem.stats?.trades_today > 0) && (
+                  <div style={styles.compactBotStats}>
+                    <div style={styles.compactStatItem}>
+                      <span style={styles.compactStatLabel}>Volume Today</span>
+                      <span style={styles.compactStatValue}>
+                        ${volumeToday.toLocaleString(undefined, {maximumFractionDigits: 0})} / ${volumeTarget.toLocaleString()}
+                      </span>
+                    </div>
+                    {botItem.stats?.trades_today > 0 && (
+                      <div style={styles.compactStatItem}>
+                        <span style={styles.compactStatLabel}>Trades</span>
+                        <span style={styles.compactStatValue}>{botItem.stats.trades_today}</span>
+                      </div>
+                    )}
+                    {botItem.last_trade_time && (
+                      <div style={styles.compactStatItem}>
+                        <span style={styles.compactStatLabel}>Last Trade</span>
+                        <span style={styles.compactStatValue}>
+                          {new Date(botItem.last_trade_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div style={styles.compactStatItem}>
-                    <span style={styles.compactStatLabel}>Progress</span>
-                    <span style={styles.compactStatValue}>{volumePercent.toFixed(0)}%</span>
-                  </div>
-                  <div style={styles.compactStatItem}>
-                    <span style={styles.compactStatLabel}>Size</span>
-                    <span style={styles.compactStatValue}>${botItem.config?.min_trade_usd || 10}-${botItem.config?.max_trade_usd || 25}</span>
-                  </div>
-                  <div style={styles.compactStatItem}>
-                    <span style={styles.compactStatLabel}>Interval</span>
-                    <span style={styles.compactStatValue}>{Math.round((botItem.config?.interval_min_seconds || 900) / 60)}-{Math.round((botItem.config?.interval_max_seconds || 2700) / 60)}m</span>
-                  </div>
-                  <div style={styles.compactStatItem}>
-                    <span style={styles.compactStatLabel}>Trades</span>
-                    <span style={styles.compactStatValue}>{botItem.stats?.trades_today || '0'}</span>
-                  </div>
-                  <div style={styles.compactStatItem}>
-                    <span style={styles.compactStatLabel}>Last</span>
-                    <span style={styles.compactStatValue}>
-                      {botItem.last_trade_time 
-                        ? new Date(botItem.last_trade_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                        : 'Never'}
+                )}
+                
+                {/* Progress Bar - Only show if there's progress */}
+                {volumeToday > 0 && (
+                  <div style={styles.compactProgressContainer}>
+                    <div style={styles.compactProgressBar}>
+                      <div style={{ ...styles.compactProgressFill, width: `${Math.min(volumePercent, 100)}%` }} />
+                    </div>
+                    <span style={styles.compactProgressLabel}>
+                      {volumePercent.toFixed(0)}% complete
                     </span>
                   </div>
-                </div>
-
-                {/* Compact Progress Bar */}
-                <div style={styles.compactProgressContainer}>
-                  <div style={styles.compactProgressBar}>
-                    <div style={{ ...styles.compactProgressFill, width: `${volumePercent}%` }} />
-                  </div>
-                  <span style={styles.compactProgressLabel}>
-                    ${volumeToday.toLocaleString()} / ${volumeTarget.toLocaleString()}
-                  </span>
-                </div>
+                )}
               </div>
             );
           })}
