@@ -759,32 +759,54 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
             const volumeTarget = botItem?.config?.daily_volume_usd || 5000;
             const volumePercent = volumeTarget > 0 ? Math.min((volumeToday / volumeTarget) * 100, 100) : 0;
             
+            const isRunning = botItem.status === 'running';
+            const volumeProgress = volumeToday > 0 ? `${volumeToday.toLocaleString(undefined, {maximumFractionDigits: 0})} / ${volumeTarget.toLocaleString()}` : `Target: $${volumeTarget.toLocaleString()}`;
+            
             return (
               <div key={botItem.id} style={styles.compactBotCard} className="compact-bot-card">
-                {/* Compact Header Row */}
+                {/* Essential Info Row */}
                 <div style={styles.compactBotHeader}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                       <h3 style={styles.compactBotName}>
                         {botItem.name}
                       </h3>
-                      <BotHealthBadge
-                        status={botItem.status}
-                        healthStatus={botItem.health_status}
-                        healthMessage={botItem.health_message}
-                        lastTradeTime={botItem.last_trade_time}
-                        botId={botItem.id}
-                        onRefresh={onRefresh}
-                      />
+                      {/* Clear Status Badge */}
+                      <span style={{
+                        padding: '4px 12px',
+                        borderRadius: '16px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        backgroundColor: isRunning ? '#d1fae5' : '#f3f4f6',
+                        color: isRunning ? '#065f46' : '#6b7280',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {isRunning ? '🟢 Running' : '⚪ Stopped'}
+                      </span>
+                      {/* Volume Progress - Always visible */}
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#374151',
+                      }}>
+                        {volumeProgress}
+                      </span>
                     </div>
-                    <span style={styles.compactBotMeta}>
-                      {botItem.bot_type === 'volume' ? 'Volume' : botItem.bot_type === 'spread' ? 'Spread' : 'Trading'} · 
-                      {botItem.connector || 'Jupiter'} · {botItem.pair || 'N/A'}
-                    </span>
+                    {/* Show health message if there's an issue */}
+                    {botItem.health_message && botItem.health_status !== 'healthy' && (
+                      <span style={{
+                        fontSize: '12px',
+                        color: '#ef4444',
+                        display: 'block',
+                        marginTop: '4px',
+                      }}>
+                        {botItem.health_message}
+                      </span>
+                    )}
                   </div>
-                  {/* Quick Actions */}
+                  {/* Controls */}
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                    {botItem.status === 'running' ? (
+                    {isRunning ? (
                       <button 
                         onClick={() => onStartStop(botItem.id, 'stop')} 
                         style={styles.compactStopButton}
@@ -815,44 +837,20 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                     </button>
                   </div>
                 </div>
-
-                {/* Simplified Stats - Only show volume if available */}
-                {(volumeToday > 0 || botItem.stats?.trades_today > 0) && (
-                  <div style={styles.compactBotStats}>
-                    <div style={styles.compactStatItem}>
-                      <span style={styles.compactStatLabel}>Volume Today</span>
-                      <span style={styles.compactStatValue}>
-                        ${volumeToday.toLocaleString(undefined, {maximumFractionDigits: 0})} / ${volumeTarget.toLocaleString()}
-                      </span>
-                    </div>
-                    {botItem.stats?.trades_today > 0 && (
-                      <div style={styles.compactStatItem}>
-                        <span style={styles.compactStatLabel}>Trades</span>
-                        <span style={styles.compactStatValue}>{botItem.stats.trades_today}</span>
-                      </div>
-                    )}
-                    {botItem.last_trade_time && (
-                      <div style={styles.compactStatItem}>
-                        <span style={styles.compactStatLabel}>Last Trade</span>
-                        <span style={styles.compactStatValue}>
-                          {new Date(botItem.last_trade_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
                 
-                {/* Progress Bar - Only show if there's progress */}
-                {volumeToday > 0 && (
-                  <div style={styles.compactProgressContainer}>
-                    <div style={styles.compactProgressBar}>
-                      <div style={{ ...styles.compactProgressFill, width: `${Math.min(volumePercent, 100)}%` }} />
-                    </div>
-                    <span style={styles.compactProgressLabel}>
-                      {volumePercent.toFixed(0)}% complete
-                    </span>
+                {/* Progress Bar - Always show for visual feedback */}
+                <div style={styles.compactProgressContainer}>
+                  <div style={styles.compactProgressBar}>
+                    <div style={{ 
+                      ...styles.compactProgressFill, 
+                      width: `${Math.min(volumePercent, 100)}%`,
+                      backgroundColor: isRunning ? '#10b981' : '#d1d5db'
+                    }} />
                   </div>
-                )}
+                  <span style={styles.compactProgressLabel}>
+                    {volumePercent.toFixed(0)}% of daily target
+                  </span>
+                </div>
               </div>
             );
           })}
