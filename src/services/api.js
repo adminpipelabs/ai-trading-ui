@@ -363,12 +363,32 @@ export const tradingBridge = {
   },
 
   async startBot(botId) {
-    // Use apiCall wrapper - same as stopBot and other endpoints
-    // This ensures consistent error handling, CORS, and headers
-    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
-      method: 'POST',
-      body: JSON.stringify({}), // Empty body for POST
-    });
+    // DEBUG: Log startBot call
+    console.log('DEBUG: startBot called', { botId });
+    console.log('DEBUG: TRADING_BRIDGE_URL:', TRADING_BRIDGE_URL);
+    
+    if (!botId) {
+      console.error('DEBUG: botId is missing!', botId);
+      throw new Error('Bot ID is required');
+    }
+    
+    const url = `${TRADING_BRIDGE_URL}/bots/${botId}/start`;
+    console.log('DEBUG: Starting bot, URL:', url);
+    console.log('DEBUG: About to call apiCall...');
+    
+    try {
+      const result = await apiCall(url, {
+        method: 'POST',
+        body: JSON.stringify({}), // Empty body for POST
+      });
+      console.log('DEBUG: startBot succeeded:', result);
+      return result;
+    } catch (error) {
+      console.error('DEBUG: startBot failed:', error);
+      console.error('DEBUG: Error message:', error.message);
+      console.error('DEBUG: Error name:', error.name);
+      throw error;
+    }
   },
 
   async stopBot(botId) {
