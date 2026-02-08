@@ -588,47 +588,6 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
             <p style={styles.welcomeSubtitle}>{user.account_identifier || client?.account_identifier}</p>
           </div>
 
-      {/* Overview Cards */}
-      <div style={styles.cardsGrid}>
-        <StatCard
-          label={
-            <>
-              Bot Status
-              <InfoTooltip
-                id="bot-status"
-                text="🟢 ON (Running): Your bot is actively trading. 🔴 OFF (Stopped): Bot is stopped — click Start Bot to resume. 🟡 Stale: No trades in the last 30 minutes (may be normal for low-frequency settings). ⚠️ Error: Health check failed — our team is notified automatically."
-                tooltipStates={tooltipStates}
-                setTooltipStates={setTooltipStates}
-              />
-            </>
-          }
-          value={bot?.status === 'running' ? '🟢 ON' :
-                 bot?.status === 'stopped' ? '🔴 OFF' :
-                 bot?.health_status === 'stale' ? '🟡 Stale' :
-                 bot?.health_status === 'error' ? '⚠️ Error' :
-                 bot ? '⚪ Unknown' : 'No Bot'}
-          sublabel={bot?.bot_type ? `${bot.bot_type === 'volume' ? 'Volume Bot' : bot.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'} · ${bot?.health_message || ''}` : bot?.health_message}
-        />
-        <StatCard
-          label={
-            <>
-              Wallet Balance
-              <InfoTooltip
-                id="wallet-balance"
-                text="This is the balance of the wallet your bot trades from. Make sure it has enough native token (SOL for Solana, ETH for Ethereum, etc.) for gas fees and enough trading capital to execute trades at your configured sizes. Low balance? Your bot will stop automatically and you'll see a 'Stopped — NO FUNDS' status."
-                tooltipStates={tooltipStates}
-                setTooltipStates={setTooltipStates}
-              />
-            </>
-          }
-          value={walletBalance?.sol_balance != null
-            ? `${walletBalance.sol_balance.toFixed(4)} SOL`
-            : walletBalance?.balance_sol != null
-            ? `${walletBalance.balance_sol.toFixed(4)} SOL`
-            : '—'}
-          sublabel={walletBalance?.usd_value ? `≈ $${walletBalance.usd_value.toFixed(2)}` : null}
-        />
-      </div>
 
       {/* Removed "Connect Wallet" banner - credentials are handled during bot creation wizard */}
 
