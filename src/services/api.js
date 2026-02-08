@@ -361,8 +361,10 @@ export const tradingBridge = {
 
   async startBot(botId) {
     // Use the standard apiCall wrapper - it handles auth correctly
+    // POST requests need an empty body or Content-Length: 0
     return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/start`, {
       method: 'POST',
+      body: '{}', // Empty JSON body for POST
     });
   },
 
