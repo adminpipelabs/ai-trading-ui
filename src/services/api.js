@@ -44,11 +44,12 @@ async function apiCall(url, options = {}) {
   let response;
   try {
     // Build fetch options - explicit CORS mode for cross-origin requests
+    // Backend has allow_credentials=True, so we need to match that
     const fetchOptions = {
       method: options.method || 'GET',
       headers: headers,
       mode: 'cors', // Explicitly set CORS mode
-      credentials: 'omit', // Don't send cookies (not needed for API)
+      credentials: 'include', // Match backend allow_credentials=True
       ...(options.body && { body: options.body }),
     };
     
