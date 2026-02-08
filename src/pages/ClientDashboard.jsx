@@ -26,6 +26,35 @@ export default function ClientDashboard() {
   const [tooltipStates, setTooltipStates] = useState({});
   const [managementMode, setManagementMode] = useState('unset');
   const [botActionLoading, setBotActionLoading] = useState({}); // Loading state per bot ID: { [botId]: true/false }
+  const [expandedBots, setExpandedBots] = useState({}); // Track which bots show activity: { [botId]: true/false }
+  const [botTrades, setBotTrades] = useState({}); // Cache trades per bot: { [botId]: [...trades] }
+  const [loadingTrades, setLoadingTrades] = useState({}); // Loading state for trades: { [botId]: true/false }
+
+  const fetchBotTrades = async (botId) => {
+    if (loadingTrades[botId] || botTrades[botId]) return; // Already loading or cached
+    
+    setLoadingTrades(prev => ({ ...prev, [botId]: true }));
+    try {
+      const stats = await tradingBridge.getBotStats(botId);
+      const recentTrades = (stats.recent_trades || []).slice(0, 5); // Show last 5 trades
+      setBotTrades(prev => ({ ...prev, [botId]: recentTrades }));
+    } catch (err) {
+      console.error(`Failed to fetch trades for bot ${botId}:`, err);
+      setBotTrades(prev => ({ ...prev, [botId]: [] }));
+    } finally {
+      setLoadingTrades(prev => ({ ...prev, [botId]: false }));
+    }
+  };
+
+  const toggleBotActivity = (botId) => {
+    const isExpanded = expandedBots[botId];
+    setExpandedBots(prev => ({ ...prev, [botId]: !isExpanded }));
+    
+    // Fetch trades when expanding
+    if (!isExpanded && !botTrades[botId]) {
+      fetchBotTrades(botId);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -850,6 +879,95 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                   <span style={styles.compactProgressLabel}>
                     {volumePercent.toFixed(0)}% of daily target
                   </span>
+                </div>
+
+                {/* Recent Activity - Expandable section to verify trading */}
+                <div style={{ marginTop: '12px', borderTop: '1px solid #e5e7eb', paddingTop: '12px' }}>
+                  <button
+                    onClick={() => toggleBotActivity(botItem.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#6b7280',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      padding: '4px 0',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span>{expandedBots[botItem.id] ? '▼' : '▶'}</span>
+                    <span>Recent Activity</span>
+                    {botItem.stats?.trades_today > 0 && (
+                      <span style={{ color: '#10b981', fontWeight: 600 }}>
+                        ({botItem.stats.trades_today} trades today)
+                      </span>
+                    )}
+                  </button>
+
+                  {expandedBots[botItem.id] && (
+                    <div style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                      {loadingTrades[botItem.id] ? (
+                        <div style={{ color: '#9ca3af', fontSize: '12px' }}>Loading trades...</div>
+                      ) : botTrades[botItem.id] && botTrades[botItem.id].length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {botTrades[botItem.id].map((trade, idx) => {
+                            const tradeTime = trade.created_at 
+                              ? new Date(trade.created_at).toLocaleString('en-US', { 
+                                  month: 'short', 
+                                  day: 'numeric', 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })
+                              : 'Unknown';
+                            const sideColor = trade.side?.toLowerCase() === 'buy' ? '#10b981' : '#ef4444';
+                            
+                            return (
+                              <div key={trade.id || idx} style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                fontSize: '11px',
+                                padding: '4px 8px',
+                                backgroundColor: '#f9fafb',
+                                borderRadius: '4px',
+                              }}>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                  <span style={{
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: sideColor + '20',
+                                    color: sideColor,
+                                    fontWeight: 600,
+                                    fontSize: '10px',
+                                  }}>
+                                    {trade.side?.toUpperCase() || 'N/A'}
+                                  </span>
+                                  <span style={{ color: '#6b7280' }}>
+                                    ${trade.value_usd ? trade.value_usd.toFixed(2) : '0.00'}
+                                  </span>
+                                  {trade.amount && (
+                                    <span style={{ color: '#9ca3af' }}>
+                                      {parseFloat(trade.amount).toFixed(4)}
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ color: '#9ca3af', fontSize: '10px' }}>
+                                  {tradeTime}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ color: '#9ca3af', fontSize: '12px', fontStyle: 'italic' }}>
+                          No trades yet. Trades will appear here once the bot starts trading.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
