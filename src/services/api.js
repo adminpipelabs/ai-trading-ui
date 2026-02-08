@@ -21,9 +21,9 @@ async function apiCall(url, options = {}) {
     console.warn('Failed to parse user from localStorage:', e);
   }
   
-  // Build headers - always include X-Wallet-Address if available
+  // Build headers - ensure Content-Type is set for POST/PUT requests
   const headers = {
-    'Content-Type': 'application/json',
+    ...(options.method && ['POST', 'PUT', 'PATCH'].includes(options.method) && { 'Content-Type': 'application/json' }),
     ...(token && { 'Authorization': `Bearer ${token}` }),
     ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
     ...options.headers,
@@ -43,14 +43,15 @@ async function apiCall(url, options = {}) {
   
   let response;
   try {
-    // Build fetch options - keep it simple, let browser handle CORS
+    // Build fetch options - match what curl does
     const fetchOptions = {
       method: options.method || 'GET',
       headers: headers,
       ...(options.body && { body: options.body }),
+      mode: 'cors', // Explicitly allow CORS
+      cache: 'no-cache', // Don't cache API calls
     };
     
-    // Simple fetch call - browser will handle CORS automatically
     response = await fetch(url, fetchOptions);
     
     console.log('📥 Fetch response:', {
