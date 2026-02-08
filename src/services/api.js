@@ -43,14 +43,16 @@ async function apiCall(url, options = {}) {
   
   let response;
   try {
-    // Build fetch options - simple and standard
+    // Build fetch options - explicit CORS mode for cross-origin requests
     const fetchOptions = {
       method: options.method || 'GET',
       headers: headers,
+      mode: 'cors', // Explicitly set CORS mode
+      credentials: 'omit', // Don't send cookies (not needed for API)
       ...(options.body && { body: options.body }),
     };
     
-    // Make the request - browser handles CORS automatically
+    // Make the request
     response = await fetch(url, fetchOptions);
     
     console.log('📥 Fetch response:', {
