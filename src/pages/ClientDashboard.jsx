@@ -346,6 +346,23 @@ export default function ClientDashboard() {
         .ai-send-button:active {
           transform: translateY(0);
         }
+        .compact-bot-card {
+          transition: all 0.2s ease;
+        }
+        .compact-bot-card:hover {
+          border-color: #d1d5db;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        .compact-start-button:hover {
+          background-color: #0b8377;
+        }
+        .compact-stop-button:hover {
+          background-color: #dc2626;
+        }
+        .compact-edit-button:hover {
+          background-color: #f9fafb;
+          border-color: #9ca3af;
+        }
       `}</style>
       <div style={styles.container}>
         {/* Header */}
@@ -777,117 +794,119 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
 
       {/* Bot List - Show all bots */}
       {bots.length > 0 && !showSetup && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {bots.map((botItem) => {
             const volumeToday = botItem?.stats?.volume_today || 0;
             const volumeTarget = botItem?.config?.daily_volume_usd || 5000;
             const volumePercent = volumeTarget > 0 ? Math.min((volumeToday / volumeTarget) * 100, 100) : 0;
             
             return (
-              <div key={botItem.id} style={styles.section}>
-                <div style={styles.sectionHeader}>
-                  <div>
-                    <h3 style={styles.botName}>
-                      {botItem.name}
+              <div key={botItem.id} style={styles.compactBotCard} className="compact-bot-card">
+                {/* Compact Header Row */}
+                <div style={styles.compactBotHeader}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <h3 style={styles.compactBotName}>
+                        {botItem.name}
+                      </h3>
                       <span style={{
-                        marginLeft: '12px',
-                        fontSize: '14px',
+                        fontSize: '11px',
                         fontWeight: 600,
-                        color: botItem.status === 'running' ? '#10b981' : '#6b7280',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: botItem.status === 'running' ? '#d1fae5' : '#f3f4f6',
+                        color: botItem.status === 'running' ? '#065f46' : '#6b7280',
                       }}>
                         {botItem.status === 'running' ? '🟢 Running' : '⚪ Stopped'}
                       </span>
-                    </h3>
-                    <span style={styles.botMeta}>
-                      {botItem.bot_type === 'volume' ? 'Volume Bot' : 
-                       botItem.bot_type === 'spread' ? 'Spread Bot' : 'Trading Bot'}
-                      {' · '}
-                      {botItem.connector || 'Jupiter'} ({botItem.chain || 'Solana'})
-                      {botItem.pair && ` · ${botItem.pair}`}
+                      <BotHealthBadge
+                        status={botItem.status}
+                        healthStatus={botItem.health_status}
+                        healthMessage={botItem.health_message}
+                        lastTradeTime={botItem.last_trade_time}
+                        botId={botItem.id}
+                        onRefresh={onRefresh}
+                      />
+                    </div>
+                    <span style={styles.compactBotMeta}>
+                      {botItem.bot_type === 'volume' ? 'Volume' : botItem.bot_type === 'spread' ? 'Spread' : 'Trading'} · 
+                      {botItem.connector || 'Jupiter'} · {botItem.pair || 'N/A'}
                     </span>
                   </div>
-                  <BotHealthBadge
-                    status={botItem.status}
-                    healthStatus={botItem.health_status}
-                    healthMessage={botItem.health_message}
-                    lastTradeTime={botItem.last_trade_time}
-                    botId={botItem.id}
-                    onRefresh={onRefresh}
-                  />
-                </div>
-
-                <div style={styles.botCard}>
-                  <div style={styles.botGrid}>
-                    <BotStat 
-                      label="Daily Target" 
-                      value={`$${(botItem.config?.daily_volume_usd || 5000).toLocaleString()}`}
-                      tooltip="Your daily volume target is the total USD value of trades your bot aims to complete each day."
-                      tooltipId={`daily-target-${botItem.id}`}
-                      tooltipStates={tooltipStates}
-                      setTooltipStates={setTooltipStates}
-                    />
-                    <BotStat label="Progress" value={`${volumePercent.toFixed(0)}%`} />
-                    <BotStat 
-                      label="Trade Size" 
-                      value={`$${botItem.config?.min_trade_usd || 10} – $${botItem.config?.max_trade_usd || 25}`}
-                      tooltip="Each individual trade will be a random amount between your min and max trade size."
-                      tooltipId={`trade-size-${botItem.id}`}
-                      tooltipStates={tooltipStates}
-                      setTooltipStates={setTooltipStates}
-                    />
-                    <BotStat 
-                      label="Interval" 
-                      value={`${Math.round((botItem.config?.interval_min_seconds || 900) / 60)}–${Math.round((botItem.config?.interval_max_seconds || 2700) / 60)} min`}
-                      tooltip="Time between trades."
-                      tooltipId={`interval-${botItem.id}`}
-                      tooltipStates={tooltipStates}
-                      setTooltipStates={setTooltipStates}
-                    />
-                    <BotStat label="Last Trade" value={botItem.last_trade_time ? new Date(botItem.last_trade_time).toLocaleString() : 'None yet'} />
-                    <BotStat label="Trades Today" value={botItem.stats?.trades_today || '0'} />
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div style={styles.progressContainer}>
-                    <div style={styles.progressBar}>
-                      <div style={{ ...styles.progressFill, width: `${volumePercent}%` }} />
-                    </div>
-                    <span style={styles.progressLabel}>${volumeToday.toLocaleString()} / ${volumeTarget.toLocaleString()}</span>
-                  </div>
-
-                  {/* Actions */}
-                  <div style={styles.botActions}>
-                    {/* Always show Start/Stop button based on bot status */}
+                  {/* Quick Actions */}
+                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                     {botItem.status === 'running' ? (
                       <button 
-                        onClick={() => {
-                          console.log('DEBUG: Clicking Stop Bot:', { botId: botItem.id, botName: botItem.name, botType: botItem.bot_type });
-                          onStartStop(botItem.id, 'stop');
-                        }} 
-                        style={styles.stopButton}
+                        onClick={() => onStartStop(botItem.id, 'stop')} 
+                        style={styles.compactStopButton}
+                        className="compact-stop-button"
                         disabled={botActionLoading[botItem.id]}
+                        title="Stop Bot"
                       >
-                        {botActionLoading[botItem.id] ? '⏳ Stopping...' : '⏹ Stop Bot'}
+                        {botActionLoading[botItem.id] ? '⏳' : '⏹'}
                       </button>
                     ) : (
                       <button 
-                        onClick={() => {
-                          console.log('DEBUG: Clicking Start Bot:', { botId: botItem.id, botName: botItem.name, botType: botItem.bot_type });
-                          onStartStop(botItem.id, 'start');
-                        }} 
-                        style={styles.startButton}
+                        onClick={() => onStartStop(botItem.id, 'start')} 
+                        style={styles.compactStartButton}
+                        className="compact-start-button"
                         disabled={botActionLoading[botItem.id]}
+                        title="Start Bot"
                       >
-                        {botActionLoading[botItem.id] ? '⏳ Starting...' : '▶ Start Bot'}
+                        {botActionLoading[botItem.id] ? '⏳' : '▶'}
                       </button>
                     )}
-                    <button onClick={() => setEditingBot(botItem)} style={styles.editButton}>
-                      ✏️ Edit Settings
+                    <button 
+                      onClick={() => setEditingBot(botItem)} 
+                      style={styles.compactEditButton}
+                      className="compact-edit-button"
+                      title="Edit Settings"
+                    >
+                      ✏️
                     </button>
                   </div>
+                </div>
+
+                {/* Compact Stats Row */}
+                <div style={styles.compactBotStats}>
+                  <div style={styles.compactStatItem}>
+                    <span style={styles.compactStatLabel}>Target</span>
+                    <span style={styles.compactStatValue}>${(botItem.config?.daily_volume_usd || 5000).toLocaleString()}</span>
+                  </div>
+                  <div style={styles.compactStatItem}>
+                    <span style={styles.compactStatLabel}>Progress</span>
+                    <span style={styles.compactStatValue}>{volumePercent.toFixed(0)}%</span>
+                  </div>
+                  <div style={styles.compactStatItem}>
+                    <span style={styles.compactStatLabel}>Size</span>
+                    <span style={styles.compactStatValue}>${botItem.config?.min_trade_usd || 10}-${botItem.config?.max_trade_usd || 25}</span>
+                  </div>
+                  <div style={styles.compactStatItem}>
+                    <span style={styles.compactStatLabel}>Interval</span>
+                    <span style={styles.compactStatValue}>{Math.round((botItem.config?.interval_min_seconds || 900) / 60)}-{Math.round((botItem.config?.interval_max_seconds || 2700) / 60)}m</span>
+                  </div>
+                  <div style={styles.compactStatItem}>
+                    <span style={styles.compactStatLabel}>Trades</span>
+                    <span style={styles.compactStatValue}>{botItem.stats?.trades_today || '0'}</span>
+                  </div>
+                  <div style={styles.compactStatItem}>
+                    <span style={styles.compactStatLabel}>Last</span>
+                    <span style={styles.compactStatValue}>
+                      {botItem.last_trade_time 
+                        ? new Date(botItem.last_trade_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : 'Never'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Compact Progress Bar */}
+                <div style={styles.compactProgressContainer}>
+                  <div style={styles.compactProgressBar}>
+                    <div style={{ ...styles.compactProgressFill, width: `${volumePercent}%` }} />
+                  </div>
+                  <span style={styles.compactProgressLabel}>
+                    ${volumeToday.toLocaleString()} / ${volumeTarget.toLocaleString()}
+                  </span>
                 </div>
               </div>
             );
@@ -1678,6 +1697,14 @@ const styles = {
     padding: '24px',
     marginBottom: '24px',
   },
+  // Compact section (for when we have many bots)
+  compactSection: {
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb',
+    padding: '12px 16px',
+    marginBottom: '12px',
+  },
   sectionHeader: {
     display: 'flex',
     alignItems: 'center',
@@ -1719,6 +1746,134 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '4px',
+  },
+  // Compact Bot Card Styles
+  compactBotCard: {
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb',
+    padding: '12px 16px',
+    transition: 'all 0.2s ease',
+  },
+  compactBotHeader: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: '10px',
+    gap: '12px',
+  },
+  compactBotName: {
+    fontSize: '15px',
+    fontWeight: 600,
+    color: '#111827',
+    margin: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  compactBotMeta: {
+    fontSize: '12px',
+    color: '#6b7280',
+    marginTop: '2px',
+  },
+  compactBotStats: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '12px 16px',
+    marginBottom: '10px',
+    paddingBottom: '10px',
+    borderBottom: '1px solid #f3f4f6',
+  },
+  compactStatItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    minWidth: '60px',
+  },
+  compactStatLabel: {
+    fontSize: '11px',
+    color: '#9ca3af',
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  compactStatValue: {
+    fontSize: '13px',
+    fontWeight: 600,
+    color: '#111827',
+  },
+  compactProgressContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  compactProgressBar: {
+    flex: 1,
+    height: '6px',
+    borderRadius: '3px',
+    backgroundColor: '#e5e7eb',
+    overflow: 'hidden',
+  },
+  compactProgressFill: {
+    height: '100%',
+    borderRadius: '3px',
+    backgroundColor: '#0d9488',
+    transition: 'width 0.3s ease',
+  },
+  compactProgressLabel: {
+    fontSize: '11px',
+    color: '#6b7280',
+    whiteSpace: 'nowrap',
+    minWidth: '100px',
+    textAlign: 'right',
+  },
+  compactStartButton: {
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: 'none',
+    backgroundColor: '#0d9488',
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    minWidth: '36px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+  },
+  compactStopButton: {
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: 'none',
+    backgroundColor: '#ef4444',
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    minWidth: '36px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+  },
+  compactEditButton: {
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: '1px solid #d1d5db',
+    backgroundColor: '#fff',
+    color: '#374151',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    minWidth: '36px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
   },
 
   // Progress
