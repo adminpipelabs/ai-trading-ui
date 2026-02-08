@@ -43,15 +43,14 @@ async function apiCall(url, options = {}) {
   
   let response;
   try {
-    // Build fetch options - match what curl does
+    // Build fetch options - simple and standard
     const fetchOptions = {
       method: options.method || 'GET',
       headers: headers,
       ...(options.body && { body: options.body }),
-      mode: 'cors', // Explicitly allow CORS
-      cache: 'no-cache', // Don't cache API calls
     };
     
+    // Make the request - browser handles CORS automatically
     response = await fetch(url, fetchOptions);
     
     console.log('📥 Fetch response:', {
