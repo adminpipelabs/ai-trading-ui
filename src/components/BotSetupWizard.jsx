@@ -542,8 +542,9 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
         <div style={styles.warningBox}>
           <strong>⚠️ Authorization</strong>
           <p>
-            By clicking "Create & Start Bot" you authorize Pipe Labs to execute trades on your 
-            behalf using the credentials you provided. You can stop or revoke access at any time.
+            By clicking "Create & Start Bot" you authorize the trading system to execute trades on your 
+            behalf using the credentials you provided. The bot will run automatically and execute trades 
+            according to your configuration. You can stop or revoke access at any time.
           </p>
         </div>
 
@@ -591,8 +592,24 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
         });
 
         if (!credRes.ok) {
-          const credErr = await credRes.json();
-          throw new Error(credErr.detail || 'Failed to save API credentials');
+          let errorMessage = 'Failed to save API credentials';
+          try {
+            const credErr = await credRes.json();
+            errorMessage = credErr.detail || credErr.message || errorMessage;
+            
+            if (credRes.status === 404) {
+              errorMessage = 'Exchange credentials endpoint not found. Please refresh and try again.';
+            } else if (credRes.status === 400) {
+              errorMessage = `Invalid credentials: ${errorMessage}. Please check your API keys.`;
+            }
+          } catch (parseError) {
+            if (credRes.status === 404) {
+              errorMessage = 'Credentials endpoint not found. Please refresh the page.';
+            } else {
+              errorMessage = `Failed to save credentials (status ${credRes.status}). Please try again.`;
+            }
+          }
+          throw new Error(errorMessage);
         }
       } else {
         // DEX - save private key
@@ -662,8 +679,34 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
       });
 
       if (!botRes.ok) {
-        const botErr = await botRes.json();
-        throw new Error(botErr.detail || 'Failed to create bot');
+        let errorMessage = 'Failed to create bot';
+        try {
+          const botErr = await botRes.json();
+          errorMessage = botErr.detail || botErr.message || errorMessage;
+          
+          // Provide more helpful error messages
+          if (botRes.status === 404) {
+            if (errorMessage.includes('Client not found')) {
+              errorMessage = `Client account not found. Please refresh the page and try again. If this persists, contact support.`;
+            } else {
+              errorMessage = `Resource not found: ${errorMessage}. Please refresh the page and try again.`;
+            }
+          } else if (botRes.status === 400) {
+            errorMessage = `Invalid request: ${errorMessage}. Please check your bot configuration.`;
+          } else if (botRes.status === 500) {
+            errorMessage = `Server error: ${errorMessage}. Please try again in a moment or contact support.`;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use status-based message
+          if (botRes.status === 404) {
+            errorMessage = 'Resource not found. Please refresh the page and ensure you are logged in correctly.';
+          } else if (botRes.status === 500) {
+            errorMessage = 'Server error occurred. Please try again in a moment.';
+          } else {
+            errorMessage = `Request failed with status ${botRes.status}. Please try again.`;
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const bot = await botRes.json();
