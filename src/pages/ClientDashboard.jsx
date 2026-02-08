@@ -165,32 +165,44 @@ export default function ClientDashboard() {
   };
 
   const handleStartStop = async (botId, action) => {
+    console.log('DEBUG: handleStartStop called', { botId, action });
+    
     // Prevent double-click on THIS bot only
-    if (botActionLoading[botId]) return;
+    if (botActionLoading[botId]) {
+      console.log('DEBUG: Already loading, skipping');
+      return;
+    }
+    
+    // Validate botId
+    if (!botId) {
+      console.error('DEBUG: botId is missing!', botId);
+      alert('Error: Bot ID is missing');
+      return;
+    }
     
     // Set loading state for THIS bot only
     setBotActionLoading(prev => ({ ...prev, [botId]: true }));
     
     try {
-      // Log URL being called for debugging
-      const url = `${API_BASE}/bots/${botId}/${action}`;
-      console.log(`🚀 ${action === 'start' ? 'Starting' : 'Stopping'} bot:`, botId);
-      console.log('📡 API URL:', url);
-      console.log('🔗 API_BASE:', API_BASE);
+      console.log('DEBUG: About to call tradingBridge.startBot/stopBot');
+      console.log('DEBUG: botId type:', typeof botId);
+      console.log('DEBUG: botId value:', botId);
+      console.log('DEBUG: API_BASE:', API_BASE);
       
       if (action === 'start') {
         await tradingBridge.startBot(botId);
       } else {
         await tradingBridge.stopBot(botId);
       }
+      
+      console.log('DEBUG: Bot action succeeded, refreshing data...');
       await fetchData(); // Refresh bot status
     } catch (err) {
-      console.error(`❌ Failed to ${action} bot:`, err);
-      console.error('Error details:', {
+      console.error(`DEBUG: Failed to ${action} bot:`, err);
+      console.error('DEBUG: Error details:', {
         message: err.message,
-        status: err.status,
-        data: err.data,
-        isNetworkError: err.isNetworkError
+        name: err.name,
+        stack: err.stack
       });
       const errorMsg = err.message || err.detail || err.data?.detail || 'Unknown error';
       alert(`Failed to ${action} bot: ${errorMsg}`);
