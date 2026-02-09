@@ -890,30 +890,48 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
               const locked = balanceData.locked || {};
               const volume = balanceData.volume;
               
-              const availableStr = base && quote 
-                ? `Available: ${(available[base] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${base} | ${(available[quote] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${quote}`
-                : 'Available: Loading...';
+              // Format: Available | Locked | Volume (compact horizontal display)
+              const formatValue = (val, decimals = 2) => {
+                if (val === 0) return '0';
+                return val.toLocaleString(undefined, {maximumFractionDigits: decimals, minimumFractionDigits: 0});
+              };
               
-              const lockedStr = base && quote
-                ? `Locked: ${(locked[base] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${base} | ${(locked[quote] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${quote}`
-                : 'Locked: Loading...';
+              let availableDisplay = 'Available: -';
+              let lockedDisplay = 'Locked: -';
+              let volumeDisplay = 'Volume: -';
               
-              let volumeStr = 'Volume: -';
+              if (base && quote) {
+                const baseAvail = available[base] || 0;
+                const quoteAvail = available[quote] || 0;
+                const baseLocked = locked[base] || 0;
+                const quoteLocked = locked[quote] || 0;
+                
+                availableDisplay = `Available: ${formatValue(baseAvail, 4)} ${base} | ${formatValue(quoteAvail, 2)} ${quote}`;
+                lockedDisplay = `Locked: ${formatValue(baseLocked, 4)} ${base} | ${formatValue(quoteLocked, 2)} ${quote}`;
+              }
+              
               if (volume) {
                 if (volume.type === 'value_traded') {
                   // Spread Bot: Total value traded
-                  volumeStr = `Volume: $${volume.value_usd.toLocaleString(undefined, {maximumFractionDigits: 0})} traded`;
+                  volumeDisplay = `Volume: $${formatValue(volume.value_usd, 0)} traded`;
                 } else if (volume.type === 'trade_count') {
                   // Volume Bot: Buy/sell count
-                  volumeStr = `Volume: ${volume.buy_count} buys, ${volume.sell_count} sells`;
+                  volumeDisplay = `Volume: ${volume.buy_count} buys, ${volume.sell_count} sells`;
                 }
               }
               
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#374151' }}>
-                  <span>{availableStr}</span>
-                  <span>{lockedStr}</span>
-                  <span style={{ fontWeight: 500 }}>{volumeStr}</span>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '6px', 
+                  fontSize: '12px', 
+                  color: '#374151',
+                  lineHeight: '1.4'
+                }}>
+                  <div style={{ fontWeight: 500, color: '#059669' }}>{availableDisplay}</div>
+                  <div style={{ fontWeight: 500, color: '#dc2626' }}>{lockedDisplay}</div>
+                  <div style={{ fontWeight: 600, color: '#2563eb', marginTop: '2px' }}>{volumeDisplay}</div>
                 </div>
               );
             };
