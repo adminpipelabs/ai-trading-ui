@@ -589,6 +589,7 @@ export default function ClientDashboard() {
             editingBot={editingBot}
             setEditingBot={setEditingBot}
             onStartStop={handleStartStop}
+            onDeleteBot={handleDeleteBot}
             onRefresh={fetchData}
             tooltipStates={tooltipStates}
             setTooltipStates={setTooltipStates}
@@ -684,7 +685,7 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 }
 
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading, expandedBots, setExpandedBots, botTrades, loadingTrades, toggleBotActivity, botBalanceData, loadingBalance, fetchBotBalanceAndVolume }) {
+function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onDeleteBot, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading, expandedBots, setExpandedBots, botTrades, loadingTrades, toggleBotActivity, botBalanceData, loadingBalance, fetchBotBalanceAndVolume }) {
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
@@ -1043,7 +1044,7 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       ✏️
                     </button>
                     <button 
-                      onClick={() => handleDeleteBot(botItem.id)} 
+                      onClick={() => onDeleteBot(botItem.id)} 
                       style={styles.compactDeleteButton}
                       className="compact-delete-button"
                       title="Delete Bot"
