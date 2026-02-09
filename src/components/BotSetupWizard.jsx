@@ -663,6 +663,13 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
         base_mint: config.tokenMint || null,
         private_key: isCEX ? null : credentials.privateKey.trim(), // Only for DEX
         config: botConfig,
+        // Include API keys for CEX bots
+        ...(isCEX && {
+          api_key: credentials.apiKey.trim(),
+          api_secret: credentials.apiSecret.trim(),
+          ...(credentials.memo && { passphrase: credentials.memo.trim() }),
+          ...(credentials.passphrase && { passphrase: credentials.passphrase.trim() }),
+        }),
       };
 
       // Use clientId prop if provided, otherwise fallback to user.id

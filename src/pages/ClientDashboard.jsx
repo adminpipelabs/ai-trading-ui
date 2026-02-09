@@ -31,6 +31,7 @@ export default function ClientDashboard() {
   const [loadingTrades, setLoadingTrades] = useState({}); // Loading state for trades: { [botId]: true/false }
   const [botBalanceData, setBotBalanceData] = useState({}); // Cache balance/volume per bot: { [botId]: {available, locked, volume} }
   const [loadingBalance, setLoadingBalance] = useState({}); // Loading state for balance: { [botId]: true/false }
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // Bot ID to confirm deletion for
 
   const fetchBotTrades = async (botId) => {
     if (loadingTrades[botId] || botTrades[botId]) return; // Already loading or cached
@@ -249,6 +250,29 @@ export default function ClientDashboard() {
     } finally {
       // CRITICAL: Always clear loading state, even if API calls fail
       setLoading(false);
+    }
+  };
+
+  const handleDeleteBot = async (botId) => {
+    if (!window.confirm(`Are you sure you want to delete "${bots.find(b => b.id === botId)?.name || 'this bot'}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      await tradingBridge.deleteBot(botId);
+      // Remove from local state immediately
+      setBots(prev => prev.filter(b => b.id !== botId));
+      // Clear balance cache
+      setBotBalanceData(prev => {
+        const updated = { ...prev };
+        delete updated[botId];
+        return updated;
+      });
+      // Refresh data to ensure consistency
+      await fetchData();
+    } catch (err) {
+      console.error('Failed to delete bot:', err);
+      alert(`Failed to delete bot: ${err.message || err.detail || 'Unknown error'}`);
     }
   };
 
@@ -889,8 +913,9 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
               const available = balanceData.available || {};
               const locked = balanceData.locked || {};
               const volume = balanceData.volume;
+              const pnl = balanceData.pnl || {};
               
-              // Format: Available | Locked | Volume (compact horizontal display)
+              // Format: Available | Locked | Volume | P&L (compact horizontal display)
               const formatValue = (val, decimals = 2) => {
                 if (val === 0) return '0';
                 return val.toLocaleString(undefined, {maximumFractionDigits: decimals, minimumFractionDigits: 0});
@@ -925,6 +950,11 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                 volumeDisplay = `Volume: $${formatValue(volumeValue, 0)}`;
               }
               
+              // P&L display
+              const pnlTotal = pnl.total_usd || 0;
+              const pnlDisplay = `P&L: ${pnlTotal >= 0 ? '+' : ''}$${formatValue(pnlTotal, 2)}`;
+              const pnlColor = pnlTotal >= 0 ? '#059669' : '#DC2626';
+              
               return (
                 <div style={{ 
                   display: 'flex', 
@@ -937,6 +967,7 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                   <div style={{ fontWeight: 500, color: '#000000' }}>{availableDisplay}</div>
                   <div style={{ fontWeight: 500, color: '#000000' }}>{lockedDisplay}</div>
                   <div style={{ fontWeight: 600, color: '#000000', marginTop: '2px' }}>{volumeDisplay}</div>
+                  <div style={{ fontWeight: 700, color: pnlColor, marginTop: '2px' }}>{pnlDisplay}</div>
                 </div>
               );
             };
@@ -1010,6 +1041,14 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       title="Edit Settings"
                     >
                       ✏️
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteBot(botItem.id)} 
+                      style={styles.compactDeleteButton}
+                      className="compact-delete-button"
+                      title="Delete Bot"
+                    >
+                      🗑️
                     </button>
                   </div>
                 </div>
@@ -2059,6 +2098,22 @@ const styles = {
     border: '1px solid #d1d5db',
     backgroundColor: '#fff',
     color: '#374151',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    minWidth: '36px',
+    height: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s',
+  },
+  compactDeleteButton: {
+    padding: '6px 10px',
+    borderRadius: '6px',
+    border: '1px solid #ef4444',
+    backgroundColor: 'transparent',
+    color: '#ef4444',
     fontSize: '14px',
     fontWeight: 600,
     cursor: 'pointer',
