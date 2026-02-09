@@ -896,28 +896,33 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                 return val.toLocaleString(undefined, {maximumFractionDigits: decimals, minimumFractionDigits: 0});
               };
               
-              let availableDisplay = 'Available: -';
-              let lockedDisplay = 'Locked: -';
-              let volumeDisplay = 'Volume: -';
+              // Always show Available and Locked (even if 0)
+              const baseAvail = available[base] || 0;
+              const quoteAvail = available[quote] || 0;
+              const baseLocked = locked[base] || 0;
+              const quoteLocked = locked[quote] || 0;
               
-              if (base && quote) {
-                const baseAvail = available[base] || 0;
-                const quoteAvail = available[quote] || 0;
-                const baseLocked = locked[base] || 0;
-                const quoteLocked = locked[quote] || 0;
-                
-                availableDisplay = `Available: ${formatValue(baseAvail, 4)} ${base} | ${formatValue(quoteAvail, 2)} ${quote}`;
-                lockedDisplay = `Locked: ${formatValue(baseLocked, 4)} ${base} | ${formatValue(quoteLocked, 2)} ${quote}`;
-              }
+              const availableDisplay = base && quote
+                ? `Available: ${formatValue(baseAvail, 4)} ${base} | ${formatValue(quoteAvail, 2)} ${quote}`
+                : 'Available: 0 | 0';
               
-              if (volume) {
-                if (volume.type === 'value_traded') {
-                  // Spread Bot: Total value traded
-                  volumeDisplay = `Volume: $${formatValue(volume.value_usd, 0)} traded`;
-                } else if (volume.type === 'trade_count') {
-                  // Volume Bot: Buy/sell count
-                  volumeDisplay = `Volume: ${volume.buy_count} buys, ${volume.sell_count} sells`;
-                }
+              const lockedDisplay = base && quote
+                ? `Locked: ${formatValue(baseLocked, 4)} ${base} | ${formatValue(quoteLocked, 2)} ${quote}`
+                : 'Locked: 0 | 0';
+              
+              let volumeDisplay = '';
+              
+              // Volume display based on bot type
+              const botType = botItem.bot_type || botItem.strategy || '';
+              if (botType.toLowerCase() === 'spread') {
+                // Spread Bot: Buy/Sell orders done
+                const buyCount = volume?.buy_count || 0;
+                const sellCount = volume?.sell_count || 0;
+                volumeDisplay = `Buy/Sell: ${buyCount} buys, ${sellCount} sells`;
+              } else {
+                // Volume Bot: Total volume traded (USD)
+                const volumeValue = volume?.value_usd || volume?.total_volume_usd || 0;
+                volumeDisplay = `Volume: $${formatValue(volumeValue, 0)}`;
               }
               
               return (
