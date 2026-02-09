@@ -410,6 +410,19 @@ export const tradingBridge = {
     });
   },
 
+  async addBotCredentials(botId, apiKey, apiSecret, passphrase = null) {
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      api_secret: apiSecret,
+    });
+    if (passphrase) {
+      params.append('passphrase', passphrase);
+    }
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/add-exchange-credentials?${params}`, {
+      method: 'POST',
+    });
+  },
+
   // Health monitoring endpoints
   async getBotHealth(botId) {
     return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/health`);
