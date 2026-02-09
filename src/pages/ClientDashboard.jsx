@@ -29,6 +29,8 @@ export default function ClientDashboard() {
   const [expandedBots, setExpandedBots] = useState({}); // Track which bots show activity: { [botId]: true/false }
   const [botTrades, setBotTrades] = useState({}); // Cache trades per bot: { [botId]: [...trades] }
   const [loadingTrades, setLoadingTrades] = useState({}); // Loading state for trades: { [botId]: true/false }
+  const [botBalanceData, setBotBalanceData] = useState({}); // Cache balance/volume per bot: { [botId]: {available, locked, volume} }
+  const [loadingBalance, setLoadingBalance] = useState({}); // Loading state for balance: { [botId]: true/false }
 
   const fetchBotTrades = async (botId) => {
     if (loadingTrades[botId] || botTrades[botId]) return; // Already loading or cached
@@ -55,6 +57,33 @@ export default function ClientDashboard() {
       fetchBotTrades(botId);
     }
   };
+
+  const fetchBotBalanceAndVolume = async (botId) => {
+    if (loadingBalance[botId] || botBalanceData[botId]) return; // Already loading or cached
+    
+    setLoadingBalance(prev => ({ ...prev, [botId]: true }));
+    try {
+      const data = await tradingBridge.getBotBalanceAndVolume(botId);
+      setBotBalanceData(prev => ({ ...prev, [botId]: data }));
+    } catch (err) {
+      console.error(`Failed to fetch balance/volume for bot ${botId}:`, err);
+      setBotBalanceData(prev => ({ ...prev, [botId]: null }));
+    } finally {
+      setLoadingBalance(prev => ({ ...prev, [botId]: false }));
+    }
+  };
+
+  // Fetch balance/volume for all running bots on mount and refresh
+  useEffect(() => {
+    if (bots.length > 0) {
+      bots.forEach(bot => {
+        if (bot.status === 'running' && !botBalanceData[bot.id] && !loadingBalance[bot.id]) {
+          fetchBotBalanceAndVolume(bot.id);
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bots.length]); // Only depend on bots.length to avoid infinite loops
 
   useEffect(() => {
     if (!user) return;
@@ -247,6 +276,20 @@ export default function ClientDashboard() {
       // Force refresh - wait a moment for backend to update, then fetch
       await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms for backend
       await fetchData(); // Refresh bot status
+      
+      // Clear balance cache for this bot to force refresh
+      if (action === 'start') {
+        setBotBalanceData(prev => {
+          const updated = { ...prev };
+          delete updated[botId];
+          return updated;
+        });
+        // Fetch fresh balance data after a short delay
+        setTimeout(() => {
+          fetchBotBalanceAndVolume(botId);
+        }, 1000);
+      }
+      
       console.log('DEBUG: Data refresh complete');
     } catch (err) {
       console.error(`DEBUG: Failed to ${action} bot:`, err);
@@ -521,6 +564,9 @@ export default function ClientDashboard() {
             botTrades={botTrades}
             loadingTrades={loadingTrades}
             toggleBotActivity={toggleBotActivity}
+            botBalanceData={botBalanceData}
+            loadingBalance={loadingBalance}
+            fetchBotBalanceAndVolume={fetchBotBalanceAndVolume}
           />
         ) : activeTab === 'settings' ? (
           <SettingsTab
@@ -602,7 +648,7 @@ function InfoTooltip({ text, id, tooltipStates, setTooltipStates }) {
 }
 
 // ─── Dashboard Tab ────────────────────────────────────────
-function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading, expandedBots, setExpandedBots, botTrades, loadingTrades, toggleBotActivity }) {
+function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, walletBalance, showSetup, setShowSetup, editingBot, setEditingBot, onStartStop, onRefresh, tooltipStates, setTooltipStates, selectedBotType, setSelectedBotType, botActionLoading, expandedBots, setExpandedBots, botTrades, loadingTrades, toggleBotActivity, botBalanceData, loadingBalance, fetchBotBalanceAndVolume }) {
   const bot = bots[0]; // Primary bot
 
   const volumeToday = bot?.stats?.volume_today || 0;
@@ -789,12 +835,55 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
       {bots.length > 0 && !showSetup && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {bots.map((botItem) => {
-            const volumeToday = botItem?.stats?.volume_today || 0;
-            const volumeTarget = botItem?.config?.daily_volume_usd || 5000;
-            const volumePercent = volumeTarget > 0 ? Math.min((volumeToday / volumeTarget) * 100, 100) : 0;
-            
             const isRunning = botItem.status === 'running';
-            const volumeProgress = volumeToday > 0 ? `${volumeToday.toLocaleString(undefined, {maximumFractionDigits: 0})} / ${volumeTarget.toLocaleString()}` : `Target: $${volumeTarget.toLocaleString()}`;
+            const balanceData = botBalanceData[botItem.id];
+            const isLoadingBalance = loadingBalance[botItem.id];
+            
+            // Get pair to determine base/quote
+            const pair = botItem.pair || (botItem.base_asset && botItem.quote_asset ? `${botItem.base_asset}/${botItem.quote_asset}` : null);
+            const [base, quote] = pair ? pair.split('/') : ['', ''];
+            
+            // Format Available | Locked | Volume display
+            const formatBalanceDisplay = () => {
+              if (isLoadingBalance) {
+                return <span style={{ color: '#9ca3af', fontSize: '12px' }}>Loading balance...</span>;
+              }
+              
+              if (!balanceData || balanceData.error) {
+                return <span style={{ color: '#9ca3af', fontSize: '12px' }}>Balance unavailable</span>;
+              }
+              
+              const available = balanceData.available || {};
+              const locked = balanceData.locked || {};
+              const volume = balanceData.volume;
+              
+              const availableStr = base && quote 
+                ? `Available: ${(available[base] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${base} | ${(available[quote] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${quote}`
+                : 'Available: Loading...';
+              
+              const lockedStr = base && quote
+                ? `Locked: ${(locked[base] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${base} | ${(locked[quote] || 0).toLocaleString(undefined, {maximumFractionDigits: 2})} ${quote}`
+                : 'Locked: Loading...';
+              
+              let volumeStr = 'Volume: -';
+              if (volume) {
+                if (volume.type === 'value_traded') {
+                  // Spread Bot: Total value traded
+                  volumeStr = `Volume: $${volume.value_usd.toLocaleString(undefined, {maximumFractionDigits: 0})} traded`;
+                } else if (volume.type === 'trade_count') {
+                  // Volume Bot: Buy/sell count
+                  volumeStr = `Volume: ${volume.buy_count} buys, ${volume.sell_count} sells`;
+                }
+              }
+              
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#374151' }}>
+                  <span>{availableStr}</span>
+                  <span>{lockedStr}</span>
+                  <span style={{ fontWeight: 500 }}>{volumeStr}</span>
+                </div>
+              );
+            };
             
             return (
               <div key={botItem.id} style={styles.compactBotCard} className="compact-bot-card">
@@ -817,14 +906,6 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       }}>
                         {isRunning ? '🟢 Running' : '⚪ Stopped'}
                       </span>
-                      {/* Volume Progress - Always visible */}
-                      <span style={{
-                        fontSize: '13px',
-                        fontWeight: 500,
-                        color: '#374151',
-                      }}>
-                        {volumeProgress}
-                      </span>
                     </div>
                     {/* Show health message if there's an issue */}
                     {botItem.health_message && botItem.health_status !== 'healthy' && (
@@ -833,10 +914,15 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                         color: '#ef4444',
                         display: 'block',
                         marginTop: '4px',
+                        marginBottom: '8px',
                       }}>
                         {botItem.health_message}
                       </span>
                     )}
+                    {/* Available | Locked | Volume */}
+                    <div style={{ marginTop: '8px' }}>
+                      {formatBalanceDisplay()}
+                    </div>
                   </div>
                   {/* Controls */}
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
@@ -870,20 +956,6 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       ✏️
                     </button>
                   </div>
-                </div>
-                
-                {/* Progress Bar - Always show for visual feedback */}
-                <div style={styles.compactProgressContainer}>
-                  <div style={styles.compactProgressBar}>
-                    <div style={{ 
-                      ...styles.compactProgressFill, 
-                      width: `${Math.min(volumePercent, 100)}%`,
-                      backgroundColor: isRunning ? '#10b981' : '#d1d5db'
-                    }} />
-                  </div>
-                  <span style={styles.compactProgressLabel}>
-                    {volumePercent.toFixed(0)}% of daily target
-                  </span>
                 </div>
 
                 {/* Recent Activity - Expandable section to verify trading */}

@@ -419,6 +419,10 @@ export const tradingBridge = {
     return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/stats`);
   },
 
+  async getBotBalanceAndVolume(botId) {
+    return apiCall(`${TRADING_BRIDGE_URL}/bots/${botId}/balance-and-volume`);
+  },
+
   async getHealthSummary(account = null) {
     const url = account
       ? `${TRADING_BRIDGE_URL}/bots/health/summary?account=${encodeURIComponent(account)}`
