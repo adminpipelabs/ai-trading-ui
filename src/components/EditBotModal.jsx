@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { tradingBridge } from '../services/api';
 
 const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
   const [config, setConfig] = useState({});
@@ -50,32 +51,14 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
       const isCEX = bot.connector && !['jupiter', 'solana'].includes(bot.connector.toLowerCase());
       if (isCEX && showApiKeys && apiKeys.api_key && apiKeys.api_secret) {
         try {
-          const API_BASE = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
-          const walletAddress = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).wallet_address : null;
-          const headers = {
-            'Content-Type': 'application/json',
-            ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
-          };
-          
-          const params = new URLSearchParams({
-            api_key: apiKeys.api_key.trim(),
-            api_secret: apiKeys.api_secret.trim(),
-          });
-          if (apiKeys.passphrase) {
-            params.append('passphrase', apiKeys.passphrase.trim());
-          }
-          
-          const credRes = await fetch(`${API_BASE}/bots/${bot.id}/add-exchange-credentials?${params}`, {
-            method: 'POST',
-            headers,
-          });
-          
-          if (!credRes.ok) {
-            const credErr = await credRes.json();
-            throw new Error(credErr.detail || 'Failed to save API credentials');
-          }
+          await tradingBridge.addBotCredentials(
+            bot.id,
+            apiKeys.api_key.trim(),
+            apiKeys.api_secret.trim(),
+            apiKeys.passphrase?.trim() || null
+          );
         } catch (credErr) {
-          throw new Error(`Failed to save API keys: ${credErr.message}`);
+          throw new Error(`Failed to save API keys: ${credErr.message || credErr.detail || 'Unknown error'}`);
         }
       }
 
