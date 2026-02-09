@@ -1020,8 +1020,52 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                       </div>
                     )}
                     {/* Available | Locked | Volume */}
-                    <div style={{ marginTop: '8px' }}>
-                      {formatBalanceDisplay()}
+                    <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ flex: 1 }}>
+                        {formatBalanceDisplay()}
+                      </div>
+                      {/* Refresh Balance Button */}
+                      <button
+                        onClick={() => fetchBotBalanceAndVolume(botItem.id, true)}
+                        disabled={loadingBalance[botItem.id]}
+                        title="Refresh Balance"
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: loadingBalance[botItem.id] ? '#D1D5DB' : '#3B82F6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: loadingBalance[botItem.id] ? 'wait' : 'pointer',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.2s',
+                          opacity: loadingBalance[botItem.id] ? 0.6 : 1,
+                          minWidth: '70px',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!loadingBalance[botItem.id]) {
+                            e.currentTarget.style.backgroundColor = '#2563EB';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!loadingBalance[botItem.id]) {
+                            e.currentTarget.style.backgroundColor = '#3B82F6';
+                          }
+                        }}
+                      >
+                        <span style={{
+                          display: 'inline-block',
+                          animation: loadingBalance[botItem.id] ? 'spin 1s linear infinite' : 'none',
+                          fontSize: '14px'
+                        }}>
+                          {loadingBalance[botItem.id] ? '⟳' : '↻'}
+                        </span>
+                        {loadingBalance[botItem.id] ? '...' : ''}
+                      </button>
                     </div>
                   </div>
                   {/* Controls */}
