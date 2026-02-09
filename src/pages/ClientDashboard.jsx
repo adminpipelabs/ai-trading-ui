@@ -87,8 +87,8 @@ export default function ClientDashboard() {
         const hasData = botBalanceData[bot.id] && !botBalanceData[bot.id].error;
         const isLoading = loadingBalance[bot.id];
         
-        // Fetch if running and (no data yet OR data has error)
-        if (isRunning && !hasData && !isLoading) {
+        // Fetch balance for all bots (running or stopped) - balance should always be available
+        if (!hasData && !isLoading) {
           fetchBotBalanceAndVolume(bot.id);
         }
       });
