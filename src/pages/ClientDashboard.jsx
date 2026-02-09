@@ -58,8 +58,12 @@ export default function ClientDashboard() {
     }
   };
 
-  const fetchBotBalanceAndVolume = async (botId) => {
-    if (loadingBalance[botId] || botBalanceData[botId]) return; // Already loading or cached
+  const fetchBotBalanceAndVolume = async (botId, forceRefresh = false) => {
+    // Allow retry if forceRefresh is true, or if data doesn't exist yet
+    // Don't retry if already loading or if we have valid data (unless forcing)
+    if (!forceRefresh && (loadingBalance[botId] || (botBalanceData[botId] && !botBalanceData[botId].error))) {
+      return;
+    }
     
     setLoadingBalance(prev => ({ ...prev, [botId]: true }));
     try {
@@ -67,23 +71,30 @@ export default function ClientDashboard() {
       setBotBalanceData(prev => ({ ...prev, [botId]: data }));
     } catch (err) {
       console.error(`Failed to fetch balance/volume for bot ${botId}:`, err);
-      setBotBalanceData(prev => ({ ...prev, [botId]: null }));
+      // Store error info so we can retry later
+      setBotBalanceData(prev => ({ ...prev, [botId]: { error: err.message || 'Failed to fetch balance' } }));
     } finally {
       setLoadingBalance(prev => ({ ...prev, [botId]: false }));
     }
   };
 
-  // Fetch balance/volume for all running bots on mount and refresh
+  // Fetch balance/volume for all running bots on mount and when bots change
   useEffect(() => {
     if (bots.length > 0) {
       bots.forEach(bot => {
-        if (bot.status === 'running' && !botBalanceData[bot.id] && !loadingBalance[bot.id]) {
+        // Check if bot is running (case-insensitive)
+        const isRunning = bot.status && bot.status.toLowerCase() === 'running';
+        const hasData = botBalanceData[bot.id] && !botBalanceData[bot.id].error;
+        const isLoading = loadingBalance[bot.id];
+        
+        // Fetch if running and (no data yet OR data has error)
+        if (isRunning && !hasData && !isLoading) {
           fetchBotBalanceAndVolume(bot.id);
         }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bots.length]); // Only depend on bots.length to avoid infinite loops
+  }, [bots.length, JSON.stringify(bots.map(b => ({ id: b.id, status: b.status })))]); // Stable dependency: length + bot IDs/statuses
 
   useEffect(() => {
     if (!user) return;
@@ -277,8 +288,9 @@ export default function ClientDashboard() {
       await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms for backend
       await fetchData(); // Refresh bot status
       
-      // Clear balance cache for this bot to force refresh
+      // Force refresh balance data when bot starts
       if (action === 'start') {
+        // Clear cache and fetch fresh data
         setBotBalanceData(prev => {
           const updated = { ...prev };
           delete updated[botId];
@@ -286,7 +298,7 @@ export default function ClientDashboard() {
         });
         // Fetch fresh balance data after a short delay
         setTimeout(() => {
-          fetchBotBalanceAndVolume(botId);
+          fetchBotBalanceAndVolume(botId, true); // Force refresh
         }, 1000);
       }
       
@@ -835,7 +847,7 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
       {bots.length > 0 && !showSetup && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {bots.map((botItem) => {
-            const isRunning = botItem.status === 'running';
+            const isRunning = botItem.status && botItem.status.toLowerCase() === 'running';
             const balanceData = botBalanceData[botItem.id];
             const isLoadingBalance = loadingBalance[botItem.id];
             
@@ -849,8 +861,29 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                 return <span style={{ color: '#9ca3af', fontSize: '12px' }}>Loading balance...</span>;
               }
               
-              if (!balanceData || balanceData.error) {
+              if (!balanceData) {
+                // No data yet - try fetching if bot is running
+                if (isRunning) {
+                  // Trigger fetch if not already loading
+                  if (!loadingBalance[botItem.id]) {
+                    setTimeout(() => fetchBotBalanceAndVolume(botItem.id), 100);
+                  }
+                }
                 return <span style={{ color: '#9ca3af', fontSize: '12px' }}>Balance unavailable</span>;
+              }
+              
+              if (balanceData.error) {
+                return (
+                  <span style={{ color: '#ef4444', fontSize: '12px' }}>
+                    Error: {balanceData.error}
+                    <button 
+                      onClick={() => fetchBotBalanceAndVolume(botItem.id, true)}
+                      style={{ marginLeft: '8px', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer' }}
+                    >
+                      Retry
+                    </button>
+                  </span>
+                );
               }
               
               const available = balanceData.available || {};
