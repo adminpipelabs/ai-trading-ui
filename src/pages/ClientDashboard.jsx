@@ -931,10 +931,10 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                   flexDirection: 'column', 
                   gap: '6px', 
                   fontSize: '12px', 
-                  color: '#374151',
+                  color: '#000000',
                   lineHeight: '1.4'
                 }}>
-                  <div style={{ fontWeight: 500, color: '#059669' }}>{availableDisplay}</div>
+                  <div style={{ fontWeight: 500, color: '#000000' }}>{availableDisplay}</div>
                   <div style={{ fontWeight: 500, color: '#dc2626' }}>{lockedDisplay}</div>
                   <div style={{ fontWeight: 600, color: '#2563eb', marginTop: '2px' }}>{volumeDisplay}</div>
                 </div>
