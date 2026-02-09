@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { BotList } from '../../components/BotList';
 import EditBotModal from '../../components/EditBotModal';
-import { Bot, Plus, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Bot, Plus, X, AlertCircle, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export default function BotManagement({ theme, isDark, onBack, activeChain = "all", setActiveChain }) {
   const [bots, setBots] = useState([]);
@@ -12,6 +12,9 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
   const [clients, setClients] = useState([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [editingBot, setEditingBot] = useState(null);
+  const [lastRefreshTime, setLastRefreshTime] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const intervalRef = useRef(null);
   const [newBot, setNewBot] = useState({
     name: '',
     account: '',
@@ -418,18 +421,92 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
     loadClients();
   }, []);
 
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchBots();
+      setLastRefreshTime(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
+    // Initial fetch
     fetchBots();
-    // Refresh every 10 seconds
-    const interval = setInterval(fetchBots, 10000);
-    return () => clearInterval(interval);
+    setLastRefreshTime(new Date());
+    
+    // Auto-refresh every 30 minutes (1800000ms) instead of every 10 seconds
+    // This is more appropriate for admin page where status changes are infrequent
+    intervalRef.current = setInterval(() => {
+      fetchBots();
+      setLastRefreshTime(new Date());
+    }, 30 * 60 * 1000); // 30 minutes
+    
+    // Pause auto-refresh when tab is hidden (saves resources)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden - pause auto-refresh
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      } else {
+        // Tab is visible - resume auto-refresh
+        if (!intervalRef.current) {
+          fetchBots(); // Refresh immediately when tab becomes visible
+          setLastRefreshTime(new Date());
+          intervalRef.current = setInterval(() => {
+            fetchBots();
+            setLastRefreshTime(new Date());
+          }, 30 * 60 * 1000);
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   return (
     <div className="flex-1">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2" style={{ color: theme.textPrimary }}>Bot Management</h1>
-        <p className="text-sm" style={{ color: theme.textMuted }}>Create and manage your trading bots</p>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h1 className="text-2xl font-bold mb-1" style={{ color: theme.textPrimary }}>Bot Management</h1>
+            <p className="text-sm" style={{ color: theme.textMuted }}>Create and manage your trading bots</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {lastRefreshTime && (
+              <span className="text-xs" style={{ color: theme.textMuted }}>
+                Last updated: {Math.floor((new Date() - lastRefreshTime) / 1000 / 60)}m ago
+              </span>
+            )}
+            <button 
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-opacity"
+              style={{ 
+                background: theme.bgCard, 
+                color: theme.textPrimary,
+                border: `1px solid ${theme.border}`,
+                opacity: isRefreshing ? 0.6 : 1,
+                cursor: isRefreshing ? 'wait' : 'pointer'
+              }}
+              title="Refresh bot list"
+            >
+              <RefreshCw size={16} className={isRefreshing ? 'animate-spin' : ''} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6">

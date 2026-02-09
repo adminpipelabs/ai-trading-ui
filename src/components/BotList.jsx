@@ -165,7 +165,9 @@ export function BotList({ account = null, onEditBot = null, readOnly = false, ac
 
   useEffect(() => { 
     fetchBots(); 
-    const interval = setInterval(fetchBots, 10000);
+    // Auto-refresh every 30 minutes (admin page handles its own refresh)
+    // This component is used in multiple places, so we keep a longer interval
+    const interval = setInterval(fetchBots, 30 * 60 * 1000); // 30 minutes
     return () => clearInterval(interval);
   }, [account, activeChain]); // Re-fetch when account or chain filter changes
 
