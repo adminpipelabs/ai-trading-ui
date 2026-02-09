@@ -995,17 +995,29 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                         {isRunning ? '🟢 Running' : '⚪ Stopped'}
                       </span>
                     </div>
-                    {/* Show health message if there's an issue */}
+                    {/* Show health message if there's an issue - make it actionable */}
                     {botItem.health_message && botItem.health_status !== 'healthy' && (
-                      <span style={{
+                      <div style={{
                         fontSize: '12px',
-                        color: '#ef4444',
-                        display: 'block',
-                        marginTop: '4px',
+                        backgroundColor: botItem.health_message.includes('Missing API') ? '#FEF3C7' : '#FEE2E2',
+                        border: `1px solid ${botItem.health_message.includes('Missing API') ? '#FBBF24' : '#EF4444'}`,
+                        borderRadius: '6px',
+                        padding: '8px 10px',
+                        marginTop: '8px',
                         marginBottom: '8px',
+                        color: botItem.health_message.includes('Missing API') ? '#92400E' : '#991B1B',
                       }}>
-                        {botItem.health_message}
-                      </span>
+                        <div style={{ fontWeight: 600, marginBottom: '2px' }}>
+                          {botItem.health_message.includes('Missing API') ? '⚠️ Connect API Keys' : '⚠️ Action Needed'}
+                        </div>
+                        <div style={{ fontSize: '11px' }}>
+                          {botItem.health_message.includes('Missing API')
+                            ? 'Click Edit to add your exchange API keys'
+                            : botItem.health_message.includes('Trade skipped')
+                            ? 'Check your wallet balance and ensure funds are available'
+                            : botItem.health_message}
+                        </div>
+                      </div>
                     )}
                     {/* Available | Locked | Volume */}
                     <div style={{ marginTop: '8px' }}>

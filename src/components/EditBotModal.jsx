@@ -4,6 +4,8 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
   const [config, setConfig] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [apiKeys, setApiKeys] = useState({ api_key: '', api_secret: '', passphrase: '' });
+  const [showApiKeys, setShowApiKeys] = useState(false);
 
   // Pre-populate form with current config
   useEffect(() => {
@@ -41,6 +43,39 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
         }
         if (config.interval_min_seconds >= config.interval_max_seconds) {
           throw new Error('Min interval must be less than max interval');
+        }
+      }
+
+      // If API keys are provided for CEX bots, save them first
+      const isCEX = bot.connector && !['jupiter', 'solana'].includes(bot.connector.toLowerCase());
+      if (isCEX && showApiKeys && apiKeys.api_key && apiKeys.api_secret) {
+        try {
+          const API_BASE = process.env.REACT_APP_TRADING_BRIDGE_URL || 'https://trading-bridge-production.up.railway.app';
+          const walletAddress = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')).wallet_address : null;
+          const headers = {
+            'Content-Type': 'application/json',
+            ...(walletAddress && { 'X-Wallet-Address': walletAddress }),
+          };
+          
+          const params = new URLSearchParams({
+            api_key: apiKeys.api_key.trim(),
+            api_secret: apiKeys.api_secret.trim(),
+          });
+          if (apiKeys.passphrase) {
+            params.append('passphrase', apiKeys.passphrase.trim());
+          }
+          
+          const credRes = await fetch(`${API_BASE}/bots/${bot.id}/add-exchange-credentials?${params}`, {
+            method: 'POST',
+            headers,
+          });
+          
+          if (!credRes.ok) {
+            const credErr = await credRes.json();
+            throw new Error(credErr.detail || 'Failed to save API credentials');
+          }
+        } catch (credErr) {
+          throw new Error(`Failed to save API keys: ${credErr.message}`);
         }
       }
 
@@ -118,6 +153,68 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
             marginBottom: 16,
           }}>
             ⚠️ Bot is running. Stop it before editing for changes to take effect.
+          </div>
+        )}
+
+        {/* Show API keys section for CEX bots */}
+        {bot.connector && !['jupiter', 'solana'].includes(bot.connector.toLowerCase()) && (
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => setShowApiKeys(!showApiKeys)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: 8,
+                border: '1px solid #d1d5db',
+                background: showApiKeys ? '#f0fdfa' : 'white',
+                cursor: 'pointer',
+                textAlign: 'left',
+                fontWeight: 500,
+              }}
+            >
+              {showApiKeys ? '▼' : '▶'} {showApiKeys ? 'Hide' : 'Add'} API Keys
+            </button>
+            {showApiKeys && (
+              <div style={{ marginTop: 12, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
+                <p style={{ marginTop: 0, marginBottom: 12, fontSize: 14, color: '#6b7280' }}>
+                  Add or update your exchange API credentials. Leave blank to keep existing keys.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>API Key</label>
+                    <input
+                      type="text"
+                      value={apiKeys.api_key}
+                      onChange={(e) => setApiKeys({ ...apiKeys, api_key: e.target.value })}
+                      placeholder="Enter API key"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>API Secret</label>
+                    <input
+                      type="password"
+                      value={apiKeys.api_secret}
+                      onChange={(e) => setApiKeys({ ...apiKeys, api_secret: e.target.value })}
+                      placeholder="Enter API secret"
+                      style={inputStyle}
+                    />
+                  </div>
+                  {(bot.connector.toLowerCase() === 'bitmart' || bot.connector.toLowerCase() === 'coinstore') && (
+                    <div>
+                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>Passphrase / Memo</label>
+                      <input
+                        type="password"
+                        value={apiKeys.passphrase}
+                        onChange={(e) => setApiKeys({ ...apiKeys, passphrase: e.target.value })}
+                        placeholder="Enter passphrase (if required)"
+                        style={inputStyle}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
