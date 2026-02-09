@@ -633,6 +633,7 @@ export default function BotManagement({ theme, isDark, onBack, activeChain = "al
                 >
                   <optgroup label="CEX">
                     <option value="bitmart">BitMart</option>
+                    <option value="coinstore">Coinstore</option>
                     <option value="binance">Binance</option>
                     <option value="kucoin">KuCoin</option>
                   </optgroup>
