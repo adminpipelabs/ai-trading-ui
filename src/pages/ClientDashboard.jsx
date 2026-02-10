@@ -104,7 +104,7 @@ export default function ClientDashboard() {
     const interval = setInterval(() => {
       bots.forEach(bot => {
         const isRunning = bot.status && bot.status.toLowerCase() === 'running';
-        if (isRunning) {
+        if (isRunning && bot.id) {
           // Refresh balance/volume for running bots
           fetchBotBalanceAndVolume(bot.id, true);
         }
@@ -113,7 +113,7 @@ export default function ClientDashboard() {
     
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bots.length, JSON.stringify(bots.map(b => ({ id: b.id, status: b.status })))]);
+  }, [bots.length]);
 
   useEffect(() => {
     if (!user) return;
