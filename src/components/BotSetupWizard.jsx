@@ -264,10 +264,8 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
         <div style={styles.tipBox}>
           <strong>📍 IP Whitelist</strong>
           <p>Add these IPs to your {selectedExchange.name} API whitelist:</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-            <code style={styles.code}>5.161.64.209</code>
-            <code style={styles.code}>162.220.232.99</code>
-          </div>
+          <code style={styles.code}>5.161.64.209</code>
+          <code style={{...styles.code, marginTop: '8px'}}>162.220.232.99</code>
           <p style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
             Both IPs need to be whitelisted for the API key to work.
           </p>
