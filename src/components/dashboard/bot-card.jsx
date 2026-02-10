@@ -16,7 +16,7 @@ import {
 import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
 
-export interface BotData {
+export const BotData = {} {
   name: string
   type: "spread" | "volume"
   status: "running" | "stopped"
@@ -31,7 +31,7 @@ export interface BotData {
   recentActivity: { time: string; action: string; amount: string }[]
 }
 
-export function BotCard({ bot }: { bot: BotData }) {
+export function BotCard({ bot }: { bot: any }) {
   const [expanded, setExpanded] = useState(false)
   const isRunning = bot.status === "running"
 

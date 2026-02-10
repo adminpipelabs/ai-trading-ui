@@ -3,9 +3,9 @@
 import { Plus, BarChart3, ArrowUpDown } from "lucide-react"
 import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
-import { BotCard, type BotData } from "./bot-card"
+import { BotCard } from "./bot-card"
 
-const bots: BotData[] = [
+const bots= [] = [
   {
     name: "Sharp-SB-BitMart",
     type: "spread",
