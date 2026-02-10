@@ -5,7 +5,7 @@ import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
 import { BotCard } from "./bot-card"
 
-const bots= [] = [
+const bots = [
   {
     name: "Sharp-SB-BitMart",
     type: "spread",
