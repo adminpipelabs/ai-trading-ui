@@ -97,6 +97,24 @@ export default function ClientDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bots.length, JSON.stringify(bots.map(b => ({ id: b.id, status: b.status })))]); // Stable dependency: length + bot IDs/statuses
 
+  // Auto-refresh balance/volume for running bots every 15 seconds
+  useEffect(() => {
+    if (bots.length === 0) return;
+    
+    const interval = setInterval(() => {
+      bots.forEach(bot => {
+        const isRunning = bot.status && bot.status.toLowerCase() === 'running';
+        if (isRunning) {
+          // Refresh balance/volume for running bots
+          fetchBotBalanceAndVolume(bot.id, true);
+        }
+      });
+    }, 15000); // Refresh every 15 seconds
+    
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bots.length, JSON.stringify(bots.map(b => ({ id: b.id, status: b.status })))]);
+
   useEffect(() => {
     if (!user) return;
     
