@@ -16,22 +16,9 @@ import {
 import { Button } from "../ui/button"
 import { Badge } from "../ui/badge"
 
-export const BotData = {} {
-  name: string
-  type: "spread" | "volume"
-  status: "running" | "stopped"
-  availableSharp: string
-  availableUsdt: string
-  lockedSharp: string
-  lockedUsdt: string
-  metric: string
-  metricValue: string
-  pnl: string
-  pnlPositive: boolean
-  recentActivity: { time: string; action: string; amount: string }[]
-}
+// BotData shape: { name, type, status, availableSharp, availableUsdt, lockedSharp, lockedUsdt, metric, metricValue, pnl, pnlPositive, recentActivity }
 
-export function BotCard({ bot }: { bot: any }) {
+export function BotCard({ bot }) {
   const [expanded, setExpanded] = useState(false)
   const isRunning = bot.status === "running"
 
