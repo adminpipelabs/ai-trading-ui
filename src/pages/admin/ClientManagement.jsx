@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { BotList } from '../../components/BotList';
-import { EditClientModal } from './EditClientModal';
 import { 
   Send, Bot, Users, Plus, ArrowLeft, Search, UserPlus, Key, Mail, Building, 
   Clock, Wallet, Edit2, Trash2, AlertCircle, CheckCircle2, X, Eye, EyeOff, 
@@ -8,22 +7,35 @@ import {
 } from 'lucide-react';
 // Theme is passed as props, no need to import useTheme
 
-// Import shared exchange configuration
-import { getAllCEXExchanges, getAllDEXExchanges, getExchangeById } from '../../constants/exchanges';
-
-// Convert to array format for backward compatibility with existing code
+// EXCHANGES constant - list of supported exchanges
 const EXCHANGES = [
-  ...getAllCEXExchanges().map(ex => ({
-    id: ex.id,
-    name: ex.name,
-    requiresMemo: ex.requiresMemo || false,
-  })),
-  ...getAllDEXExchanges().map(ex => ({
-    id: ex.id,
-    name: ex.name,
-    requiresMemo: false,
-  })),
-  // Additional DEX exchanges from Gateway (not in shared config yet)
+  // CLOB CEX (Centralized Exchanges)
+  { id: 'binance', name: 'Binance', requiresMemo: false },
+  { id: 'bitget', name: 'Bitget', requiresMemo: false },
+  { id: 'bitmart', name: 'BitMart', requiresMemo: true },
+  { id: 'derive', name: 'Derive', requiresMemo: false },
+  { id: 'dydx', name: 'dYdX', requiresMemo: false },
+  { id: 'gateio', name: 'Gate.io', requiresMemo: false },
+  { id: 'htx', name: 'HTX (Huobi)', requiresMemo: false },
+  { id: 'hyperliquid', name: 'Hyperliquid', requiresMemo: false },
+  { id: 'kucoin', name: 'KuCoin', requiresMemo: true },
+  { id: 'okx', name: 'OKX', requiresMemo: true },
+  { id: 'xrpl', name: 'XRP Ledger', requiresMemo: false },
+  { id: 'ascendex', name: 'AscendEx', requiresMemo: false },
+  { id: 'bitstamp', name: 'Bitstamp', requiresMemo: false },
+  { id: 'bitrue', name: 'Bitrue', requiresMemo: false },
+  { id: 'bingx', name: 'BingX', requiresMemo: false },
+  { id: 'bybit', name: 'Bybit', requiresMemo: false },
+  { id: 'btc_markets', name: 'BTC Markets', requiresMemo: false },
+  { id: 'coinbase', name: 'Coinbase', requiresMemo: false },
+  { id: 'kraken', name: 'Kraken', requiresMemo: false },
+  { id: 'mexc', name: 'MEXC', requiresMemo: false },
+  { id: 'ndax', name: 'NDAX', requiresMemo: false },
+  
+  // CLOB DEX (Decentralized Exchanges)
+  { id: 'vertex', name: 'Vertex', requiresMemo: false },
+  
+  // Gateway DEX (AMM/DEX via Gateway)
   { id: 'balancer', name: 'Balancer', requiresMemo: false },
   { id: 'cube', name: 'Cube', requiresMemo: false },
   { id: 'curve', name: 'Curve', requiresMemo: false },
@@ -31,6 +43,7 @@ const EXCHANGES = [
   { id: 'etcswap', name: 'ETCSwap', requiresMemo: false },
   { id: 'foxbit', name: 'Foxbit', requiresMemo: false },
   { id: 'injective', name: 'Injective Helix', requiresMemo: false },
+  { id: 'jupiter', name: 'Jupiter', requiresMemo: false },
   { id: 'meteora', name: 'Meteora', requiresMemo: false },
   { id: 'pancakeswap', name: 'Pancakeswap', requiresMemo: false },
   { id: 'orca', name: 'Orca', requiresMemo: false },
@@ -53,9 +66,6 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const [showApiKeysModal, setShowApiKeysModal] = useState(null);
   const [showPairsModal, setShowPairsModal] = useState(null);
   const [showBotsModal, setShowBotsModal] = useState(null);
-  const [clientKeyStatuses, setClientKeyStatuses] = useState({});
-  const [clientBalances, setClientBalances] = useState({}); // Store balances for each client
-  const [loadingBalances, setLoadingBalances] = useState(false);
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,69 +96,10 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const handleDelete = async (clientId) => {
-    console.log(`🗑️ Attempting to delete client: ${clientId}`);
-    try {
-      const { adminAPI } = await import('../../services/api');
-      
-      // Actually delete from backend database first
-      console.log(`📡 Calling DELETE /clients/${clientId}`);
-      const result = await adminAPI.deleteClient(clientId);
-      console.log(`📥 Delete response:`, result);
-      
-      // Verify deletion was successful
-      if (!result || (result.status !== 'deleted' && !result.client_id)) {
-        console.error('❌ Invalid delete response:', result);
-        throw new Error('Delete request did not return success confirmation');
-      }
-      
-      // Only update UI after successful backend deletion
-      setShowDeleteConfirm(null);
-      
-      // If deleted client was selected, clear selection
-      if (selectedClient?.id === clientId) {
-        setSelectedClient(null);
-      }
-      
-      // Reload clients from backend to ensure consistency
-      console.log(`🔄 Reloading clients list...`);
-      const data = await adminAPI.getClients();
-      console.log(`📋 Reloaded ${data?.length || 0} clients`);
-      
-      const transformedClients = (data || []).map(c => ({
-        id: c.id,
-        name: c.name,
-        email: c.email,
-        wallet_address: c.wallet_address,
-        wallet_type: c.wallet_type || 'EVM',
-        company: c.settings?.contactPerson || '',
-        phone: c.settings?.telegramId || '',
-        status: c.status || 'active',
-        createdAt: c.created_at,
-        connectors: c.connectors || c.exchanges || [],
-        tokens: c.tokens || (c.tradingPair ? [c.tradingPair] : []),
-        pairs: c.pairs || [],
-        balance: '$0',
-        pnl: '$0',
-        pnlPercent: '0%'
-      }));
-      setClients(transformedClients);
-      
-      console.log(`✅ Successfully deleted and reloaded clients. Client ${clientId} should be gone.`);
-    } catch (error) {
-      console.error('❌ Failed to delete client:', error);
-      console.error('Error details:', {
-        message: error.message,
-        status: error.status,
-        data: error.data,
-        stack: error.stack
-      });
-      // Show detailed error message
-      const errorMsg = error.message || error.detail || error.data?.detail || 'Unknown error occurred';
-      alert(`Failed to delete client: ${errorMsg}\n\nPlease check the browser console (F12) for details.`);
-      // Don't update UI if deletion failed
-      setShowDeleteConfirm(null);
-    }
+  const handleDelete = (clientId) => {
+    setClients(clients.filter(c => c.id !== clientId));
+    setShowDeleteConfirm(null);
+    setSelectedClient(null);
   };
 
   const handleResendInvite = (client) => {
@@ -166,66 +117,6 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
   const handleManageBots = (client) => {
     setShowBotsModal(client);
   };
-
-  // Fetch balances when a client is selected
-  // Use account_identifier (for BitMart API keys) instead of wallet_address
-  useEffect(() => {
-    const fetchClientBalances = async () => {
-      if (!selectedClient?.id) return;
-      
-      setLoadingBalances(true);
-      try {
-        const { adminAPI } = await import('../../services/api');
-        // Use admin endpoint that fetches by client_id (uses account_identifier + connectors)
-        const balanceData = await adminAPI.getClientBalances(selectedClient.id);
-        const balances = Array.isArray(balanceData?.balances) ? balanceData.balances : [];
-        
-        // Calculate USD values for USDT/USDC
-        const balancesWithUsd = balances.map(b => ({
-          ...b,
-          usd_value: (b.asset === 'USDT' || b.asset === 'USDC') ? (b.total || 0) : 0
-        }));
-        
-        setClientBalances(prev => ({
-          ...prev,
-          [selectedClient.id]: balancesWithUsd
-        }));
-      } catch (error) {
-        console.error('Failed to fetch balances:', error);
-        setClientBalances(prev => ({
-          ...prev,
-          [selectedClient.id]: []
-        }));
-      } finally {
-        setLoadingBalances(false);
-      }
-    };
-
-    if (selectedClient) {
-      fetchClientBalances();
-    }
-  }, [selectedClient?.id]);
-
-  // Fetch key status for all clients
-  useEffect(() => {
-    const fetchKeyStatuses = async () => {
-      const statuses = {};
-      for (const client of clients) {
-        try {
-          const { tradingBridge } = await import('../../services/api');
-          const status = await tradingBridge.getClientKeyStatus(client.id);
-          statuses[client.id] = status;
-        } catch (error) {
-          console.error(`Failed to fetch key status for client ${client.id}:`, error);
-          statuses[client.id] = { has_key: false };
-        }
-      }
-      setClientKeyStatuses(statuses);
-    };
-    if (clients.length > 0) {
-      fetchKeyStatuses();
-    }
-  }, [clients]);
 
   const [showSendOrderModal, setShowSendOrderModal] = useState(null);
 
@@ -433,24 +324,13 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-4">
                     <span style={{ color: theme.textMuted }}>
-                      <span style={{ color: theme.textSecondary }}>{client.connectors.length}</span> exchanges
+                      <span style={{ color: theme.textSecondary }}>{client.connectors?.length || 0}</span> exchanges
                     </span>
                     <span style={{ color: theme.textMuted }}>
-                      <span style={{ color: theme.textSecondary }}>{client.tokens.length}</span> tokens
+                      <span style={{ color: theme.textSecondary }}>{client.tokens?.length || 0}</span> tokens
                     </span>
-                    {clientKeyStatuses[client.id] && (
-                      <span style={{ color: theme.textMuted }}>
-                        {clientKeyStatuses[client.id].has_key ? (
-                          <span style={{ color: theme.positive }}>
-                            ✅ Key ({clientKeyStatuses[client.id].key_added_by || 'unknown'})
-                          </span>
-                        ) : (
-                          <span style={{ color: theme.textMuted }}>⬜ No key</span>
-                        )}
-                      </span>
-                    )}
                   </div>
-                  <span style={{ color: client.pnlPercent.startsWith('+') ? theme.positive : client.pnlPercent.startsWith('-') ? theme.negative : theme.textMuted }}>
+                  <span style={{ color: client.pnlPercent?.startsWith('+') ? theme.positive : client.pnlPercent?.startsWith('-') ? theme.negative : theme.textMuted }}>
                     {client.pnl}
                   </span>
                 </div>
@@ -555,45 +435,21 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
             <div className="flex-1 overflow-y-auto p-5 space-y-5">
               {/* Contact Info */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-xs font-semibold uppercase" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                    Contact Info
-                  </div>
+                <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
+                  Contact Info
                 </div>
                 <div className="space-y-2 text-sm">
-                  {/* Primary Wallet (Login Wallet) */}
                   <div className="flex items-center gap-3">
                     <Wallet size={14} style={{ color: theme.textMuted }} />
-                    <span className="font-mono text-xs flex-1" style={{ color: theme.textPrimary }}>
-                      {selectedClient.wallet_address || selectedClient.wallets?.[0]?.address || 'No wallet'}
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: theme.accentLight, color: theme.accent }}>
-                      Primary
+                    <span className="font-mono text-xs" style={{ color: theme.textPrimary }}>
+                      {selectedClient.wallet_address || selectedClient.email || 'No wallet'}
                     </span>
                   </div>
-                  
-                  {/* Additional Wallets */}
-                  {selectedClient.wallets && selectedClient.wallets.length > 1 && (
-                    <div className="space-y-1.5 mt-2">
-                      {selectedClient.wallets.slice(1).map((wallet, idx) => (
-                        <div key={wallet.id || idx} className="flex items-center gap-3 pl-5">
-                          <Wallet size={12} style={{ color: theme.textMuted }} />
-                          <span className="font-mono text-xs flex-1" style={{ color: theme.textSecondary }}>
-                            {wallet.address}
-                          </span>
-                          <span className="text-xs px-2 py-0.5 rounded" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
-                            {wallet.chain || 'unknown'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {selectedClient.email && (
-                    <div className="flex items-center gap-3">
-                      <Mail size={14} style={{ color: theme.textMuted }} />
+                  {selectedClient.email && selectedClient.wallet_address && (
+                  <div className="flex items-center gap-3">
+                    <Mail size={14} style={{ color: theme.textMuted }} />
                       <span style={{ color: theme.textMuted }}>{selectedClient.email}</span>
-                    </div>
+                  </div>
                   )}
                   {selectedClient.phone && (
                     <div className="flex items-center gap-3">
@@ -610,71 +466,15 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                 </div>
               </div>
 
-              {/* Trading Key Status */}
-              {clientKeyStatuses[selectedClient.id] && (
-                <div>
-                  <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                    Trading Key
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    {clientKeyStatuses[selectedClient.id].has_key ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <CheckCircle2 size={14} style={{ color: theme.positive }} />
-                          <span style={{ color: theme.textPrimary }}>
-                            ✅ Connected by {clientKeyStatuses[selectedClient.id].key_added_by || 'unknown'}
-                          </span>
-                        </div>
-                        {clientKeyStatuses[selectedClient.id].key_connected_at && (
-                          <div className="flex items-center gap-3">
-                            <Clock size={14} style={{ color: theme.textMuted }} />
-                            <span style={{ color: theme.textMuted }}>
-                              Connected {formatDate(clientKeyStatuses[selectedClient.id].key_connected_at)}
-                            </span>
-                          </div>
-                        )}
-                        {clientKeyStatuses[selectedClient.id].wallet_address && (
-                          <div className="flex items-center gap-3">
-                            <Wallet size={14} style={{ color: theme.textMuted }} />
-                            <span className="font-mono text-xs" style={{ color: theme.textPrimary }}>
-                              {clientKeyStatuses[selectedClient.id].wallet_address}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs px-2 py-1 rounded" style={{ background: theme.bgSecondary, color: theme.textSecondary }}>
-                            {clientKeyStatuses[selectedClient.id].chain || 'solana'}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="p-3 rounded-xl text-center" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
-                        ⬜ No trading key connected
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
               {/* Performance */}
               <div>
                 <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
                   Performance
                 </div>
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
-                    <div className="text-xs" style={{ color: theme.textMuted }}>Total Balance</div>
-                    {loadingBalances ? (
-                      <div className="text-sm" style={{ color: theme.textMuted }}>Loading...</div>
-                    ) : (() => {
-                      const balances = clientBalances[selectedClient.id] || [];
-                      const totalUsd = balances.reduce((sum, b) => sum + (b.usd_value || 0), 0);
-                      return (
-                        <div className="text-lg font-semibold" style={{ color: theme.textPrimary }}>
-                          ${totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </div>
-                      );
-                    })()}
+                    <div className="text-xs" style={{ color: theme.textMuted }}>Balance</div>
+                    <div className="text-lg font-semibold" style={{ color: theme.textPrimary }}>{selectedClient.balance}</div>
                   </div>
                   <div className="p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
                     <div className="text-xs" style={{ color: theme.textMuted }}>P&L</div>
@@ -684,67 +484,14 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
                     </div>
                   </div>
                 </div>
-                
-                {/* Individual Token Balances */}
-                {(() => {
-                  const balances = clientBalances[selectedClient.id] || [];
-                  const nonZeroBalances = balances.filter(b => b.total > 0);
-                  
-                  if (loadingBalances) {
-                    return (
-                      <div className="p-3 rounded-xl text-sm" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
-                        Loading balances...
-                      </div>
-                    );
-                  }
-                  
-                  if (nonZeroBalances.length === 0) {
-                    return (
-                      <div className="p-3 rounded-xl text-sm" style={{ background: theme.bgSecondary, color: theme.textMuted }}>
-                        No balances found. Connect exchange API keys to view balances.
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <div className="p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
-                      <div className="text-xs font-semibold uppercase mb-2" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                        Tokens
-                      </div>
-                      <div className="space-y-2">
-                        {nonZeroBalances.map((balance, idx) => {
-                          const decimals = balance.asset === 'USDT' || balance.asset === 'USDC' ? 2 : 8;
-                          return (
-                            <div key={`${balance.exchange}-${balance.asset}-${idx}`} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium" style={{ color: theme.textPrimary }}>
-                                  {balance.total.toLocaleString('en-US', {
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: decimals
-                                  })}
-                                </span>
-                                <span style={{ color: theme.textMuted }}>{balance.asset}</span>
-                              </div>
-                              {balance.usd_value > 0 && (
-                                <span className="text-xs" style={{ color: theme.textMuted }}>
-                                  ${balance.usd_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
 
               {/* Exchanges */}
               <div>
                 <div className="text-xs font-semibold uppercase mb-3" style={{ color: theme.textMuted, letterSpacing: '0.05em' }}>
-                  Exchanges ({selectedClient.connectors.length})
+                  Exchanges ({selectedClient.connectors?.length || 0})
                 </div>
-                {selectedClient.connectors.length > 0 ? (
+                {selectedClient.connectors?.length > 0 ? (
                   <div className="space-y-2">
                     {selectedClient.connectors.map(conn => (
                       <div key={conn.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: theme.bgSecondary }}>
@@ -988,31 +735,6 @@ export default function ClientManagement({ onBack, onAddClient, clients, setClie
           setSelectedClient(transformedClients.find(c => c.id === showBotsModal.id));
         }
       }} theme={theme} />}
-
-      {showEditModal && <EditClientModal client={showEditModal} onClose={() => setShowEditModal(null)} onUpdate={async () => {
-        const { adminAPI } = await import('../../services/api');
-        const data = await adminAPI.getClients();
-        const transformedClients = (data || []).map(c => ({
-          id: c.id,
-          name: c.name,
-          email: c.email,
-          wallet_address: c.wallet_address,
-          account_identifier: c.account_identifier,
-          status: c.status || 'active',
-          connectors: c.connectors || [],
-          wallets: c.wallets || [],
-          pairs: [],
-          bots: [],
-          balance: '$0',
-          pnl: '$0',
-          pnlPercent: '0%',
-          createdAt: c.created_at
-        }));
-        setClients(transformedClients);
-        if (selectedClient?.id === showEditModal.id) {
-          setSelectedClient(transformedClients.find(c => c.id === showEditModal.id));
-        }
-      }} theme={theme} />}
     </div>
   );
 }
@@ -1166,7 +888,7 @@ function ApiKeysModal({ client, onClose, onUpdate, theme }) {
                       Instead, provide wallet address and private key when creating a bot in Bot Management.
                     </div>
                   )}
-                  {(getExchangeById(formData.exchange)?.requiresMemo || EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo) && (
+                  {EXCHANGES.find(e => e.id === formData.exchange)?.requiresMemo && (
                     <div>
                       <label className="block text-xs font-medium mb-1" style={{ color: theme.textMuted }}>Memo/Passphrase</label>
                       <input
