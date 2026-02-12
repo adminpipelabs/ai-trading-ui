@@ -617,23 +617,8 @@ export default function BotSetupWizard({ onComplete, onCancel, clientId }) {
           }
           throw new Error(errorMessage);
         }
-      } else {
-        // DEX - save private key
-        const clientIdToUse = clientId || user?.id || user?.client_id;
-        const keyRes = await fetch(`${API_BASE}/clients/${clientIdToUse}/trading-key`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            private_key: credentials.privateKey.trim(),
-            chain: selectedExchange.chain,
-          }),
-        });
-
-        if (!keyRes.ok) {
-          const keyErr = await keyRes.json();
-          throw new Error(keyErr.detail || 'Failed to save private key');
-        }
       }
+      // DEX private key is sent directly in the bot payload (setup-bot handles storage)
 
       // 2. Create bot with bot-type-specific config
       let botConfig = {};
