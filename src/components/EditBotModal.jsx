@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { tradingBridge } from '../services/api';
 
 const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
   const [config, setConfig] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [apiKeys, setApiKeys] = useState({ api_key: '', api_secret: '', passphrase: '' });
-  const [showApiKeys, setShowApiKeys] = useState(false);
 
   // Pre-populate form with current config
   useEffect(() => {
@@ -20,10 +17,11 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
         interval_max_seconds: bot.config.interval_max_seconds || 2700,
         slippage_bps: bot.config.slippage_bps || 50,
         // Spread bot fields
-        spread_bps: bot.config.spread_bps || 50,
-        order_size_usd: bot.config.order_size_usd || 500,
-        refresh_seconds: bot.config.refresh_seconds || 30,
-        expire_seconds: bot.config.expire_seconds || 3600,
+        spread_percent: bot.config.spread_percent || 0.5,
+        order_size_usd: bot.config.order_size_usd || 100,
+        poll_interval_seconds: bot.config.poll_interval_seconds || 5,
+        price_decimals: bot.config.price_decimals || 6,
+        amount_decimals: bot.config.amount_decimals || 2,
       });
     }
   }, [bot]);
@@ -47,21 +45,6 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
         }
       }
 
-      // If API keys are provided for CEX bots, save them first
-      const isCEX = bot.connector && !['jupiter', 'solana'].includes(bot.connector.toLowerCase());
-      if (isCEX && showApiKeys && apiKeys.api_key && apiKeys.api_secret) {
-        try {
-          await tradingBridge.addBotCredentials(
-            bot.id,
-            apiKeys.api_key.trim(),
-            apiKeys.api_secret.trim(),
-            apiKeys.passphrase?.trim() || null
-          );
-        } catch (credErr) {
-          throw new Error(`Failed to save API keys: ${credErr.message || credErr.detail || 'Unknown error'}`);
-        }
-      }
-
       // Build payload based on bot type
       const payload = {
         name: config.name,
@@ -77,11 +60,11 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
         } : {
           base_mint: bot.config.base_mint,
           quote_mint: bot.config.quote_mint,
-          spread_bps: Number(config.spread_bps),
+          spread_percent: Number(config.spread_percent),
           order_size_usd: Number(config.order_size_usd),
-          refresh_seconds: Number(config.refresh_seconds),
-          expire_seconds: Number(config.expire_seconds),
-          slippage_bps: Number(config.slippage_bps),
+          poll_interval_seconds: Number(config.poll_interval_seconds),
+          price_decimals: Number(config.price_decimals),
+          amount_decimals: Number(config.amount_decimals),
         }
       };
 
@@ -136,68 +119,6 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
             marginBottom: 16,
           }}>
             ⚠️ Bot is running. Stop it before editing for changes to take effect.
-          </div>
-        )}
-
-        {/* Show API keys section for CEX bots */}
-        {bot.connector && !['jupiter', 'solana'].includes(bot.connector.toLowerCase()) && (
-          <div style={{ marginBottom: 16 }}>
-            <button
-              onClick={() => setShowApiKeys(!showApiKeys)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                borderRadius: 8,
-                border: '1px solid #d1d5db',
-                background: showApiKeys ? '#f0fdfa' : 'white',
-                cursor: 'pointer',
-                textAlign: 'left',
-                fontWeight: 500,
-              }}
-            >
-              {showApiKeys ? '▼' : '▶'} {showApiKeys ? 'Hide' : 'Add'} API Keys
-            </button>
-            {showApiKeys && (
-              <div style={{ marginTop: 12, padding: 16, backgroundColor: '#f9fafb', borderRadius: 8 }}>
-                <p style={{ marginTop: 0, marginBottom: 12, fontSize: 14, color: '#6b7280' }}>
-                  Add or update your exchange API credentials. Leave blank to keep existing keys.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>API Key</label>
-                    <input
-                      type="text"
-                      value={apiKeys.api_key}
-                      onChange={(e) => setApiKeys({ ...apiKeys, api_key: e.target.value })}
-                      placeholder="Enter API key"
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>API Secret</label>
-                    <input
-                      type="password"
-                      value={apiKeys.api_secret}
-                      onChange={(e) => setApiKeys({ ...apiKeys, api_secret: e.target.value })}
-                      placeholder="Enter API secret"
-                      style={inputStyle}
-                    />
-                  </div>
-                  {(bot.connector.toLowerCase() === 'bitmart' || bot.connector.toLowerCase() === 'coinstore') && (
-                    <div>
-                      <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>Passphrase / Memo</label>
-                      <input
-                        type="password"
-                        value={apiKeys.passphrase}
-                        onChange={(e) => setApiKeys({ ...apiKeys, passphrase: e.target.value })}
-                        placeholder="Enter passphrase (if required)"
-                        style={inputStyle}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -293,21 +214,22 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
           {!isVolume && (
             <>
               <div>
-                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Spread (basis points)</label>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Spread (%)</label>
                 <input
                   type="number"
-                  value={config.spread_bps || ''}
-                  onChange={(e) => handleChange('spread_bps', e.target.value)}
+                  step="0.1"
+                  value={config.spread_percent || ''}
+                  onChange={(e) => handleChange('spread_percent', e.target.value)}
                   style={inputStyle}
                 />
-                <small style={{ color: '#6b7280' }}>{(config.spread_bps || 0) / 100}%</small>
+                <small style={{ color: '#6b7280' }}>Half above + half below mid price</small>
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Order Size (USD)</label>
                 <input
                   type="number"
-                  step="0.01"
+                  step="1"
                   value={config.order_size_usd || ''}
                   onChange={(e) => handleChange('order_size_usd', e.target.value)}
                   style={inputStyle}
@@ -315,39 +237,52 @@ const EditBotModal = ({ bot, isOpen, onClose, onSave }) => {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Refresh Interval (seconds)</label>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Poll Interval (seconds)</label>
                 <input
                   type="number"
-                  value={config.refresh_seconds || ''}
-                  onChange={(e) => handleChange('refresh_seconds', e.target.value)}
+                  value={config.poll_interval_seconds || ''}
+                  onChange={(e) => handleChange('poll_interval_seconds', e.target.value)}
                   style={inputStyle}
                 />
+                <small style={{ color: '#6b7280' }}>How often to check for fills</small>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Order Expiry (seconds)</label>
-                <input
-                  type="number"
-                  value={config.expire_seconds || ''}
-                  onChange={(e) => handleChange('expire_seconds', e.target.value)}
-                  style={inputStyle}
-                />
-                <small style={{ color: '#6b7280' }}>{Math.round((config.expire_seconds || 0) / 3600)} hours</small>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Price Decimals</label>
+                  <input
+                    type="number"
+                    value={config.price_decimals || ''}
+                    onChange={(e) => handleChange('price_decimals', e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Amount Decimals</label>
+                  <input
+                    type="number"
+                    value={config.amount_decimals || ''}
+                    onChange={(e) => handleChange('amount_decimals', e.target.value)}
+                    style={inputStyle}
+                  />
+                </div>
               </div>
             </>
           )}
 
-          {/* Slippage - both bot types */}
-          <div>
-            <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Slippage Tolerance (basis points)</label>
-            <input
-              type="number"
-              value={config.slippage_bps || ''}
-              onChange={(e) => handleChange('slippage_bps', e.target.value)}
-              style={inputStyle}
-            />
-            <small style={{ color: '#6b7280' }}>{(config.slippage_bps || 0) / 100}%</small>
-          </div>
+          {/* Slippage - volume bot only */}
+          {isVolume && (
+            <div>
+              <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Slippage Tolerance (basis points)</label>
+              <input
+                type="number"
+                value={config.slippage_bps || ''}
+                onChange={(e) => handleChange('slippage_bps', e.target.value)}
+                style={inputStyle}
+              />
+              <small style={{ color: '#6b7280' }}>{(config.slippage_bps || 0) / 100}%</small>
+            </div>
+          )}
 
           {/* Read-only info */}
           <div style={{ backgroundColor: '#f3f4f6', padding: 12, borderRadius: 8 }}>
