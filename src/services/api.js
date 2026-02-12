@@ -72,13 +72,8 @@ async function apiCall(url, options = {}) {
       stack: fetchError.stack
     });
     
-    // Provide more helpful error message
-    let errorMessage = 'Failed to connect to server';
-    if (fetchError.message.includes('Failed to fetch') || fetchError.name === 'TypeError') {
-      errorMessage = `Network error: Cannot reach ${url}\n\nPossible causes:\n- CORS blocking (check Network tab)\n- Server not responding\n- Network issue\n\nStatus: ${fetchError.type || 'unknown'}`;
-    } else {
-      errorMessage = `Network error: ${fetchError.message}`;
-    }
+    // Provide a clean, user-friendly error message — never expose URLs or technical details
+    let errorMessage = 'Unable to connect. Please check your internet and try again.';
     
     const networkError = new Error(errorMessage);
     networkError.isNetworkError = true;

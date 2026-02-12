@@ -72,8 +72,13 @@ export default function ClientDashboard() {
       setBotBalanceData(prev => ({ ...prev, [botId]: data }));
     } catch (err) {
       console.error(`Failed to fetch balance/volume for bot ${botId}:`, err);
-      // Store error info so we can retry later
-      setBotBalanceData(prev => ({ ...prev, [botId]: { error: err.message || 'Failed to fetch balance' } }));
+      // If bot not found, store empty data silently — don't show error to user
+      if (err.status === 404 || (err.message && err.message.includes('not found'))) {
+        setBotBalanceData(prev => ({ ...prev, [botId]: { unavailable: true } }));
+      } else {
+        // For other errors, store a clean message (no URLs or technical details)
+        setBotBalanceData(prev => ({ ...prev, [botId]: { error: 'Could not load balance. Tap to retry.' } }));
+      }
     } finally {
       setLoadingBalance(prev => ({ ...prev, [botId]: false }));
     }
@@ -915,13 +920,18 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                 return <span style={{ color: '#9ca3af', fontSize: '12px' }}>Balance unavailable</span>;
               }
               
+              if (balanceData.unavailable) {
+                // Bot not found on server — show nothing
+                return null;
+              }
+
               if (balanceData.error) {
                 return (
-                  <span style={{ color: '#ef4444', fontSize: '12px' }}>
-                    Error: {balanceData.error}
+                  <span style={{ color: '#9ca3af', fontSize: '12px' }}>
+                    {balanceData.error}{' '}
                     <button 
                       onClick={() => fetchBotBalanceAndVolume(botItem.id, true)}
-                      style={{ marginLeft: '8px', fontSize: '11px', textDecoration: 'underline', cursor: 'pointer' }}
+                      style={{ marginLeft: '4px', fontSize: '11px', color: '#6366f1', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}
                     >
                       Retry
                     </button>
