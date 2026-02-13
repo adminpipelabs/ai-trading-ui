@@ -1016,11 +1016,11 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                         borderRadius: '16px',
                         fontSize: '12px',
                         fontWeight: 600,
-                        backgroundColor: isRunning ? '#d1fae5' : '#f3f4f6',
-                        color: isRunning ? '#065f46' : '#6b7280',
+                        backgroundColor: isRunning ? '#d1fae5' : botItem.status === 'error' ? '#fee2e2' : '#f3f4f6',
+                        color: isRunning ? '#065f46' : botItem.status === 'error' ? '#991b1b' : '#6b7280',
                         whiteSpace: 'nowrap',
                       }}>
-                        {isRunning ? '🟢 Running' : '⚪ Stopped'}
+                        {isRunning ? '🟢 Running' : botItem.status === 'error' ? '🔴 Error' : '⚪ Stopped'}
                       </span>
                     </div>
                     {/* Show health message if there's an issue - make it actionable */}
@@ -1036,11 +1036,15 @@ function DashboardTab({ user, client, bots, keyStatus, exchangeCredentials, wall
                         color: botItem.health_message.includes('Missing API') ? '#92400E' : '#991B1B',
                       }}>
                         <div style={{ fontWeight: 600, marginBottom: '2px' }}>
-                          {botItem.health_message.includes('Missing API') ? '⚠️ Connect API Keys' : '⚠️ Action Needed'}
+                          {botItem.health_message.includes('Missing API') ? '⚠️ Connect API Keys'
+                            : botItem.health_message.includes('nsufficient') ? '⚠️ Low Balance'
+                            : '⚠️ Action Needed'}
                         </div>
                         <div style={{ fontSize: '11px' }}>
                           {botItem.health_message.includes('Missing API')
                             ? 'Click Edit to add your exchange API keys'
+                            : botItem.health_message.includes('nsufficient')
+                            ? botItem.health_message
                             : botItem.health_message.includes('Trade skipped')
                             ? 'Check your wallet balance and ensure funds are available'
                             : botItem.health_message}
